@@ -1,0 +1,139 @@
+"use client";
+
+import { useState } from "react";
+import Link from "next/link";
+import { cn } from "@/lib/utils";
+import {
+  Home,
+  Package,
+  ShoppingCart,
+  Users,
+  Settings,
+  BarChart3,
+  LogOut,
+  ChevronLeft,
+  ChevronRight,
+  Layers,
+} from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { ScrollArea } from "@/components/ui/scroll-area";
+import { Separator } from "@/components/ui/separator";
+
+interface SidebarProps {
+  className?: string;
+}
+
+export function Sidebar({ className }: SidebarProps) {
+  const [collapsed, setCollapsed] = useState(false);
+
+  const toggleSidebar = () => {
+    setCollapsed(!collapsed);
+  };
+
+  return (
+    <div
+      className={cn(
+        "flex h-full flex-col border-r bg-background transition-all duration-300",
+        collapsed ? "w-16" : "w-64",
+        className
+      )}
+    >
+      <div className="flex h-14 items-center px-3 border-b bg-primary/5">
+        <Link
+          href="/dashboard"
+          className={cn(
+            "flex items-center gap-2 font-semibold",
+            collapsed ? "justify-center" : "justify-start"
+          )}
+        >
+          {!collapsed && (
+            <span className="text-xl font-bold text-primary">ShopSphere</span>
+          )}
+          {collapsed && <Layers className="h-6 w-6 text-primary" />}
+        </Link>
+        <Button
+          variant="ghost"
+          size="icon"
+          className={cn(
+            "ml-auto h-8 w-8",
+            collapsed ? "rotate-180" : "rotate-0"
+          )}
+          onClick={toggleSidebar}
+        >
+          <ChevronLeft className="h-4 w-4" />
+          <span className="sr-only">Toggle Sidebar</span>
+        </Button>
+      </div>
+      <ScrollArea className="flex-1 overflow-auto">
+        <div className={cn("flex flex-col gap-1 p-2")}>
+          <SidebarItem
+            href="/dashboard"
+            icon={Home}
+            label="Dashboard"
+            collapsed={collapsed}
+          />
+          <SidebarItem
+            href="/dashboard/products"
+            icon={Package}
+            label="Products"
+            collapsed={collapsed}
+          />
+          <SidebarItem
+            href="/dashboard/orders"
+            icon={ShoppingCart}
+            label="Orders"
+            collapsed={collapsed}
+          />
+          <SidebarItem
+            href="/dashboard/customers"
+            icon={Users}
+            label="Customers"
+            collapsed={collapsed}
+          />
+          <SidebarItem
+            href="/dashboard/analytics"
+            icon={BarChart3}
+            label="Analytics"
+            collapsed={collapsed}
+          />
+          <Separator className="my-2" />
+          <SidebarItem
+            href="/dashboard/settings"
+            icon={Settings}
+            label="Settings"
+            collapsed={collapsed}
+          />
+          <SidebarItem
+            href="/auth"
+            icon={LogOut}
+            label="Logout"
+            collapsed={collapsed}
+          />
+        </div>
+      </ScrollArea>
+    </div>
+  );
+}
+
+interface SidebarItemProps {
+  href: string;
+  icon: React.ComponentType<{ className?: string }>;
+  label: string;
+  collapsed: boolean;
+}
+
+function SidebarItem({ href, icon: Icon, label, collapsed }: SidebarItemProps) {
+  return (
+    <Link
+      href={href}
+      className={cn(
+        "flex h-10 items-center rounded-md px-3 py-2 text-muted-foreground hover:bg-primary hover:text-primary-foreground transition-colors",
+        collapsed ? "justify-center" : "justify-start"
+      )}
+    >
+      <Icon className={cn("h-5 w-5", collapsed ? "mr-0" : "mr-2")} />
+      {!collapsed && <span>{label}</span>}
+      {collapsed && <span className="sr-only">{label}</span>}
+    </Link>
+  );
+} 
