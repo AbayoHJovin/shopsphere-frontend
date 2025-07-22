@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import Link from "next/link";
+import { usePathname } from "next/navigation";
 import { cn } from "@/lib/utils";
 import {
   Home,
@@ -12,7 +13,6 @@ import {
   BarChart3,
   LogOut,
   ChevronLeft,
-  ChevronRight,
   Layers,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -25,6 +25,7 @@ interface SidebarProps {
 
 export function Sidebar({ className }: SidebarProps) {
   const [collapsed, setCollapsed] = useState(false);
+  const pathname = usePathname();
 
   const toggleSidebar = () => {
     setCollapsed(!collapsed);
@@ -71,30 +72,35 @@ export function Sidebar({ className }: SidebarProps) {
             icon={Home}
             label="Dashboard"
             collapsed={collapsed}
+            isActive={pathname === "/dashboard"}
           />
           <SidebarItem
             href="/dashboard/products"
             icon={Package}
             label="Products"
             collapsed={collapsed}
+            isActive={pathname === "/dashboard/products"}
           />
           <SidebarItem
             href="/dashboard/orders"
             icon={ShoppingCart}
             label="Orders"
             collapsed={collapsed}
+            isActive={pathname === "/dashboard/orders"}
           />
           <SidebarItem
             href="/dashboard/customers"
             icon={Users}
             label="Customers"
             collapsed={collapsed}
+            isActive={pathname === "/dashboard/customers"}
           />
           <SidebarItem
             href="/dashboard/analytics"
             icon={BarChart3}
             label="Analytics"
             collapsed={collapsed}
+            isActive={pathname === "/dashboard/analytics"}
           />
           <Separator className="my-2" />
           <SidebarItem
@@ -102,6 +108,7 @@ export function Sidebar({ className }: SidebarProps) {
             icon={Settings}
             label="Settings"
             collapsed={collapsed}
+            isActive={pathname === "/dashboard/settings"}
           />
           <SidebarItem
             href="/auth"
@@ -120,14 +127,18 @@ interface SidebarItemProps {
   icon: React.ComponentType<{ className?: string }>;
   label: string;
   collapsed: boolean;
+  isActive?: boolean;
 }
 
-function SidebarItem({ href, icon: Icon, label, collapsed }: SidebarItemProps) {
+function SidebarItem({ href, icon: Icon, label, collapsed, isActive }: SidebarItemProps) {
   return (
     <Link
       href={href}
       className={cn(
-        "flex h-10 items-center rounded-md px-3 py-2 text-muted-foreground hover:bg-primary hover:text-primary-foreground transition-colors",
+        "flex h-10 items-center rounded-md px-3 py-2 transition-colors",
+        isActive 
+          ? "bg-primary text-primary-foreground"
+          : "text-muted-foreground hover:bg-primary hover:text-primary-foreground",
         collapsed ? "justify-center" : "justify-start"
       )}
     >
