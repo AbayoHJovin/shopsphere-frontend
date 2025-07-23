@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from 'react';
+import { useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -26,6 +27,7 @@ interface ProductFilters {
 }
 
 export default function ProductsPage() {
+  const router = useRouter();
   const [filters, setFilters] = useState<ProductFilters>({
     keyword: '',
     minPrice: '',
@@ -118,7 +120,10 @@ export default function ProductsPage() {
 
       {/* Add Product Button */}
       <div className="flex justify-end">
-        <Button className="bg-primary hover:bg-primary/90">
+        <Button 
+          className="bg-primary hover:bg-primary/90"
+          onClick={() => router.push('/dashboard/products/create')}
+        >
           <Plus className="w-4 h-4 mr-2" />
           Add Product
         </Button>
@@ -349,12 +354,38 @@ export default function ProductsPage() {
                     </TableCell>
                     <TableCell>
                       <div className="flex items-center space-x-1">
-                        <Button variant="ghost" size="icon" className="h-8 w-8 text-primary hover:text-primary hover:bg-primary/10">
-                          <Eye className="w-4 h-4" />
-                        </Button>
-                        <Button variant="ghost" size="icon" className="h-8 w-8 text-primary hover:text-primary hover:bg-primary/10">
-                          <Edit className="w-4 h-4" />
-                        </Button>
+                        <TooltipProvider>
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <Button 
+                                variant="ghost" 
+                                size="icon" 
+                                className="h-8 w-8 text-primary hover:text-primary hover:bg-primary/10"
+                                onClick={() => router.push(`/dashboard/products/${product.productId}`)}
+                              >
+                                <Eye className="w-4 h-4" />
+                              </Button>
+                            </TooltipTrigger>
+                            <TooltipContent>View Product</TooltipContent>
+                          </Tooltip>
+                        </TooltipProvider>
+                        
+                        <TooltipProvider>
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <Button 
+                                variant="ghost" 
+                                size="icon" 
+                                className="h-8 w-8 text-primary hover:text-primary hover:bg-primary/10"
+                                onClick={() => router.push(`/dashboard/products/${product.productId}/update`)}
+                              >
+                                <Edit className="w-4 h-4" />
+                              </Button>
+                            </TooltipTrigger>
+                            <TooltipContent>Edit Product</TooltipContent>
+                          </Tooltip>
+                        </TooltipProvider>
+                        
                         <Button variant="ghost" size="icon" className="h-8 w-8 text-primary hover:text-primary hover:bg-primary/10">
                           <Percent className="w-4 h-4" />
                         </Button>
