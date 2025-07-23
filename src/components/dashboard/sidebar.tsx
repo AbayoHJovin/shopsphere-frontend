@@ -14,6 +14,7 @@ import {
   LogOut,
   ChevronLeft,
   Layers,
+  Mail,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -79,21 +80,21 @@ export function Sidebar({ className }: SidebarProps) {
             icon={Package}
             label="Products"
             collapsed={collapsed}
-            isActive={pathname === "/dashboard/products"}
+            isActive={pathname.startsWith("/dashboard/products")}
           />
           <SidebarItem
             href="/dashboard/orders"
             icon={ShoppingCart}
             label="Orders"
             collapsed={collapsed}
-            isActive={pathname === "/dashboard/orders"}
+            isActive={pathname.startsWith("/dashboard/orders")}
           />
           <SidebarItem
-            href="/dashboard/customers"
-            icon={Users}
-            label="Customers"
+            href="/dashboard/invitations"
+            icon={Mail}
+            label="Invitations"
             collapsed={collapsed}
-            isActive={pathname === "/dashboard/customers"}
+            isActive={pathname.startsWith("/dashboard/invitations")}
           />
           <SidebarItem
             href="/dashboard/analytics"

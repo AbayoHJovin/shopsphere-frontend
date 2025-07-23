@@ -132,7 +132,7 @@ const QRScannerModal = ({ isOpen, onClose, orderCode, onSuccess }: QRScannerModa
       
       if (cameras && cameras.length > 0) {
         // Try to use back camera first, fallback to first available camera
-        const backCamera = cameras.find(camera => 
+        const backCamera = cameras.find((camera: any) => 
           camera.label && camera.label.toLowerCase().includes('back')
         );
         const cameraId = backCamera ? backCamera.id : cameras[0].id;
