@@ -23,15 +23,16 @@ const categoryOptions = [
   'Sports', 'Books', 'Home', 'Beauty', 'Jewelry', 'Toys'
 ];
 
+// Fixed schema: remove .default(false) and make popular required
 const productSchema = z.object({
   name: z.string().min(1, 'Product name is required'),
   description: z.string().min(1, 'Product description is required'),
   price: z.string().min(1, 'Price is required')
     .refine(val => !isNaN(parseFloat(val)) && parseFloat(val) >= 0, 'Price must be a valid number'),
-  gender: z.enum(['MALE', 'FEMALE', 'UNISEX'], { required_error: 'Gender is required' }),
+  gender: z.enum(['MALE', 'FEMALE', 'UNISEX'], { message: 'Gender is required' }),
   stock: z.string()
     .refine(val => !isNaN(parseInt(val)) && parseInt(val) >= 0, 'Stock must be a valid number'),
-  popular: z.boolean().default(false),
+  popular: z.boolean(), // Removed .default(false)
 });
 
 type ProductFormData = z.infer<typeof productSchema>;
@@ -53,7 +54,7 @@ export default function CreateProductPage() {
       price: '',
       gender: undefined,
       stock: '0',
-      popular: false,
+      popular: false, // Explicit default value
     },
   });
 
@@ -498,4 +499,4 @@ export default function CreateProductPage() {
       </div>
     </div>
   );
-} 
+}

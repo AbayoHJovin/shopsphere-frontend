@@ -15,6 +15,7 @@ import {
   ChevronLeft,
   Layers,
   Mail,
+  TagIcon,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -97,11 +98,11 @@ export function Sidebar({ className }: SidebarProps) {
             isActive={pathname.startsWith("/dashboard/invitations")}
           />
           <SidebarItem
-            href="/dashboard/analytics"
-            icon={BarChart3}
-            label="Analytics"
+            href="/dashboard/categories"
+            icon={TagIcon}
+            label="Categories"
             collapsed={collapsed}
-            isActive={pathname === "/dashboard/analytics"}
+            isActive={pathname.startsWith("/dashboard/categories")}
           />
           <Separator className="my-2" />
           <SidebarItem

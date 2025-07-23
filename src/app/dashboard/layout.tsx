@@ -23,6 +23,8 @@ export default function DashboardLayout({
       setTitle("Orders Management");
     } else if (pathname === "/dashboard/invitations" || pathname.startsWith("/dashboard/invitations/")) {
       setTitle("Invitations Management");
+    } else if (pathname === "/dashboard/categories" || pathname.startsWith("/dashboard/categories/")) {
+      setTitle("Categories Management");
     } else if (pathname === "/dashboard/analytics") {
       setTitle("Analytics");
     } else if (pathname === "/dashboard/settings") {

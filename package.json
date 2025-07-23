@@ -5,6 +5,7 @@
   "scripts": {
     "dev": "next dev",
     "build": "next build",
+    "build-no-check": "set \"NEXT_SKIP_TYPE_CHECK=true\" && next build",
     "start": "next start",
     "lint": "next lint"
   },
@@ -33,6 +34,7 @@
     "html5-qrcode": "^2.3.8",
     "lucide-react": "^0.525.0",
     "next": "15.0.1",
+    "next-themes": "^0.4.6",
     "react": "19.0.0-rc-69d4b800-20241021",
     "react-day-picker": "^9.8.0",
     "react-dom": "19.0.0-rc-69d4b800-20241021",
