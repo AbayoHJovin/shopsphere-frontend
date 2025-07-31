@@ -22,7 +22,7 @@ import {
   PaginationNext,
   PaginationPrevious,
 } from "@/components/ui/pagination";
-import { Eye, Edit, Percent, Plus, FilterIcon, Star } from "lucide-react";
+import { Eye, Edit, Percent, Plus, FilterIcon, Star, Trash } from "lucide-react";
 import {
   Tooltip,
   TooltipContent,
@@ -40,6 +40,9 @@ import {
   ProductSearchFilterRequest,
 } from "@/lib/types/product";
 import { formatCurrency } from "@/lib/utils";
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Checkbox } from "@/components/ui/checkbox";
+import { toast } from "@/components/ui/use-toast";
 
 export default function ProductsPage() {
   const router = useRouter();
@@ -59,6 +62,11 @@ export default function ProductsPage() {
   // Add state for discount modal
   const [discountModalOpen, setDiscountModalOpen] = useState(false);
   const [selectedProductId, setSelectedProductId] = useState<string>("");
+
+  // Delete confirmation modal state
+  const [deleteModalOpen, setDeleteModalOpen] = useState(false);
+  const [productToDelete, setProductToDelete] = useState<string>("");
+  const [dontAskAgain, setDontAskAgain] = useState(false);
 
   // Fetch products with React Query
   const { data, isLoading, isError, error, refetch } = useQuery({
@@ -81,6 +89,54 @@ export default function ProductsPage() {
   const openDiscountModal = (productId: string) => {
     setSelectedProductId(productId);
     setDiscountModalOpen(true);
+  };
+
+  const openDeleteModal = (productId: string) => {
+    // Check if user has chosen to skip confirmation
+    const deletePreference = localStorage.getItem("productDeletePreference");
+    if (deletePreference === "true") {
+      // Skip confirmation and delete directly
+      handleDeleteProduct(productId);
+    } else {
+      // Show confirmation modal
+      setProductToDelete(productId);
+      setDeleteModalOpen(true);
+    }
+  };
+
+  const handleDeleteProduct = async (productId: string) => {
+    try {
+      await productService.deleteProduct(productId);
+      
+      // Refresh the product list
+      refetch();
+      
+      toast({
+        title: "Success",
+        description: "Product deleted successfully",
+        variant: "default",
+      });
+    } catch (error) {
+      console.error("Error deleting product:", error);
+      toast({
+        title: "Error",
+        description: "Failed to delete product",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const confirmDelete = () => {
+    // Save preference if don't ask again is checked
+    if (dontAskAgain) {
+      localStorage.setItem("productDeletePreference", "true");
+    }
+    
+    // Delete the product
+    handleDeleteProduct(productToDelete);
+    
+    // Close the modal
+    setDeleteModalOpen(false);
   };
 
   // Handle pagination
@@ -356,6 +412,24 @@ export default function ProductsPage() {
                             <TooltipContent>Manage Discounts</TooltipContent>
                           </Tooltip>
                         </TooltipProvider>
+
+                        <TooltipProvider>
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                className="h-8 w-8 text-destructive hover:text-destructive hover:bg-destructive/10"
+                                onClick={() =>
+                                  openDeleteModal(product.productId)
+                                }
+                              >
+                                <Trash className="w-4 h-4" />
+                              </Button>
+                            </TooltipTrigger>
+                            <TooltipContent>Delete Product</TooltipContent>
+                          </Tooltip>
+                        </TooltipProvider>
                       </div>
                     </TableCell>
                   </TableRow>
@@ -451,6 +525,51 @@ export default function ProductsPage() {
         onOpenChange={setDiscountModalOpen}
         selectedProductId={selectedProductId}
       />
+
+      {/* Delete Confirmation Modal */}
+      <Dialog open={deleteModalOpen} onOpenChange={setDeleteModalOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="text-destructive">Confirm Deletion</DialogTitle>
+            <DialogDescription>
+              Are you sure you want to delete this product? This action cannot be undone.
+            </DialogDescription>
+          </DialogHeader>
+          
+          <div className="flex items-center space-x-2 py-4">
+            <Checkbox
+              id="dont-ask-again"
+              checked={dontAskAgain}
+              onCheckedChange={(checked) => setDontAskAgain(checked === true)}
+            />
+            <label
+              htmlFor="dont-ask-again"
+              className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
+            >
+              Don't ask again
+            </label>
+          </div>
+          
+          <DialogFooter className="sm:justify-end">
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => setDeleteModalOpen(false)}
+              className="border-primary/20 hover:bg-primary/5 hover:text-primary"
+            >
+              Cancel
+            </Button>
+            <Button 
+              type="button" 
+              variant="destructive"
+              onClick={confirmDelete}
+            >
+              <Trash className="w-4 h-4 mr-2" />
+              Delete
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
