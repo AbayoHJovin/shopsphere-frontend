@@ -1,4 +1,5 @@
 import { LoginForm } from "@/components/auth/login-form";
+import { Suspense } from "react";
 
 export default function AuthPage() {
   return (
@@ -32,9 +33,11 @@ export default function AuthPage() {
       </div>
       <div className="lg:p-8">
         <div className="mx-auto flex w-full flex-col justify-center space-y-6 sm:w-[350px]">
-          <LoginForm />
+          <Suspense fallback={<div className="flex items-center justify-center">Loading...</div>}>
+            <LoginForm />
+          </Suspense>
         </div>
       </div>
     </div>
   );
-} 
+}
