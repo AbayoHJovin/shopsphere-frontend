@@ -1,44 +1,158 @@
 "use client";
 
-import { StatsCardGroup } from "@/components/dashboard/stats-cards";
-import { RevenueChart } from "@/components/dashboard/revenue-chart";
-import { OrderStatusChart } from "@/components/dashboard/order-status-chart";
-import { TopProducts } from "@/components/dashboard/top-products";
-import { ProductCategories } from "@/components/dashboard/product-categories";
-import { Alerts } from "@/components/dashboard/alerts";
-import { ArrowRightIcon, LineChart } from "lucide-react";
+import { useQuery } from '@tanstack/react-query';
+import { useAppSelector } from '@/lib/redux/hooks';
+import { dashboardService } from '@/lib/services/dashboard-service';
+import { UserRole } from '@/lib/constants';
+import {
+  RevenueChart,
+  OrderStatusChart,
+  Alerts,
+  TopProducts
+} from '@/components/dashboard';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { AdminDashboardResponse, CoWorkerDashboardResponse } from '@/lib/types/dashboard';
+import Link from "next/link";
+import { ArrowUpRight, Package, ShoppingCart, Users, CreditCard } from "lucide-react";
+import { formatCurrency } from '@/lib/utils';
 
-export default function Dashboard() {
+// Simplified stat card for dashboard overview
+function StatCard({ title, value, icon, description, className = "" }: { 
+  title: string; 
+  value: string | number; 
+  icon: React.ReactNode;
+  description?: string;
+  className?: string;
+}) {
   return (
-    <div className="space-y-6">
-      <div className="border-b border-border/40 pb-4">
-        <h1 className="text-3xl font-bold tracking-tight text-primary">Dashboard</h1>
-        <p className="text-muted-foreground mt-1">
-          Welcome back! Here's what's happening with your ecommerce store.
-        </p>
+    <Card className={className}>
+      <CardHeader className="flex flex-row items-center justify-between pb-2">
+        <CardTitle className="text-sm font-medium text-muted-foreground">{title}</CardTitle>
+        <div className="p-1 bg-primary/10 rounded-md text-primary">{icon}</div>
+      </CardHeader>
+      <CardContent>
+        <div className="text-2xl font-bold">{value}</div>
+        {description && <p className="text-xs text-muted-foreground mt-1">{description}</p>}
+      </CardContent>
+    </Card>
+  );
+}
+
+export default function DashboardPage() {
+  const { user } = useAppSelector(state => state.auth);
+  const isAdmin = user?.role === UserRole.ADMIN;
+
+  // Fetch dashboard data using TanStack Query
+  const { data, isLoading, error } = useQuery({
+    queryKey: ['dashboard'],
+    queryFn: dashboardService.getDashboardData,
+  });
+
+  if (isLoading) {
+    return (
+      <div className="p-6">
+        <div className="flex items-center justify-center h-[60vh]">
+          <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-primary"></div>
+        </div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="p-6">
+        <div className="flex flex-col items-center justify-center h-[60vh] text-center gap-2">
+          <h2 className="text-2xl font-semibold">Failed to load dashboard data</h2>
+          <p className="text-muted-foreground">Please try again later or contact support if the issue persists.</p>
+        </div>
+      </div>
+    );
+  }
+
+  // Make sure data is defined before checking its type
+  const isAdminDashboard = data ? dashboardService.isAdminDashboard(data) : false;
+
+  // Only show a few key metrics on the main dashboard
+  return (
+    <div className="p-6">
+      <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-6">
+        <div>
+          <h2 className="text-3xl font-bold tracking-tight">Dashboard</h2>
+          <p className="text-muted-foreground">Welcome back, {user?.username}! Here's a quick overview.</p>
+        </div>
+        
+        <Link href="/dashboard/analytics">
+          <Button variant="outline" className="gap-2">
+            <span>View Detailed Analytics</span>
+            <ArrowUpRight className="h-4 w-4" />
+          </Button>
+        </Link>
       </div>
       
-      <section>
-        <h2 className="text-xl font-semibold mb-4 flex items-center text-primary">
-          <LineChart className="mr-2 h-5 w-5" />
-          <span>Revenue Overview</span>
-        </h2>
-        <StatsCardGroup />
-      </section>
-
-      <div className="grid gap-6 grid-cols-1 md:grid-cols-4 lg:grid-cols-8">
-        <RevenueChart />
-        <OrderStatusChart />
-      </div>
-
-      <div className="grid gap-6 grid-cols-1 md:grid-cols-4 lg:grid-cols-8">
-        <TopProducts />
-        <ProductCategories />
-        <Alerts />
+      {/* Key stats - simplified from StatsCards */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+        <StatCard 
+          title="Total Orders"
+          value={isAdminDashboard 
+            ? (data as AdminDashboardResponse).totalOrders 
+            : (data as CoWorkerDashboardResponse).totalOrders}
+          icon={<ShoppingCart className="h-4 w-4" />}
+          description="All orders placed"
+        />
+        
+        <StatCard 
+          title="Total Products"
+          value={isAdminDashboard
+            ? (data as AdminDashboardResponse).totalProducts 
+            : (data as CoWorkerDashboardResponse).totalProducts}
+          icon={<Package className="h-4 w-4" />}
+          description="Product catalog size"
+        />
+        
+        <StatCard 
+          title="Total Users"
+          value={isAdminDashboard 
+            ? (data as AdminDashboardResponse).totalUsers 
+            : (data as CoWorkerDashboardResponse).totalCustomers + (data as CoWorkerDashboardResponse).totalCoWorkers}
+          icon={<Users className="h-4 w-4" />}
+          description="Registered accounts"
+        />
+        
+        {isAdmin && isAdminDashboard && (
+          <StatCard 
+            title="Monthly Revenue"
+            value={formatCurrency((data as AdminDashboardResponse).revenueThisMonth)}
+            icon={<CreditCard className="h-4 w-4" />}
+            description="Current month"
+          />
+        )}
       </div>
       
-      {/* <div className="grid gap-6 grid-cols-1 md:grid-cols-4 lg:grid-cols-8"> */}
-      {/* </div> */}
+      {/* Alerts - Important for quick action */}
+      <div className="mb-6">
+        <Alerts data={data} />
+      </div>
+
+      {/* Primary charts and data */}
+      <div className="grid grid-cols-1 lg:grid-cols-4 gap-4 mb-6">
+        <div className="lg:col-span-3">
+          {isAdmin && <RevenueChart data={data} isAdmin={isAdmin} />}
+        </div>
+        
+        <div className="lg:col-span-1">
+          <OrderStatusChart data={data} />
+        </div>
+      </div>
+      
+      {/* Top products - most useful quick data */}
+      <div className="mb-6">
+        <TopProducts data={data} />
+      </div>
+      
+      <div className="text-center text-muted-foreground text-sm mt-12">
+        <p>For more detailed metrics and reports, visit the <Link href="/dashboard/analytics" className="text-primary hover:underline">Analytics</Link> page.</p>
+      </div>
     </div>
   );
 } 

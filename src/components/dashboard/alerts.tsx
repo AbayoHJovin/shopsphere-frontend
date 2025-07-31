@@ -1,59 +1,94 @@
 "use client";
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { AlertCircle } from "lucide-react";
+import { AlertTriangle, Info } from "lucide-react";
+import { AdminDashboardResponse, DashboardResponse } from "@/lib/types/dashboard";
+import { dashboardService } from "@/lib/services/dashboard-service";
 
-interface Alert {
-  title: string;
-  message: string;
-  type: "warning" | "error" | "success";
+interface AlertsProps {
+  data: DashboardResponse | undefined;
 }
 
-const alerts: Alert[] = [
-  {
-    title: "Low Stock Alert",
-    message: "156 products are running low on stock",
-    type: "warning",
-  },
-  {
-    title: "Out of Stock",
-    message: "23 products are currently out of stock",
-    type: "error",
-  },
-  {
-    title: "High Cart Value",
-    message: "$456,789 in active carts",
-    type: "success",
-  },
-];
-
-export function Alerts() {
+export function Alerts({ data }: AlertsProps) {
+  if (!data) return null;
+  
+  const isAdmin = dashboardService.isAdminDashboard(data);
+  if (!isAdmin) return null;
+  
+  const adminData = data as AdminDashboardResponse;
+  
+  // Check if we have any alerts to show
+  const outOfStockCount = adminData.outOfStockProducts || 0;
+  const lowStockCount = adminData.lowStockProducts || 0;
+  const pendingOrderCount = adminData.pendingOrders || 0;
+  
+  const hasAlerts = outOfStockCount > 0 || lowStockCount > 0 || pendingOrderCount > 0;
+  
+  if (!hasAlerts) {
+    return (
+      <Card className="col-span-4">
+        <CardHeader className="border-b border-border/50 bg-primary/5">
+          <CardTitle className="text-primary">Alerts</CardTitle>
+        </CardHeader>
+        <CardContent className="pt-6 flex items-center justify-center min-h-[100px]">
+          <div className="text-center text-muted-foreground">
+            <div className="flex justify-center mb-2">
+              <Info className="h-6 w-6" />
+            </div>
+            <p>No alerts at this time.</p>
+            <p className="mt-1 text-sm">Everything appears to be running smoothly!</p>
+          </div>
+        </CardContent>
+      </Card>
+    );
+  }
+  
   return (
-    <Card className="col-span-4 lg:col-span-2">
-      <CardHeader className="flex flex-row items-center border-b border-border/50 bg-primary/5">
-        <CardTitle className="flex items-center text-primary">
-          <AlertCircle className="mr-2 h-4 w-4" />
-          Alerts
-        </CardTitle>
+    <Card className="col-span-4">
+      <CardHeader className="border-b border-border/50 bg-primary/5">
+        <CardTitle className="text-primary">Alerts</CardTitle>
       </CardHeader>
       <CardContent className="pt-6">
-        <div className="space-y-4">
-          {alerts.map((alert, index) => (
-            <div
-              key={index}
-              className={`rounded-md p-4 ${
-                alert.type === "warning"
-                  ? "bg-amber-50 text-amber-700 border border-amber-200"
-                  : alert.type === "error"
-                  ? "bg-rose-50 text-rose-700 border border-rose-200"
-                  : "bg-primary/10 text-primary border border-primary/20"
-              }`}
-            >
-              <p className="font-medium">{alert.title}</p>
-              <p className="text-sm mt-1">{alert.message}</p>
-            </div>
-          ))}
-        </div>
+        <ul className="space-y-4">
+          {outOfStockCount > 0 && (
+            <li className="flex items-start gap-3">
+              <AlertTriangle className="h-5 w-5 text-red-500 mt-0.5" />
+              <div>
+                <p className="font-medium">Out of Stock Products</p>
+                <p className="text-muted-foreground text-sm">
+                  {outOfStockCount} {outOfStockCount === 1 ? 'product is' : 'products are'} out of stock.
+                  Consider reordering or removing from the catalog.
+                </p>
+              </div>
+            </li>
+          )}
+          
+          {lowStockCount > 0 && (
+            <li className="flex items-start gap-3">
+              <AlertTriangle className="h-5 w-5 text-amber-500 mt-0.5" />
+              <div>
+                <p className="font-medium">Low Stock Warning</p>
+                <p className="text-muted-foreground text-sm">
+                  {lowStockCount} {lowStockCount === 1 ? 'product is' : 'products are'} running low on inventory.
+                  Consider reordering soon.
+                </p>
+              </div>
+            </li>
+          )}
+          
+          {pendingOrderCount > 0 && (
+            <li className="flex items-start gap-3">
+              <AlertTriangle className="h-5 w-5 text-blue-500 mt-0.5" />
+              <div>
+                <p className="font-medium">Pending Orders</p>
+                <p className="text-muted-foreground text-sm">
+                  {pendingOrderCount} {pendingOrderCount === 1 ? 'order needs' : 'orders need'} processing.
+                  Please review and update their status.
+                </p>
+              </div>
+            </li>
+          )}
+        </ul>
       </CardContent>
     </Card>
   );

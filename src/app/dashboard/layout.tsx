@@ -4,6 +4,8 @@ import { useState, useEffect } from "react";
 import { usePathname } from "next/navigation";
 import { Sidebar } from "@/components/dashboard/sidebar";
 import { Header } from "@/components/dashboard/header";
+import ProtectedRoute from "@/components/auth/protected-route";
+import { UserRole } from "@/lib/constants";
 
 export default function DashboardLayout({
   children,
@@ -17,13 +19,13 @@ export default function DashboardLayout({
     // Update title based on pathname
     if (pathname === "/dashboard") {
       setTitle("Dashboard");
-    } else if (pathname === "/dashboard/products") {
+    } else if (pathname.startsWith("/dashboard/products")) {
       setTitle("Products Management");
-    } else if (pathname === "/dashboard/orders") {
+    } else if (pathname.startsWith("/dashboard/orders")) {
       setTitle("Orders Management");
-    } else if (pathname === "/dashboard/invitations" || pathname.startsWith("/dashboard/invitations/")) {
+    } else if (pathname.startsWith("/dashboard/invitations")) {
       setTitle("Invitations Management");
-    } else if (pathname === "/dashboard/categories" || pathname.startsWith("/dashboard/categories/")) {
+    } else if (pathname.startsWith("/dashboard/categories")) {
       setTitle("Categories Management");
     } else if (pathname === "/dashboard/analytics") {
       setTitle("Analytics");
@@ -33,16 +35,18 @@ export default function DashboardLayout({
   }, [pathname]);
 
   return (
-    <div className="flex h-screen overflow-hidden">
-      <div className="hidden md:block">
-        <Sidebar />
+    <ProtectedRoute allowedRoles={[UserRole.ADMIN, UserRole.CO_WORKER]}>
+      <div className="flex h-screen overflow-hidden">
+        <div className="hidden md:block">
+          <Sidebar />
+        </div>
+        <div className="flex flex-col flex-1 overflow-hidden">
+          <Header title={title} />
+          <main className="flex-1 overflow-y-auto p-4 md:p-6">
+            {children}
+          </main>
+        </div>
       </div>
-      <div className="flex flex-col flex-1 overflow-hidden">
-        <Header title={title} />
-        <main className="flex-1 overflow-y-auto p-4 md:p-6">
-          {children}
-        </main>
-      </div>
-    </div>
+    </ProtectedRoute>
   );
 } 

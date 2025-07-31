@@ -9,43 +9,84 @@ import {
   XAxis,
   YAxis,
 } from "recharts";
+import { AdminDashboardResponse, CoWorkerDashboardResponse, DashboardResponse } from "@/lib/types/dashboard";
+import { dashboardService } from "@/lib/services/dashboard-service";
+import { formatCurrency } from "@/lib/utils";
+import { Info } from "lucide-react";
 
-const data = [
-  { month: "Jan", revenue: 250000 },
-  { month: "Feb", revenue: 270000 },
-  { month: "Mar", revenue: 280000 },
-  { month: "Apr", revenue: 230000 },
-  { month: "May", revenue: 290000 },
-  { month: "Jun", revenue: 305000 },
-  { month: "Jul", revenue: 280000 },
-  { month: "Aug", revenue: 350000 },
-  { month: "Sep", revenue: 290000 },
-  { month: "Oct", revenue: 310000 },
-  { month: "Nov", revenue: 355000 },
-  { month: "Dec", revenue: 280000 },
-];
+interface RevenueChartProps {
+  data: DashboardResponse | undefined;
+  isAdmin: boolean;
+}
 
-export function RevenueChart() {
-  const formatCurrency = (value: number) => {
-    return new Intl.NumberFormat("en-US", {
-      style: "currency",
-      currency: "USD",
-      minimumFractionDigits: 0,
-      maximumFractionDigits: 0,
-    }).format(value);
+export function RevenueChart({ data, isAdmin }: RevenueChartProps) {
+  // If no data or not admin, don't render this component
+  if (!data || !isAdmin) return null;
+  
+  const adminData = data as AdminDashboardResponse;
+  
+  // Extract revenue data directly from API response
+  const chartData = adminData.revenueByMonth || [];
+  
+  // Check if we have any non-zero data
+  const hasData = chartData.some(item => Number(item.revenue) > 0);
+  
+  // If no data available, show empty state
+  if (!hasData || chartData.length === 0) {
+    return (
+      <Card className="col-span-4 lg:col-span-5">
+        <CardHeader className="border-b border-border/50 bg-primary/5">
+          <CardTitle className="text-primary">Revenue Trend</CardTitle>
+          <CardDescription>No revenue data available</CardDescription>
+        </CardHeader>
+        <CardContent className="pt-6 flex items-center justify-center min-h-[300px]">
+          <div className="text-center text-muted-foreground">
+            <div className="flex justify-center mb-2">
+              <Info className="h-6 w-6" />
+            </div>
+            <p>No revenue has been recorded yet.</p>
+            <p className="mt-1 text-sm">Revenue chart will appear once orders are completed.</p>
+          </div>
+        </CardContent>
+      </Card>
+    );
+  }
+
+  const formatTooltipCurrency = (value: number) => {
+    return formatCurrency(value);
+  };
+
+  // Calculate appropriate Y-axis format based on revenue amounts
+  const maxRevenue = Math.max(...chartData.map(item => Number(item.revenue || 0)));
+  const tickFormatter = (value: number) => {
+    if (maxRevenue >= 1000000) {
+      return `$${value / 1000000}M`;
+    } else if (maxRevenue >= 1000) {
+      return `$${value / 1000}k`;
+    } else {
+      return `$${value}`;
+    }
   };
 
   return (
-    <Card className="col-span-4">
+    <Card className="col-span-4 lg:col-span-5">
       <CardHeader className="border-b border-border/50 bg-primary/5">
         <CardTitle className="text-primary">Revenue Trend</CardTitle>
-        <CardDescription>Last 12 months</CardDescription>
+        <CardDescription>
+          {adminData.revenueThisMonth > 0 
+            ? `Current month: ${formatCurrency(adminData.revenueThisMonth)}`
+            : 'Monthly revenue overview'
+          }
+        </CardDescription>
       </CardHeader>
       <CardContent className="p-0 pt-6">
         <div className="h-[350px] w-full">
           <ResponsiveContainer width="100%" height="100%">
             <AreaChart
-              data={data}
+              data={chartData.map(item => ({
+                month: item.month,
+                revenue: Number(item.revenue || 0)
+              }))}
               margin={{
                 top: 20,
                 right: 30,
@@ -79,10 +120,11 @@ export function RevenueChart() {
                 fontSize={12}
                 tickLine={false}
                 axisLine={false}
-                tickFormatter={(value) => `$${value / 1000}k`}
+                tickFormatter={tickFormatter}
               />
               <Tooltip
-                formatter={(value: number) => formatCurrency(value)}
+                formatter={(value: number) => formatTooltipCurrency(value)}
+                labelFormatter={(label) => `Month: ${label}`}
                 contentStyle={{
                   backgroundColor: "hsl(var(--card))",
                   border: "1px solid hsl(var(--border))",

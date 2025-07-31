@@ -1,9 +1,12 @@
 "use client";
 
 import { useState } from "react";
-import { Bell, Search, Menu } from "lucide-react";
+import { Bell, Search, Menu, LogOut, Settings, User } from "lucide-react";
+import { useRouter } from "next/navigation";
+import { useMutation } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { useToast } from "@/hooks/use-toast";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -15,12 +18,58 @@ import {
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import { Sidebar } from "@/components/dashboard/sidebar";
+import { useAppDispatch, useAppSelector } from "@/lib/redux/hooks";
+import { authService } from "@/lib/services/auth-service";
+import { logout } from "@/lib/redux/auth-slice";
+import { handleApiError } from "@/lib/utils/error-handler";
 
 interface HeaderProps {
   title: string;
 }
 
 export function Header({ title }: HeaderProps) {
+  const router = useRouter();
+  const { toast } = useToast();
+  const dispatch = useAppDispatch();
+  const { user } = useAppSelector(state => state.auth);
+
+  // Logout mutation
+  const logoutMutation = useMutation({
+    mutationFn: authService.logout,
+    onSuccess: () => {
+      dispatch(logout());
+      toast({
+        title: "Logged out",
+        description: "You have been successfully logged out",
+      });
+      router.push("/auth");
+    },
+    onError: (error) => {
+      const errorMessage = handleApiError(error);
+      toast({
+        title: "Logout failed",
+        description: errorMessage,
+        variant: "destructive",
+      });
+    },
+  });
+
+  const handleLogout = () => {
+    logoutMutation.mutate();
+  };
+
+  // Get user initials for avatar
+  const getUserInitials = (): string => {
+    if (!user || !user.username) return "AD";
+    
+    const names = user.username.split(' ');
+    if (names.length === 1) {
+      return names[0].substring(0, 2).toUpperCase();
+    } else {
+      return (names[0][0] + names[names.length - 1][0]).toUpperCase();
+    }
+  };
+
   return (
     <header className="sticky top-0 z-30 flex h-14 w-full items-center gap-4 border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 px-4 sm:px-6">
       <div className="block md:hidden">
@@ -86,18 +135,31 @@ export function Header({ title }: HeaderProps) {
             className="relative h-8 w-8 rounded-full ring-2 ring-primary/10"
           >
             <Avatar className="h-8 w-8">
-              <AvatarImage src="" alt="Admin" />
-              <AvatarFallback className="bg-primary/10 text-primary">AD</AvatarFallback>
+              <AvatarImage src="" alt={user?.username || "Admin"} />
+              <AvatarFallback className="bg-primary/10 text-primary">{getUserInitials()}</AvatarFallback>
             </Avatar>
           </Button>
         </DropdownMenuTrigger>
         <DropdownMenuContent align="end">
-          <DropdownMenuLabel>My Account</DropdownMenuLabel>
+          <DropdownMenuLabel>{user?.username || "Admin"}</DropdownMenuLabel>
           <DropdownMenuSeparator />
-          <DropdownMenuItem className="cursor-pointer">Profile</DropdownMenuItem>
-          <DropdownMenuItem className="cursor-pointer">Settings</DropdownMenuItem>
+          <DropdownMenuItem className="cursor-pointer" onClick={() => router.push('/dashboard/settings')}>
+            <User className="mr-2 h-4 w-4" />
+            Profile
+          </DropdownMenuItem>
+          <DropdownMenuItem className="cursor-pointer" onClick={() => router.push('/dashboard/settings')}>
+            <Settings className="mr-2 h-4 w-4" />
+            Settings
+          </DropdownMenuItem>
           <DropdownMenuSeparator />
-          <DropdownMenuItem className="cursor-pointer text-destructive">Logout</DropdownMenuItem>
+          <DropdownMenuItem 
+            className="cursor-pointer text-destructive"
+            onClick={handleLogout}
+            disabled={logoutMutation.isPending}
+          >
+            <LogOut className="mr-2 h-4 w-4" />
+            {logoutMutation.isPending ? "Logging out..." : "Logout"}
+          </DropdownMenuItem>
         </DropdownMenuContent>
       </DropdownMenu>
     </header>

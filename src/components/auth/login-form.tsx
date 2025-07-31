@@ -1,12 +1,14 @@
 "use client";
 
-import { useState } from "react";
-import { useRouter } from "next/navigation";
+import { useState, useEffect } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
+import { useMutation } from "@tanstack/react-query";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
+import { useToast } from "@/hooks/use-toast";
 import {
   Form,
   FormControl,
@@ -16,6 +18,11 @@ import {
   FormMessage,
 } from "@/components/ui/form";
 import { Layers } from "lucide-react";
+import { authService } from "@/lib/services/auth-service";
+import { LoginRequest } from "@/lib/types";
+import { useAppDispatch, useAppSelector } from "@/lib/redux/hooks";
+import { loginStart, loginSuccess, loginFailure } from "@/lib/redux/auth-slice";
+import { handleApiError } from "@/lib/utils/error-handler";
 
 const formSchema = z.object({
   email: z.string().email("Invalid email address"),
@@ -24,7 +31,12 @@ const formSchema = z.object({
 
 export function LoginForm() {
   const router = useRouter();
-  const [isLoading, setIsLoading] = useState(false);
+  const searchParams = useSearchParams();
+  const returnUrl = searchParams?.get("returnUrl") || "/dashboard";
+  const { toast } = useToast();
+  
+  const dispatch = useAppDispatch();
+  const { isAuthenticated, isLoading: authLoading, error: authError } = useAppSelector(state => state.auth);
   
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
@@ -34,15 +46,59 @@ export function LoginForm() {
     },
   });
 
+  // Redirect if already authenticated
+  useEffect(() => {
+    if (isAuthenticated) {
+      router.push(returnUrl);
+    }
+  }, [isAuthenticated, router, returnUrl]);
+
+  // Show auth error if any
+  useEffect(() => {
+    if (authError) {
+      toast({
+        title: "Authentication Error",
+        description: authError,
+        variant: "destructive",
+      });
+    }
+  }, [authError, toast]);
+
+  // Login mutation with TanStack Query
+  const loginMutation = useMutation({
+    mutationFn: (credentials: LoginRequest) => {
+      dispatch(loginStart());
+      return authService.login(credentials);
+    },
+    onSuccess: (data) => {
+      dispatch(loginSuccess({
+        userId: data.userId,
+        username: data.username,
+        email: data.email,
+        role: data.role,
+      }));
+      
+      toast({
+        title: "Success",
+        description: "Logged in successfully",
+      });
+      
+      router.push(returnUrl);
+    },
+    onError: (error) => {
+      const errorMessage = handleApiError(error);
+      dispatch(loginFailure(errorMessage));
+      
+      toast({
+        title: "Login Failed",
+        description: errorMessage,
+        variant: "destructive",
+      });
+    }
+  });
+
   function onSubmit(values: z.infer<typeof formSchema>) {
-    setIsLoading(true);
-    
-    // This is a mock login - in a real app, you would call your authentication API
-    setTimeout(() => {
-      setIsLoading(false);
-      // If login is successful, redirect to dashboard
-      router.push("/dashboard");
-    }, 1000);
+    loginMutation.mutate(values);
   }
 
   return (
@@ -70,6 +126,7 @@ export function LoginForm() {
                     placeholder="admin@example.com" 
                     {...field} 
                     className="border-primary/20 focus-visible:ring-primary"
+                    disabled={loginMutation.isPending || authLoading}
                   />
                 </FormControl>
                 <FormMessage />
@@ -89,6 +146,7 @@ export function LoginForm() {
                     placeholder="******" 
                     {...field} 
                     className="border-primary/20 focus-visible:ring-primary"
+                    disabled={loginMutation.isPending || authLoading}
                   />
                 </FormControl>
                 <FormMessage />
@@ -96,8 +154,12 @@ export function LoginForm() {
             )}
           />
           
-          <Button type="submit" className="w-full" disabled={isLoading}>
-            {isLoading ? "Signing In..." : "Sign In"}
+          <Button 
+            type="submit" 
+            className="w-full" 
+            disabled={loginMutation.isPending || authLoading}
+          >
+            {loginMutation.isPending || authLoading ? "Signing In..." : "Sign In"}
           </Button>
         </form>
       </Form>
