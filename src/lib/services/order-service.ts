@@ -1,6 +1,10 @@
-import apiClient from '../api-client';
-import { OrderPaginationResponse, OrderResponse } from '../types/order';
-import { handleApiError } from '../utils/error-handler';
+import apiClient from "../api-client";
+import { OrderPaginationResponse, OrderResponse } from "../types/order";
+import { handleApiError } from "../utils/error-handler";
+
+interface QrScanRequest {
+  orderCode: string;
+}
 
 class OrderService {
   /**
@@ -13,7 +17,7 @@ class OrderService {
     sortDir: string = "desc"
   ): Promise<OrderPaginationResponse> {
     try {
-      const response = await apiClient.get('/admin/orders', {
+      const response = await apiClient.get("/admin/orders", {
         params: { page, size, sortBy, sortDir },
       });
       return response.data;
@@ -37,9 +41,15 @@ class OrderService {
   /**
    * Update order status
    */
-  async updateOrderStatus(orderId: string, status: string): Promise<OrderResponse> {
+  async updateOrderStatus(
+    orderId: string,
+    status: string
+  ): Promise<OrderResponse> {
     try {
-      const response = await apiClient.patch(`/admin/orders/${orderId}/status`, { status });
+      const response = await apiClient.patch(
+        `/admin/orders/${orderId}/status`,
+        { status }
+      );
       return response.data;
     } catch (error) {
       throw handleApiError(error);
@@ -49,9 +59,15 @@ class OrderService {
   /**
    * Update payment status
    */
-  async updatePaymentStatus(orderId: string, paymentStatus: string): Promise<OrderResponse> {
+  async updatePaymentStatus(
+    orderId: string,
+    paymentStatus: string
+  ): Promise<OrderResponse> {
     try {
-      const response = await apiClient.patch(`/admin/orders/${orderId}/payment-status`, { paymentStatus });
+      const response = await apiClient.patch(
+        `/admin/orders/${orderId}/payment-status`,
+        { paymentStatus }
+      );
       return response.data;
     } catch (error) {
       throw handleApiError(error);
@@ -61,9 +77,28 @@ class OrderService {
   /**
    * Update QR scan status
    */
-  async updateQrScanStatus(orderId: string, isQrScanned: boolean): Promise<OrderResponse> {
+  async updateQrScanStatus(
+    orderId: string,
+    isQrScanned: boolean
+  ): Promise<OrderResponse> {
     try {
-      const response = await apiClient.patch(`/admin/orders/${orderId}/qr-scan`, { isQrScanned });
+      const response = await apiClient.patch(
+        `/admin/orders/${orderId}/qr-scan`,
+        { isQrScanned }
+      );
+      return response.data;
+    } catch (error) {
+      throw handleApiError(error);
+    }
+  }
+
+  /**
+   * Scan QR code to verify and deliver order
+   */
+  async scanQrCode(orderCode: string): Promise<OrderResponse> {
+    try {
+      const request: QrScanRequest = { orderCode };
+      const response = await apiClient.post(`/admin/orders/scan-qr`, request);
       return response.data;
     } catch (error) {
       throw handleApiError(error);

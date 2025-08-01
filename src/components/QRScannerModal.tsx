@@ -16,7 +16,8 @@ interface QRScannerModalProps {
   isOpen: boolean;
   onClose: () => void;
   orderCode: string;
-  onSuccess: () => void;
+  onSuccess: (scannedCode: string) => void;
+  isValidating?: boolean; // Added to show loading state during backend validation
 }
 
 // Declare the Html5Qrcode type for TypeScript
@@ -26,36 +27,43 @@ declare global {
   }
 }
 
-const QRScannerModal = ({ isOpen, onClose, orderCode, onSuccess }: QRScannerModalProps) => {
+const QRScannerModal = ({
+  isOpen,
+  onClose,
+  orderCode,
+  onSuccess,
+  isValidating = false,
+}: QRScannerModalProps) => {
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
   const [scanning, setScanning] = useState(false);
   const [hasPermission, setHasPermission] = useState<boolean | null>(null);
   const [libraryLoaded, setLibraryLoaded] = useState(false);
-  
+
   const scannerRef = useRef<any | null>(null);
   const scannerContainerId = "qr-reader";
 
   // Load the html5-qrcode library dynamically
   useEffect(() => {
     const loadQRLibrary = async () => {
-      if (typeof window !== 'undefined' && !window.Html5Qrcode) {
+      if (typeof window !== "undefined" && !window.Html5Qrcode) {
         try {
           // Load the library from CDN
-          const script = document.createElement('script');
-          script.src = 'https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js';
+          const script = document.createElement("script");
+          script.src =
+            "https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js";
           script.onload = () => {
-            console.log('HTML5-QRCode library loaded successfully');
+            console.log("HTML5-QRCode library loaded successfully");
             setLibraryLoaded(true);
           };
           script.onerror = () => {
-            console.error('Failed to load HTML5-QRCode library');
-            setError('Failed to load QR scanning library');
+            console.error("Failed to load HTML5-QRCode library");
+            setError("Failed to load QR scanning library");
           };
           document.head.appendChild(script);
         } catch (err) {
-          console.error('Error loading QR library:', err);
-          setError('Failed to load QR scanning library');
+          console.error("Error loading QR library:", err);
+          setError("Failed to load QR scanning library");
         }
       } else if (window.Html5Qrcode) {
         setLibraryLoaded(true);
@@ -73,12 +81,12 @@ const QRScannerModal = ({ isOpen, onClose, orderCode, onSuccess }: QRScannerModa
       setSuccess(false);
       setScanning(false);
       setHasPermission(null);
-      
+
       // Small delay to ensure DOM is ready
       const timer = setTimeout(() => {
         initScanner();
       }, 500);
-      
+
       return () => {
         clearTimeout(timer);
       };
@@ -100,7 +108,7 @@ const QRScannerModal = ({ isOpen, onClose, orderCode, onSuccess }: QRScannerModa
       setError("QR scanner library is not loaded");
       return;
     }
-    
+
     try {
       // Check if container exists
       const container = document.getElementById(scannerContainerId);
@@ -110,40 +118,47 @@ const QRScannerModal = ({ isOpen, onClose, orderCode, onSuccess }: QRScannerModa
       }
 
       // Clear any existing content in the container
-      container.innerHTML = '';
-      
+      container.innerHTML = "";
+
       // Stop any existing scanner first
       if (scannerRef.current) {
         await stopScanner();
       }
-      
+
       console.log("Initializing QR scanner...");
-      
+
       // Create new scanner instance
       scannerRef.current = new window.Html5Qrcode(scannerContainerId);
-      
+
       setScanning(true);
       setHasPermission(null);
-      
+
       console.log("Starting camera...");
-      
+
       // Get available cameras first
       const cameras = await window.Html5Qrcode.getCameras();
-      
+
       if (cameras && cameras.length > 0) {
         // Try to use back camera first, fallback to first available camera
-        const backCamera = cameras.find((camera: any) => 
-          camera.label && camera.label.toLowerCase().includes('back')
+        const backCamera = cameras.find(
+          (camera: any) =>
+            camera.label && camera.label.toLowerCase().includes("back")
         );
         const cameraId = backCamera ? backCamera.id : cameras[0].id;
-        
-        // Start scanning with the selected camera
+
+        // Start scanning with the selected camera - higher FPS and optimized settings for faster scanning
         await scannerRef.current.start(
           cameraId,
           {
-            fps: 10,
-            qrbox: { width: 250, height: 250 },
+            fps: 30, // Even higher frame rate for faster scanning
+            qrbox: { width: 300, height: 300 }, // Larger scan area
             aspectRatio: 1.0,
+            disableFlip: false, // Allow both normal and mirrored QR codes
+            experimentalFeatures: {
+              useBarCodeDetectorIfSupported: true // Use native API if available
+            },
+            rememberLastUsedCamera: true,
+            formatsToSupport: [0], // 0 is QR Code format only - focusing on just QR codes improves speed
           },
           (decodedText: string) => onScanSuccess(decodedText),
           (errorMessage: string) => {
@@ -151,96 +166,86 @@ const QRScannerModal = ({ isOpen, onClose, orderCode, onSuccess }: QRScannerModa
             // console.log("Scan error:", errorMessage);
           }
         );
-        
+
         console.log("Camera started successfully");
         setHasPermission(true);
         setError(null);
-        
       } else {
         throw new Error("No cameras found");
       }
-      
     } catch (err: any) {
       console.error("Error initializing QR scanner:", err);
       setHasPermission(false);
       setScanning(false);
-      
+
       // Handle specific error messages
-      if (err.name === 'NotAllowedError' || err.message.includes('Permission denied')) {
-        setError('Camera permission denied. Please allow camera access and try again.');
-      } else if (err.name === 'NotFoundError') {
-        setError('No camera found. Please ensure your device has a camera.');
-      } else if (err.name === 'NotSupportedError') {
-        setError('Camera not supported in this browser. Please try a different browser.');
+      if (
+        err.name === "NotAllowedError" ||
+        err.message.includes("Permission denied")
+      ) {
+        setError(
+          "Camera permission denied. Please allow camera access and try again."
+        );
+      } else if (err.name === "NotFoundError") {
+        setError("No camera found. Please ensure your device has a camera.");
+      } else if (err.name === "NotSupportedError") {
+        setError(
+          "Camera not supported in this browser. Please try a different browser."
+        );
       } else {
-        setError(`Scanner error: ${err.message || 'Failed to start camera'}`);
+        setError(`Scanner error: ${err.message || "Failed to start camera"}`);
       }
     }
   };
 
   const onScanSuccess = (decodedText: string) => {
     console.log(`QR Code detected: ${decodedText}`);
-    
+
     // Stop scanning immediately to prevent multiple scans
     setScanning(false);
     
-    // Verify the scanned code matches the order code
-    if (decodedText === orderCode || decodedText.includes(orderCode)) {
-      setSuccess(true);
-      
-      // Stop the scanner
-      stopScanner();
-      
-      // Auto-close after success with a delay
-      setTimeout(() => {
-        onSuccess();
-        onClose();
-      }, 2000);
-    } else {
-      setError(`Scanned code "${decodedText}" doesn't match order "${orderCode}". Please scan the correct QR code.`);
-      
-      // Restart scanning after error
-      setTimeout(() => {
-        setError(null);
-        if (scannerRef.current && hasPermission) {
-          setScanning(true);
-        }
-      }, 3000);
-    }
+    // Stop the scanner to prevent multiple scans
+    stopScanner();
+    
+    // Immediately pass the scanned code to parent for backend validation
+    // without closing the modal or showing success yet
+    onSuccess(decodedText);
   };
 
   const stopScanner = async () => {
     try {
       if (scannerRef.current) {
         console.log("Stopping scanner...");
-        
+
         // Check if scanner is currently scanning
-        if (scannerRef.current.getState && 
-            scannerRef.current.getState() === window.Html5Qrcode?.ScannerState?.SCANNING) {
+        if (
+          scannerRef.current.getState &&
+          scannerRef.current.getState() ===
+            window.Html5Qrcode?.ScannerState?.SCANNING
+        ) {
           await scannerRef.current.stop();
           console.log("Scanner stopped successfully");
         }
-        
+
         // Clear the scanner
         if (scannerRef.current.clear) {
           scannerRef.current.clear();
         }
-        
+
         scannerRef.current = null;
       }
-      
+
       // Clear the container
       const container = document.getElementById(scannerContainerId);
       if (container) {
-        container.innerHTML = '';
+        container.innerHTML = "";
       }
-      
     } catch (err) {
       console.error("Error stopping scanner:", err);
       // Force clear the container even if stop fails
       const container = document.getElementById(scannerContainerId);
       if (container) {
-        container.innerHTML = '';
+        container.innerHTML = "";
       }
     }
   };
@@ -258,10 +263,10 @@ const QRScannerModal = ({ isOpen, onClose, orderCode, onSuccess }: QRScannerModa
     setError(null);
     setHasPermission(null);
     setScanning(false);
-    
+
     // Stop current scanner
     await stopScanner();
-    
+
     // Wait a bit then restart
     setTimeout(() => {
       initScanner();
@@ -297,10 +302,13 @@ const QRScannerModal = ({ isOpen, onClose, orderCode, onSuccess }: QRScannerModa
           </div>
 
           {/* QR Scanner Container */}
-          <div className="relative rounded-lg overflow-hidden bg-black" style={{ minHeight: "300px" }}>
+          <div
+            className="relative rounded-lg overflow-hidden bg-black"
+            style={{ minHeight: "300px" }}
+          >
             {/* The scanner will be rendered in this element */}
-            <div 
-              id={scannerContainerId} 
+            <div
+              id={scannerContainerId}
               className="w-full h-[300px]"
               style={{ lineHeight: 0 }}
             ></div>
@@ -333,7 +341,8 @@ const QRScannerModal = ({ isOpen, onClose, orderCode, onSuccess }: QRScannerModa
                   <AlertCircle className="h-12 w-12 mx-auto mb-2 text-red-500" />
                   <p className="font-medium mb-2">Camera Access Required</p>
                   <p className="text-xs mb-4">
-                    Please allow camera permission in your browser to scan QR codes
+                    Please allow camera permission in your browser to scan QR
+                    codes
                   </p>
                   <Button
                     variant="outline"
@@ -352,8 +361,23 @@ const QRScannerModal = ({ isOpen, onClose, orderCode, onSuccess }: QRScannerModa
               <div className="absolute inset-0 flex items-center justify-center bg-green-600 bg-opacity-90">
                 <div className="text-white text-center">
                   <CheckCircle className="h-16 w-16 mx-auto mb-4" />
-                  <p className="text-lg font-semibold mb-2">Order Verified Successfully!</p>
+                  <p className="text-lg font-semibold mb-2">
+                    Order Verified Successfully!
+                  </p>
                   <p className="text-sm">Updating order status...</p>
+                </div>
+              </div>
+            )}
+
+            {/* Validating State - When backend validation is in progress */}
+            {isValidating && !success && !error && (
+              <div className="absolute inset-0 flex items-center justify-center bg-black bg-opacity-80">
+                <div className="text-white text-center">
+                  <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-white mx-auto mb-4"></div>
+                  <p className="text-lg font-semibold mb-2">
+                    Verifying QR Code...
+                  </p>
+                  <p className="text-sm">Checking with the server</p>
                 </div>
               </div>
             )}
@@ -378,18 +402,19 @@ const QRScannerModal = ({ isOpen, onClose, orderCode, onSuccess }: QRScannerModa
           <div className="flex gap-2">
             <Button
               onClick={retryScanning}
-              disabled={!libraryLoaded || (scanning && !error && hasPermission === true)}
+              disabled={
+                !libraryLoaded || (scanning && !error && hasPermission === true)
+              }
               className="flex-1 bg-primary hover:bg-primary/90"
             >
-              {!libraryLoaded 
-                ? "Loading..." 
-                : (scanning && !error && hasPermission === true) 
-                  ? "Scanning..." 
-                  : "Start Scanning"
-              }
+              {!libraryLoaded
+                ? "Loading..."
+                : scanning && !error && hasPermission === true
+                ? "Scanning..."
+                : "Start Scanning"}
             </Button>
-            <Button 
-              variant="outline" 
+            <Button
+              variant="outline"
               onClick={handleClose}
               className="border-primary/20 hover:bg-primary/5 hover:text-primary"
             >
