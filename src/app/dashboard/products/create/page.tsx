@@ -55,17 +55,84 @@ import { useToast } from "@/components/ui/use-toast";
 
 // Product schema with validation
 const productSchema = z.object({
-  name: z.string().min(3, "Name must be at least 3 characters"),
-  description: z.string().min(10, "Description must be at least 10 characters"),
-  price: z.coerce.number().min(0.01, "Price must be greater than 0"),
-  stock: z.coerce.number().int().min(1, "Stock must be at least 1"),
-  gender: z.nativeEnum(Gender).optional().nullable(), // Make gender truly optional
-  popular: z.boolean().default(false),
-  categoryIds: z.array(z.string()).min(1, "At least one category is required"),
-  images: z.array(z.instanceof(File)).optional(),
+  name: z
+    .string()
+    .min(2, "Name must be at least 2 characters")
+    .max(255, "Name must not exceed 255 characters"),
+  shortDescription: z
+    .string()
+    .max(255, "Short description must not exceed 255 characters")
+    .optional(),
+  description: z
+    .string()
+    .max(1000, "Description must not exceed 1000 characters")
+    .optional(),
+  sku: z
+    .string()
+    .min(3, "SKU must be at least 3 characters")
+    .max(50, "SKU must not exceed 50 characters"),
+  barcode: z
+    .string()
+    .max(50, "Barcode must not exceed 50 characters")
+    .optional(),
+  basePrice: z.coerce.number().min(0.01, "Base price must be greater than 0"),
+  compareAtPrice: z.coerce
+    .number()
+    .min(0.01, "Compare at price must be greater than 0")
+    .optional(),
+  costPrice: z.coerce
+    .number()
+    .min(0.01, "Cost price must be greater than 0")
+    .optional(),
+  stockQuantity: z.coerce
+    .number()
+    .int()
+    .min(0, "Stock quantity must be at least 0"),
+  lowStockThreshold: z.coerce
+    .number()
+    .int()
+    .min(0, "Low stock threshold must be at least 0")
+    .optional(),
+  categoryId: z.coerce.number().min(1, "Category is required"),
+  brandId: z.string().uuid().optional(),
+  model: z.string().max(100, "Model must not exceed 100 characters").optional(),
+  slug: z.string().max(255, "Slug must not exceed 255 characters").optional(),
+  isActive: z.boolean().default(true),
+  isFeatured: z.boolean().default(false),
+  isBestseller: z.boolean().default(false),
+  isNewArrival: z.boolean().default(false),
+  isOnSale: z.boolean().default(false),
+  dimensions: z.string().optional(),
+  weight: z.coerce.number().min(0, "Weight must be at least 0").optional(),
+  material: z.string().optional(),
+  warranty: z.string().optional(),
+  careInstructions: z.string().optional(),
+  metaTitle: z.string().optional(),
+  metaDescription: z.string().optional(),
+  metaKeywords: z.string().optional(),
+  searchKeywords: z.string().optional(),
 });
 
 type ProductFormData = z.infer<typeof productSchema>;
+
+// Define the product variant type for the form
+interface ProductVariant {
+  variantSku: string;
+  price: number;
+  stockQuantity: number;
+  lowStockThreshold: number;
+  sortOrder: number;
+  isActive: boolean;
+  attributes: Record<string, string>;
+  images: File[];
+}
+
+// Define the product attribute type for the form
+interface ProductAttribute {
+  name: string;
+  required: boolean;
+  values: string[];
+}
 
 // Define the product color and size types for the form
 interface ProductColor {
@@ -91,12 +158,33 @@ export default function CreateProductPage() {
     resolver: zodResolver(productSchema) as any,
     defaultValues: {
       name: "",
+      shortDescription: "",
       description: "",
-      price: 0,
-      stock: 0,
-      gender: undefined,
-      popular: false,
-      categoryIds: [],
+      sku: "",
+      barcode: "",
+      basePrice: 0,
+      compareAtPrice: 0,
+      costPrice: 0,
+      stockQuantity: 0,
+      lowStockThreshold: 5,
+      categoryId: 0,
+      brandId: "",
+      model: "",
+      slug: "",
+      isActive: true,
+      isFeatured: false,
+      isBestseller: false,
+      isNewArrival: false,
+      isOnSale: false,
+      dimensions: "",
+      weight: 0,
+      material: "",
+      warranty: "",
+      careInstructions: "",
+      metaTitle: "",
+      metaDescription: "",
+      metaKeywords: "",
+      searchKeywords: "",
     },
   });
 
@@ -112,8 +200,14 @@ export default function CreateProductPage() {
   const [createdProductId, setCreatedProductId] = useState<string | null>(null);
 
   // State for image uploads
-  const [images, setImages] = useState<File[]>([]);
-  const [imageUrls, setImageUrls] = useState<string[]>([]);
+  const [mainImages, setMainImages] = useState<File[]>([]);
+  const [mainImageUrls, setMainImageUrls] = useState<string[]>([]);
+  const [productVideos, setProductVideos] = useState<File[]>([]);
+  const [videoUrls, setVideoUrls] = useState<string[]>([]);
+
+  // State for attributes and variants
+  const [attributes, setAttributes] = useState<ProductAttribute[]>([]);
+  const [variants, setVariants] = useState<ProductVariant[]>([]);
 
   // State for colors
   const [colors, setColors] = useState<ProductColor[]>([]);
@@ -134,19 +228,66 @@ export default function CreateProductPage() {
   // Get available sizes from enum
   const availableSizes = productSizeService.getAvailableSizes();
 
-  // Form is already initialized above, this is a duplicate declaration
-  // Removing this duplicate form initialization
+  // Initialize the page
+  useEffect(() => {
+    // Add default attributes for demonstration
+    if (attributes.length === 0) {
+      const defaultAttributes: ProductAttribute[] = [
+        {
+          name: "Color",
+          required: true,
+          values: ["Red", "Blue", "Black", "White"],
+        },
+        {
+          name: "Size",
+          required: true,
+          values: ["Small", "Medium", "Large"],
+        },
+      ];
+      setAttributes(defaultAttributes);
+    }
+  }, []);
+
+  // Auto-generate SKU if empty
+  useEffect(() => {
+    const name = form.watch("name");
+    const sku = form.watch("sku");
+
+    if (name && !sku) {
+      const generatedSku = name
+        .toUpperCase()
+        .replace(/[^A-Z0-9]/g, "-")
+        .replace(/-+/g, "-")
+        .replace(/^-|-$/g, "");
+      form.setValue("sku", generatedSku + "-001");
+    }
+  }, [form.watch("name")]);
+
+  // Auto-generate slug if empty
+  useEffect(() => {
+    const name = form.watch("name");
+    const slug = form.watch("slug");
+
+    if (name && !slug) {
+      const generatedSlug = name
+        .toLowerCase()
+        .replace(/[^a-z0-9]/g, "-")
+        .replace(/-+/g, "-")
+        .replace(/^-|-$/g, "");
+      form.setValue("slug", generatedSlug);
+    }
+  }, [form.watch("name")]);
 
   // Watch the stock field to validate against size quantities
-  const stockValue = form.watch("stock");
-  const categoryIds = form.watch("categoryIds");
+  const stockValue = form.watch("stockQuantity");
+  const categoryId = form.watch("categoryId");
 
   // Validate total stock against size quantities
   useEffect(() => {
     const totalStock =
       typeof stockValue === "number" ? stockValue : parseInt(stockValue) || 0;
     const totalSizeStock = sizes.reduce(
-      (sum, size) => sum + size.stockForSize,
+      (sum: number, size: ProductSize) => sum + size.stockForSize,
       0
     );
 
@@ -159,25 +300,184 @@ export default function CreateProductPage() {
     }
   }, [sizes, stockValue]);
 
-  const handleImageUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
+  const handleMainImageUpload = (
+    event: React.ChangeEvent<HTMLInputElement>
+  ) => {
     if (!event.target.files || event.target.files.length === 0) return;
 
     const files = Array.from(event.target.files);
-    const newImages = files.slice(0, 5 - images.length);
+    const newImages = files.slice(0, 10 - mainImages.length);
 
     // Create URLs for preview
     const newUrls = newImages.map((file) => URL.createObjectURL(file));
 
-    setImages((prev) => [...prev, ...newImages]);
-    setImageUrls((prev) => [...prev, ...newUrls]);
+    setMainImages((prev) => [...prev, ...newImages]);
+    setMainImageUrls((prev) => [...prev, ...newUrls]);
   };
 
-  const removeImage = (index: number) => {
-    // Revoke URL to prevent memory leaks
-    URL.revokeObjectURL(imageUrls[index]);
+  const handleVideoUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
+    if (!event.target.files || event.target.files.length === 0) return;
 
-    setImages((prev) => prev.filter((_, i) => i !== index));
-    setImageUrls((prev) => prev.filter((_, i) => i !== index));
+    const files = Array.from(event.target.files);
+    const newVideos = files.slice(0, 5 - productVideos.length);
+
+    // Create URLs for preview
+    const newUrls = newVideos.map((file) => URL.createObjectURL(file));
+
+    setProductVideos((prev) => [...prev, ...newVideos]);
+    setVideoUrls((prev) => [...prev, ...newUrls]);
+  };
+
+  const removeMainImage = (index: number) => {
+    // Revoke URL to prevent memory leaks
+    URL.revokeObjectURL(mainImageUrls[index]);
+
+    setMainImages((prev) => prev.filter((_, i) => i !== index));
+    setMainImageUrls((prev) => prev.filter((_, i) => i !== index));
+  };
+
+  const removeVideo = (index: number) => {
+    // Revoke URL to prevent memory leaks
+    URL.revokeObjectURL(videoUrls[index]);
+
+    setProductVideos((prev) => prev.filter((_, i) => i !== index));
+    setVideoUrls((prev) => prev.filter((_, i) => i !== index));
+  };
+
+  // Attribute management functions
+  const addAttribute = () => {
+    const newAttribute: ProductAttribute = {
+      name: "",
+      required: false,
+      values: [],
+    };
+    setAttributes([...attributes, newAttribute]);
+  };
+
+  const updateAttribute = (
+    index: number,
+    field: keyof ProductAttribute,
+    value: any
+  ) => {
+    setAttributes((prev) =>
+      prev.map((attr, i) => (i === index ? { ...attr, [field]: value } : attr))
+    );
+  };
+
+  const removeAttribute = (index: number) => {
+    setAttributes((prev) => prev.filter((_, i) => i !== index));
+  };
+
+  const addAttributeValue = (attributeIndex: number, value: string) => {
+    if (!value.trim()) return;
+
+    setAttributes((prev) =>
+      prev.map((attr, i) =>
+        i === attributeIndex
+          ? { ...attr, values: [...attr.values, value.trim()] }
+          : attr
+      )
+    );
+  };
+
+  const removeAttributeValue = (attributeIndex: number, valueIndex: number) => {
+    setAttributes((prev) =>
+      prev.map((attr, i) =>
+        i === attributeIndex
+          ? {
+              ...attr,
+              values: attr.values.filter((_, vi) => vi !== valueIndex),
+            }
+          : attr
+      )
+    );
+  };
+
+  // Variant management functions
+  const generateVariants = () => {
+    if (attributes.length === 0) {
+      toast({
+        title: "No attributes",
+        description: "Please add at least one attribute type first",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    // Generate all possible combinations
+    const combinations = generateCombinations();
+
+    if (combinations.length === 0) {
+      toast({
+        title: "No attribute values",
+        description: "Please add values to your attribute types first",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    const newVariants: ProductVariant[] = combinations.map(
+      (combination, index) => ({
+        variantSku: "",
+        price: form.getValues("basePrice"),
+        stockQuantity: 0,
+        lowStockThreshold: form.getValues("lowStockThreshold") || 5,
+        sortOrder: index,
+        isActive: true,
+        attributes: combination,
+        images: [],
+      })
+    );
+
+    setVariants(newVariants);
+  };
+
+  const generateCombinations = (): Record<string, string>[] => {
+    const validAttributes = attributes.filter((attr) => attr.values.length > 0);
+
+    if (validAttributes.length === 0) return [];
+
+    const combinations: Record<string, string>[] = [];
+    const stack: Record<string, string>[] = [{}];
+
+    while (stack.length > 0) {
+      const current = stack.pop()!;
+
+      if (Object.keys(current).length === validAttributes.length) {
+        combinations.push(current);
+      } else {
+        const nextType = validAttributes[Object.keys(current).length];
+        const values = nextType.values;
+
+        values.forEach((value) => {
+          const newCombination = { ...current };
+          newCombination[nextType.name] = value;
+          stack.push(newCombination);
+        });
+      }
+    }
+
+    return combinations;
+  };
+
+  const updateVariant = (
+    index: number,
+    field: keyof ProductVariant,
+    value: any
+  ) => {
+    setVariants((prev) =>
+      prev.map((variant, i) =>
+        i === index ? { ...variant, [field]: value } : variant
+      )
+    );
+  };
+
+  const removeVariant = (index: number) => {
+    setVariants((prev) => prev.filter((_, i) => i !== index));
+  };
+
+  const clearVariants = () => {
+    setVariants([]);
   };
 
   const addSize = () => {
@@ -199,7 +499,7 @@ export default function CreateProductPage() {
   };
 
   useEffect(() => {
-    const totalStock = form.getValues("stock");
+    const totalStock = form.getValues("stockQuantity");
     const parsedTotalStock =
       typeof totalStock === "number" ? totalStock : parseInt(totalStock) || 0;
     const totalSizeStock = calculateTotalSizeStock();
@@ -234,140 +534,198 @@ export default function CreateProductPage() {
 
   const onSubmit = async (data: ProductFormData) => {
     try {
-      console.log("Form submission started", data);
       setIsSubmitting(true);
 
       // Validate that we have at least one category
-      if (!data.categoryIds || data.categoryIds.length === 0) {
+      if (!data.categoryId) {
         toast({
           title: "Error",
-          description: "Please select at least one category",
+          description: "Please select a category",
           variant: "destructive",
         });
-        setIsSubmitting(false);
+        return;
+      }
+
+      // Validate that we have at least one variant if attributes are defined
+      if (attributes.length > 0 && variants.length === 0) {
+        toast({
+          title: "Error",
+          description: "Please generate variants from attributes first",
+          variant: "destructive",
+        });
         return;
       }
 
       // Validate that size stock matches total stock if sizes are provided
       const totalStock =
-        typeof data.stock === "number" ? data.stock : parseInt(data.stock) || 0;
+        typeof data.stockQuantity === "number"
+          ? data.stockQuantity
+          : parseInt(data.stockQuantity) || 0;
       const totalSizeStock = calculateTotalSizeStock();
 
-      if (sizes.length > 0 && totalStock !== totalSizeStock) {
+      if (sizes.length > 0 && totalSizeStock !== totalStock) {
         toast({
-          title: "Error",
-          description: `The sum of stock for all sizes (${totalSizeStock}) must equal the total stock (${totalStock}).`,
+          title: "Stock Mismatch",
+          description: `Total stock (${totalStock}) must match the sum of size quantities (${totalSizeStock})`,
           variant: "destructive",
         });
-        setIsSubmitting(false);
         return;
       }
 
-      // Create FormData for product
+      // Create FormData for multipart submission
       const formData = new FormData();
-      formData.append("name", data.name);
-      formData.append("description", data.description);
-      formData.append("price", data.price.toString());
-      formData.append("stock", data.stock.toString());
-      if (data.gender) formData.append("gender", data.gender);
-      formData.append("popular", String(data.popular));
 
-      // Append category IDs
-      data.categoryIds.forEach((categoryId) => {
-        formData.append("categoryIds", categoryId);
+      // Basic product information
+      formData.append("name", data.name);
+      formData.append("shortDescription", data.shortDescription || "");
+      formData.append("description", data.description || "");
+      formData.append("sku", data.sku);
+      if (data.barcode) formData.append("barcode", data.barcode);
+      formData.append("basePrice", data.basePrice.toString());
+      if (data.compareAtPrice)
+        formData.append("compareAtPrice", data.compareAtPrice.toString());
+      if (data.costPrice)
+        formData.append("costPrice", data.costPrice.toString());
+      formData.append("stockQuantity", data.stockQuantity.toString());
+      if (data.lowStockThreshold)
+        formData.append("lowStockThreshold", data.lowStockThreshold.toString());
+      formData.append("categoryId", data.categoryId.toString());
+      if (data.brandId) formData.append("brandId", data.brandId);
+      if (data.model) formData.append("model", data.model);
+      if (data.slug) formData.append("slug", data.slug);
+      formData.append("isActive", String(data.isActive));
+      formData.append("isFeatured", String(data.isFeatured));
+      formData.append("isBestseller", String(data.isBestseller));
+      formData.append("isNewArrival", String(data.isNewArrival));
+      formData.append("isOnSale", String(data.isOnSale));
+
+      // Product details
+      if (data.dimensions) formData.append("dimensions", data.dimensions);
+      if (data.weight) formData.append("weight", data.weight.toString());
+      if (data.material) formData.append("material", data.material);
+      if (data.warranty) formData.append("warranty", data.warranty);
+      if (data.careInstructions)
+        formData.append("careInstructions", data.careInstructions);
+
+      // SEO & Meta
+      if (data.metaTitle) formData.append("metaTitle", data.metaTitle);
+      if (data.metaDescription)
+        formData.append("metaDescription", data.metaDescription);
+      if (data.metaKeywords) formData.append("metaKeywords", data.metaKeywords);
+      if (data.searchKeywords)
+        formData.append("searchKeywords", data.searchKeywords);
+
+      // Main product images
+      if (mainImages.length > 0) {
+        mainImages.forEach((image) => {
+          formData.append("productImages", image);
+        });
+      }
+
+      // Product videos
+      if (productVideos.length > 0) {
+        productVideos.forEach((video) => {
+          formData.append("productVideos", video);
+        });
+      }
+
+      // Variants
+      if (variants.length > 0) {
+        variants.forEach((variant, index) => {
+          formData.append(`variants[${index}][variantSku]`, variant.variantSku);
+          formData.append(
+            `variants[${index}][price]`,
+            variant.price.toString()
+          );
+          formData.append(
+            `variants[${index}][stockQuantity]`,
+            variant.stockQuantity.toString()
+          );
+          formData.append(
+            `variants[${index}][lowStockThreshold]`,
+            variant.lowStockThreshold.toString()
+          );
+          formData.append(
+            `variants[${index}][sortOrder]`,
+            variant.sortOrder.toString()
+          );
+          formData.append(
+            `variants[${index}][isActive]`,
+            String(variant.isActive)
+          );
+
+          // Variant attributes
+          Object.entries(variant.attributes).forEach(([key, value]) => {
+            formData.append(`variants[${index}][attributes][${key}]`, value);
+          });
+
+          // Variant images
+          variant.images.forEach((image) => {
+            formData.append(`variants[${index}][variantImages]`, image);
+          });
+        });
+      }
+
+      // Colors and sizes (if not using variants)
+      if (colors.length > 0 && variants.length === 0) {
+        colors.forEach((color, index) => {
+          formData.append(`colors[${index}][colorName]`, color.colorName);
+          formData.append(`colors[${index}][colorHexCode]`, color.colorHexCode);
+        });
+      }
+
+      if (sizes.length > 0 && variants.length === 0) {
+        sizes.forEach((size, index) => {
+          formData.append(`sizes[${index}][size]`, size.size);
+          formData.append(
+            `sizes[${index}][stockForSize]`,
+            size.stockForSize.toString()
+          );
+        });
+      }
+
+      console.log("Submitting form data:", formData);
+
+      // Submit to backend
+      const response = await productService.createProduct(formData);
+
+      console.log("Product created successfully:", response);
+
+      // Show success message
+      toast({
+        title: "Success!",
+        description: "Product created successfully",
       });
 
-      // Append images
-      if (images.length > 0) {
-        images.forEach((image) => {
-          formData.append("images", image);
-        });
-      }
+      // Store the created product ID
+      setCreatedProductId(response.productId || response.id);
 
-      // Create the product
-      console.log("Sending product data to API", { formData });
-      try {
-        const product = await productService.createProduct(formData);
-        console.log("Product created successfully", product);
+      // Show success modal
+      setShowSuccessModal(true);
 
-        // Create colors for the product
-        // for (const color of colors) {
-        //   await productColorService.createColor({
-        //     colorName: color.colorName,
-        //     colorHexCode: color.colorHexCode,
-        //     productId: product.id,
-        //   });
-        // }
-
-        // Create sizes for the product
-        for (const size of sizes) {
-          await productSizeService.addSizeToProduct(product.id, {
-            size: size.size,
-            stockForSize: size.stockForSize,
-          });
-        }
-
-        // Store the created product ID
-        setCreatedProductId(product.id);
-
-        // Show success toast
-        toast({
-          title: "Success",
-          description: "Product created successfully",
-        });
-      } catch (apiError) {
-        console.error("Error in product creation API call:", apiError);
-        throw apiError; // Re-throw to be caught by the outer try-catch
-      }
-
-      // Check if we should show the success modal based on user preference
-      if (!dontShowAgain) {
-        setShowSuccessModal(true);
-      } else {
-        // If user chose not to show modal, redirect based on stored preference
-        const preference = localStorage.getItem("productCreationPreference");
-        if (preference) {
-          try {
-            const { defaultAction } = JSON.parse(preference);
-            if (defaultAction === "createAnother") {
-              // Reset form and stay on page
-              form.reset();
-              setImages([]);
-              setImageUrls([]);
-              setColors([]);
-              setSizes([]);
-              window.scrollTo(0, 0);
-            } else {
-              // Navigate to products list
-              router.push("/dashboard/products");
-            }
-          } catch (error) {
-            console.error("Error parsing product creation preference:", error);
-            router.push("/dashboard/products");
-          }
-        } else {
-          // Default behavior if no preference is stored
-          router.push("/dashboard/products");
-        }
-      }
-    } catch (error) {
+      // Reset form and stay on page
+      form.reset();
+      setMainImages([]);
+      setMainImageUrls([]);
+      setProductVideos([]);
+      setVideoUrls([]);
+      setColors([]);
+      setSizes([]);
+      setAttributes([]);
+      setVariants([]);
+    } catch (error: any) {
       console.error("Error creating product:", error);
 
-      // Log more details about the error
-      if (error instanceof Error) {
-        console.error("Error message:", error.message);
-        console.error("Error stack:", error.stack);
-      }
-
-      // If it's an AxiosError, log the response data
-      if (error && typeof error === "object" && "response" in error) {
-        console.error("API response data:", (error.response as any)?.data);
-        console.error("API response status:", (error.response as any)?.status);
+      let errorMessage = "Failed to create product. Please try again.";
+      if (error.response?.data?.message) {
+        errorMessage = error.response.data.message;
+      } else if (error.message) {
+        errorMessage = error.message;
       }
 
       toast({
         title: "Error",
-        description: "Failed to create product. Check console for details.",
+        description: errorMessage,
         variant: "destructive",
       });
     } finally {
@@ -395,8 +753,8 @@ export default function CreateProductPage() {
 
     // Reset form
     form.reset();
-    setImages([]);
-    setImageUrls([]);
+    setMainImages([]);
+    setMainImageUrls([]);
     setColors([]);
     setSizes([]);
     window.scrollTo(0, 0);
@@ -409,87 +767,42 @@ export default function CreateProductPage() {
   };
 
   return (
-    <div className="pb-20">
-      {" "}
-      {/* Add bottom padding to ensure content doesn't get cut off */}
-      {/* Success Modal */}
-      <Dialog open={showSuccessModal} onOpenChange={setShowSuccessModal}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Product Created Successfully!</DialogTitle>
-            <DialogDescription>
-              Your product has been created successfully. What would you like to
-              do next?
-            </DialogDescription>
-          </DialogHeader>
-
-          <div className="flex items-center space-x-2 py-4">
-            <Checkbox
-              id="dont-show-again"
-              checked={dontShowAgain}
-              onCheckedChange={(checked) => setDontShowAgain(checked === true)}
-            />
-            <label
-              htmlFor="dont-show-again"
-              className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
-            >
-              Don't show this again
-            </label>
+    <div className="min-h-screen bg-background">
+      <div className="container mx-auto py-6 px-4">
+        <div className="flex items-center justify-between mb-6">
+          <div>
+            <h1 className="text-3xl font-bold tracking-tight">
+              Create Product
+            </h1>
+            <p className="text-muted-foreground">
+              Add a new product to your inventory
+            </p>
           </div>
-
-          <DialogFooter>
-            <Button variant="outline" onClick={handleCreateAnother}>
-              Create Another Product
-            </Button>
-            <Button onClick={handleGoToProducts}>Go to Products Page</Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-      {/* Header */}
-      <div className="border-b border-border/40 pb-4 mb-6 flex items-center justify-between">
-        <div>
-          <h1 className="text-3xl font-bold tracking-tight text-primary">
-            Create Product
-          </h1>
-          <p className="text-muted-foreground mt-1">
-            Add a new product to your inventory
-          </p>
         </div>
-        <Button
-          variant="outline"
-          onClick={() => router.push("/dashboard/products")}
-          className="border-primary/20 hover:bg-primary/5 hover:text-primary"
-        >
-          <ArrowLeft className="w-4 h-4 mr-2" />
-          Back
-        </Button>
-      </div>
-      <div className="max-w-4xl mx-auto">
+
         <Form {...form}>
-          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-12">
-            {" "}
-            {/* Increased spacing between sections */}
-            {/* Basic Information */}
+          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+            {/* Basic Product Information */}
             <Card className="border-border/40 shadow-sm">
               <CardHeader className="bg-primary/5">
-                <CardTitle>Basic Information</CardTitle>
+                <CardTitle>Basic Product Information</CardTitle>
                 <CardDescription>
-                  Enter the core details about your product
+                  Enter the essential details about your product
                 </CardDescription>
               </CardHeader>
-              <CardContent className="pt-6 space-y-4">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <CardContent className="pt-6">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <FormField
                     control={form.control}
                     name="name"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel>Product Name</FormLabel>
+                        <FormLabel>Product Name *</FormLabel>
                         <FormControl>
                           <Input
-                            placeholder="Enter product name"
-                            className="border-primary/20 focus-visible:ring-primary"
+                            placeholder="e.g., AirPods Pro"
                             {...field}
+                            className="border-primary/20 focus-visible:ring-primary"
                           />
                         </FormControl>
                         <FormMessage />
@@ -499,38 +812,187 @@ export default function CreateProductPage() {
 
                   <FormField
                     control={form.control}
-                    name="gender"
+                    name="shortDescription"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel>Gender (Optional)</FormLabel>
-                        <Select
-                          value={field.value || ""}
-                          onValueChange={(value) => {
-                            // Allow clearing the selection
-                            if (value === "clear") {
-                              field.onChange(undefined);
-                            } else {
-                              field.onChange(value);
-                            }
-                          }}
-                        >
-                          <FormControl>
-                            <SelectTrigger className="border-primary/20 focus-visible:ring-primary">
-                              <SelectValue placeholder="Select gender (optional)" />
-                            </SelectTrigger>
-                          </FormControl>
-                          <SelectContent>
-                            <SelectItem value="MALE">Male</SelectItem>
-                            <SelectItem value="FEMALE">Female</SelectItem>
-                            <SelectItem value="UNISEX">Unisex</SelectItem>
-                            <SelectItem value="clear">
-                              No gender (clear selection)
-                            </SelectItem>
-                          </SelectContent>
-                        </Select>
-                        <FormDescription>
-                          Target gender for this product (optional)
-                        </FormDescription>
+                        <FormLabel>Short Description</FormLabel>
+                        <FormControl>
+                          <Input
+                            placeholder="Brief product description"
+                            {...field}
+                            className="border-primary/20 focus-visible:ring-primary"
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+
+                  <FormField
+                    control={form.control}
+                    name="sku"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>SKU *</FormLabel>
+                        <FormControl>
+                          <Input
+                            placeholder="Auto-generated if empty"
+                            {...field}
+                            className="border-primary/20 focus-visible:ring-primary"
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+
+                  <FormField
+                    control={form.control}
+                    name="barcode"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Barcode</FormLabel>
+                        <FormControl>
+                          <Input
+                            placeholder="Product barcode"
+                            {...field}
+                            className="border-primary/20 focus-visible:ring-primary"
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+
+                  <FormField
+                    control={form.control}
+                    name="basePrice"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Base Price *</FormLabel>
+                        <FormControl>
+                          <Input
+                            type="number"
+                            step="0.01"
+                            placeholder="0.00"
+                            {...field}
+                            className="border-primary/20 focus-visible:ring-primary"
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+
+                  <FormField
+                    control={form.control}
+                    name="compareAtPrice"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Compare At Price</FormLabel>
+                        <FormControl>
+                          <Input
+                            type="number"
+                            step="0.01"
+                            placeholder="0.00"
+                            {...field}
+                            className="border-primary/20 focus-visible:ring-primary"
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+
+                  <FormField
+                    control={form.control}
+                    name="costPrice"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Cost Price</FormLabel>
+                        <FormControl>
+                          <Input
+                            type="number"
+                            step="0.01"
+                            placeholder="0.00"
+                            {...field}
+                            className="border-primary/20 focus-visible:ring-primary"
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+
+                  <FormField
+                    control={form.control}
+                    name="stockQuantity"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Base Stock Quantity</FormLabel>
+                        <FormControl>
+                          <Input
+                            type="number"
+                            placeholder="0"
+                            {...field}
+                            className="border-primary/20 focus-visible:ring-primary"
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+
+                  <FormField
+                    control={form.control}
+                    name="lowStockThreshold"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Low Stock Threshold</FormLabel>
+                        <FormControl>
+                          <Input
+                            type="number"
+                            placeholder="5"
+                            {...field}
+                            className="border-primary/20 focus-visible:ring-primary"
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+
+                  <FormField
+                    control={form.control}
+                    name="model"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Model</FormLabel>
+                        <FormControl>
+                          <Input
+                            placeholder="Product model"
+                            {...field}
+                            className="border-primary/20 focus-visible:ring-primary"
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+
+                  <FormField
+                    control={form.control}
+                    name="slug"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Slug</FormLabel>
+                        <FormControl>
+                          <Input
+                            placeholder="URL-friendly slug"
+                            {...field}
+                            className="border-primary/20 focus-visible:ring-primary"
+                          />
+                        </FormControl>
                         <FormMessage />
                       </FormItem>
                     )}
@@ -541,12 +1003,12 @@ export default function CreateProductPage() {
                   control={form.control}
                   name="description"
                   render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Description</FormLabel>
+                    <FormItem className="mt-4">
+                      <FormLabel>Full Description</FormLabel>
                       <FormControl>
                         <Textarea
-                          placeholder="Enter product description"
-                          className="min-h-[120px] border-primary/20 focus-visible:ring-primary"
+                          placeholder="Detailed product description..."
+                          className="min-h-[100px] border-primary/20 focus-visible:ring-primary"
                           {...field}
                         />
                       </FormControl>
@@ -555,22 +1017,124 @@ export default function CreateProductPage() {
                   )}
                 />
 
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                <div className="grid grid-cols-2 md:grid-cols-5 gap-4 mt-4">
+                  <div className="flex items-center space-x-2">
+                    <Checkbox
+                      id="isActive"
+                      checked={form.watch("isActive")}
+                      onCheckedChange={(checked) =>
+                        form.setValue("isActive", checked as boolean)
+                      }
+                      className="border-primary/30 data-[state=checked]:bg-primary data-[state=checked]:border-primary"
+                    />
+                    <Label htmlFor="isActive" className="text-sm font-medium">
+                      Active
+                    </Label>
+                  </div>
+
+                  <div className="flex items-center space-x-2">
+                    <Checkbox
+                      id="isFeatured"
+                      checked={form.watch("isFeatured")}
+                      onCheckedChange={(checked) =>
+                        form.setValue("isFeatured", checked as boolean)
+                      }
+                      className="border-primary/30 data-[state=checked]:bg-primary data-[state=checked]:border-primary"
+                    />
+                    <Label htmlFor="isFeatured" className="text-sm font-medium">
+                      Featured
+                    </Label>
+                  </div>
+
+                  <div className="flex items-center space-x-2">
+                    <Checkbox
+                      id="isBestseller"
+                      checked={form.watch("isBestseller")}
+                      onCheckedChange={(checked) =>
+                        form.setValue("isBestseller", checked as boolean)
+                      }
+                      className="border-primary/30 data-[state=checked]:bg-primary data-[state=checked]:border-primary"
+                    />
+                    <Label
+                      htmlFor="isBestseller"
+                      className="text-sm font-medium"
+                    >
+                      Bestseller
+                    </Label>
+                  </div>
+
+                  <div className="flex items-center space-x-2">
+                    <Checkbox
+                      id="isNewArrival"
+                      checked={form.watch("isNewArrival")}
+                      onCheckedChange={(checked) =>
+                        form.setValue("isNewArrival", checked as boolean)
+                      }
+                      className="border-primary/30 data-[state=checked]:bg-primary data-[state=checked]:border-primary"
+                    />
+                    <Label
+                      htmlFor="isNewArrival"
+                      className="text-sm font-medium"
+                    >
+                      New Arrival
+                    </Label>
+                  </div>
+
+                  <div className="flex items-center space-x-2">
+                    <Checkbox
+                      id="isOnSale"
+                      checked={form.watch("isOnSale")}
+                      onCheckedChange={(checked) =>
+                        form.setValue("isOnSale", checked as boolean)
+                      }
+                      className="border-primary/30 data-[state=checked]:bg-primary data-[state=checked]:border-primary"
+                    />
+                    <Label htmlFor="isOnSale" className="text-sm font-medium">
+                      On Sale
+                    </Label>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Category & Brand Selection */}
+            <Card className="border-border/40 shadow-sm">
+              <CardHeader className="bg-primary/5">
+                <CardTitle>Category & Brand</CardTitle>
+                <CardDescription>
+                  Select the category and brand for your product
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="pt-6">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <FormField
                     control={form.control}
-                    name="price"
+                    name="categoryId"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel>Price ($)</FormLabel>
-                        <FormControl>
-                          <Input
-                            type="number"
-                            step="0.01"
-                            placeholder="0.00"
-                            className="border-primary/20 focus-visible:ring-primary"
-                            {...field}
-                          />
-                        </FormControl>
+                        <FormLabel>Category *</FormLabel>
+                        <Select
+                          onValueChange={(value) =>
+                            field.onChange(parseInt(value))
+                          }
+                          value={field.value?.toString() || ""}
+                        >
+                          <FormControl>
+                            <SelectTrigger className="border-primary/20 focus-visible:ring-primary">
+                              <SelectValue placeholder="Select Category" />
+                            </SelectTrigger>
+                          </FormControl>
+                          <SelectContent>
+                            {categories?.map((category) => (
+                              <SelectItem
+                                key={category.categoryId}
+                                value={category.categoryId.toString()}
+                              >
+                                {category.name}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
                         <FormMessage />
                       </FormItem>
                     )}
@@ -578,57 +1142,65 @@ export default function CreateProductPage() {
 
                   <FormField
                     control={form.control}
-                    name="stock"
+                    name="brandId"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel>Stock</FormLabel>
+                        <FormLabel>Brand</FormLabel>
                         <FormControl>
                           <Input
-                            type="number"
-                            placeholder="0"
-                            className="border-primary/20 focus-visible:ring-primary"
+                            placeholder="Brand ID (UUID)"
                             {...field}
+                            className="border-primary/20 focus-visible:ring-primary"
                           />
                         </FormControl>
                         <FormMessage />
-                        {stockWarning && (
-                          <Alert variant="destructive" className="mt-2">
-                            <AlertDescription>{stockWarning}</AlertDescription>
-                          </Alert>
-                        )}
-                      </FormItem>
-                    )}
-                  />
-
-                  <FormField
-                    control={form.control}
-                    name="popular"
-                    render={({ field }) => (
-                      <FormItem className="flex items-center space-x-2 space-y-0 pt-8">
-                        <FormControl>
-                          <Checkbox
-                            checked={field.value}
-                            onCheckedChange={field.onChange}
-                            className="data-[state=checked]:bg-primary data-[state=checked]:border-primary"
-                          />
-                        </FormControl>
-                        <div className="space-y-1">
-                          <FormLabel>Mark as Popular</FormLabel>
-                          <FormDescription>
-                            Featured in trending sections
-                          </FormDescription>
-                        </div>
                       </FormItem>
                     )}
                   />
                 </div>
+
+                {/* Selected category badge */}
+                {form.watch("categoryId") && categories && (
+                  <div className="flex items-center gap-2 mt-4">
+                    <Badge
+                      variant="secondary"
+                      className="pl-2 pr-1 py-1 flex items-center gap-1"
+                    >
+                      {
+                        categories.find(
+                          (c) =>
+                            c.categoryId ===
+                            form.watch("categoryId")?.toString()
+                        )?.name
+                      }
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="icon"
+                        className="h-4 w-4 rounded-full"
+                        onClick={() => form.setValue("categoryId", 0)}
+                      >
+                        <X className="w-3 h-3" />
+                      </Button>
+                    </Badge>
+                  </div>
+                )}
+
+                {!form.watch("categoryId") && (
+                  <p className="text-sm text-destructive">
+                    Please select a category
+                  </p>
+                )}
               </CardContent>
             </Card>
-            {/* Images */}
+
+            {/* Product Images */}
             <Card className="border-border/40 shadow-sm">
               <CardHeader className="bg-primary/5">
                 <CardTitle>Product Images</CardTitle>
-                <CardDescription>Upload up to 5 product images</CardDescription>
+                <CardDescription>
+                  Upload up to 10 product images
+                </CardDescription>
               </CardHeader>
               <CardContent className="pt-6">
                 <div className="space-y-6">
@@ -641,23 +1213,23 @@ export default function CreateProductPage() {
                           or drag and drop
                         </p>
                         <p className="text-xs text-muted-foreground">
-                          PNG, JPG, JPEG (MAX. 5 files)
+                          PNG, JPG, JPEG (MAX. 10 files)
                         </p>
                       </div>
                       <input
                         type="file"
                         multiple
                         accept="image/*"
-                        onChange={handleImageUpload}
+                        onChange={handleMainImageUpload}
                         className="hidden"
-                        disabled={images.length >= 5}
+                        disabled={mainImages.length >= 10}
                       />
                     </label>
                   </div>
 
-                  {imageUrls.length > 0 && (
+                  {mainImageUrls.length > 0 && (
                     <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3">
-                      {imageUrls.map((url, index) => (
+                      {mainImageUrls.map((url, index) => (
                         <div key={index} className="relative group">
                           <div className="aspect-square w-full h-24 overflow-hidden bg-muted rounded-md border border-border/40">
                             <img
@@ -671,7 +1243,7 @@ export default function CreateProductPage() {
                             variant="destructive"
                             size="icon"
                             className="absolute -top-2 -right-2 h-6 w-6 rounded-full opacity-90 hover:opacity-100 shadow-sm"
-                            onClick={() => removeImage(index)}
+                            onClick={() => removeMainImage(index)}
                           >
                             <X className="w-3 h-3" />
                           </Button>
@@ -682,6 +1254,375 @@ export default function CreateProductPage() {
                 </div>
               </CardContent>
             </Card>
+
+            {/* Product Videos */}
+            <Card className="border-border/40 shadow-sm">
+              <CardHeader className="bg-primary/5">
+                <CardTitle>Product Videos</CardTitle>
+                <CardDescription>Upload up to 5 product videos</CardDescription>
+              </CardHeader>
+              <CardContent className="pt-6">
+                <div className="space-y-6">
+                  <div className="flex items-center justify-center w-full">
+                    <label className="flex flex-col items-center justify-center w-full h-28 border-2 border-dashed border-border rounded-lg cursor-pointer hover:bg-muted/50 transition">
+                      <div className="flex flex-col items-center justify-center pt-4 pb-4">
+                        <Upload className="w-7 h-7 mb-2 text-primary" />
+                        <p className="text-sm text-foreground">
+                          <span className="font-semibold">Click to upload</span>{" "}
+                          or drag and drop
+                        </p>
+                        <p className="text-xs text-muted-foreground">
+                          MP4, WebM, Ogg (MAX. 5 files)
+                        </p>
+                      </div>
+                      <input
+                        type="file"
+                        multiple
+                        accept="video/*"
+                        onChange={handleVideoUpload}
+                        className="hidden"
+                        disabled={productVideos.length >= 5}
+                      />
+                    </label>
+                  </div>
+
+                  {videoUrls.length > 0 && (
+                    <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3">
+                      {videoUrls.map((url, index) => (
+                        <div key={index} className="relative group">
+                          <div className="aspect-square w-full h-24 overflow-hidden bg-muted rounded-md border border-border/40">
+                            <video
+                              src={url}
+                              className="w-full h-full object-contain p-1"
+                              controls
+                            />
+                          </div>
+                          <Button
+                            type="button"
+                            variant="destructive"
+                            size="icon"
+                            className="absolute -top-2 -right-2 h-6 w-6 rounded-full opacity-90 hover:opacity-100 shadow-sm"
+                            onClick={() => removeVideo(index)}
+                          >
+                            <X className="w-3 h-3" />
+                          </Button>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Attributes */}
+            <Card className="border-border/40 shadow-sm">
+              <CardHeader className="bg-primary/5">
+                <CardTitle>Product Attributes</CardTitle>
+                <CardDescription>
+                  Add attributes and their values for product variants
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="pt-6">
+                <div className="space-y-4">
+                  {attributes.map((attribute, index) => (
+                    <div
+                      key={index}
+                      className="p-4 border border-border/30 rounded-md"
+                    >
+                      <div className="flex flex-col sm:flex-row sm:items-end gap-4 mb-4">
+                        <div className="w-full sm:w-1/3 max-w-[200px]">
+                          <Label className="mb-2 block">Attribute Name</Label>
+                          <Input
+                            placeholder="e.g., Color, Size"
+                            value={attribute.name}
+                            onChange={(e) =>
+                              updateAttribute(index, "name", e.target.value)
+                            }
+                            className="border-primary/20 focus-visible:ring-primary"
+                          />
+                        </div>
+                        <div className="w-full sm:w-1/3 max-w-[200px]">
+                          <Label className="mb-2 block">Required</Label>
+                          <Select
+                            value={attribute.required ? "true" : "false"}
+                            onValueChange={(value) =>
+                              updateAttribute(
+                                index,
+                                "required",
+                                value === "true"
+                              )
+                            }
+                          >
+                            <SelectTrigger className="border-primary/20 focus-visible:ring-primary">
+                              <SelectValue placeholder="Select" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="true">Yes</SelectItem>
+                              <SelectItem value="false">No</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        </div>
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="icon"
+                          onClick={() => removeAttribute(index)}
+                          className="h-10 w-10 border-destructive/30 text-destructive hover:bg-destructive/10 hover:text-destructive"
+                        >
+                          <X className="w-4 h-4" />
+                        </Button>
+                      </div>
+
+                      {/* Attribute Values */}
+                      <div className="mb-4">
+                        <Label className="mb-2 block">Attribute Values</Label>
+                        <div className="flex flex-wrap gap-2 mb-2">
+                          {attribute.values.map((value, valueIndex) => (
+                            <Badge
+                              key={valueIndex}
+                              variant="secondary"
+                              className="pl-2 pr-1 py-1 flex items-center gap-1"
+                            >
+                              {value}
+                              <Button
+                                type="button"
+                                variant="ghost"
+                                size="icon"
+                                className="h-4 w-4 rounded-full"
+                                onClick={() =>
+                                  removeAttributeValue(index, valueIndex)
+                                }
+                              >
+                                <X className="w-3 h-3" />
+                              </Button>
+                            </Badge>
+                          ))}
+                        </div>
+                        <div className="flex gap-2">
+                          <Input
+                            placeholder={`Add value for ${
+                              attribute.name || "attribute"
+                            }`}
+                            className="flex-1 border-primary/20 focus-visible:ring-primary"
+                            onKeyPress={(e) => {
+                              if (e.key === "Enter") {
+                                e.preventDefault();
+                                const input = e.target as HTMLInputElement;
+                                if (input.value.trim()) {
+                                  addAttributeValue(index, input.value.trim());
+                                  input.value = "";
+                                }
+                              }
+                            }}
+                          />
+                          <Button
+                            type="button"
+                            variant="outline"
+                            size="sm"
+                            onClick={() => {
+                              const input = document.querySelector(
+                                `input[placeholder*="${attribute.name}"]`
+                              ) as HTMLInputElement;
+                              if (input && input.value.trim()) {
+                                addAttributeValue(index, input.value.trim());
+                                input.value = "";
+                              }
+                            }}
+                            className="border-primary/20 hover:bg-primary/5 hover:text-primary"
+                          >
+                            <Plus className="w-4 h-4" />
+                          </Button>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={addAttribute}
+                    className="w-full mt-2 border-primary/20 hover:bg-primary/5 hover:text-primary"
+                  >
+                    <Plus className="w-4 h-4 mr-2" />
+                    Add Attribute
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Variants */}
+            <Card className="border-border/40 shadow-sm">
+              <CardHeader className="bg-primary/5">
+                <CardTitle>Product Variants</CardTitle>
+                <CardDescription>
+                  Define different combinations of attributes and their prices
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="pt-6">
+                <div className="space-y-4">
+                  {variants.length === 0 && (
+                    <p className="text-muted-foreground">
+                      No variants defined. Click "Generate Variants" to create
+                      combinations.
+                    </p>
+                  )}
+                  {variants.map((variant, index) => (
+                    <div
+                      key={index}
+                      className="p-4 border border-border/30 rounded-md"
+                    >
+                      <div className="flex flex-col sm:flex-row sm:items-end gap-4 mb-4">
+                        <div className="w-full sm:w-1/4 max-w-[200px]">
+                          <Label className="mb-2 block">Variant SKU</Label>
+                          <Input
+                            placeholder="e.g., RED-L, BLUE-M"
+                            value={variant.variantSku}
+                            onChange={(e) =>
+                              updateVariant(index, "variantSku", e.target.value)
+                            }
+                            className="border-primary/20 focus-visible:ring-primary"
+                          />
+                        </div>
+                        <div className="w-full sm:w-1/4 max-w-[200px]">
+                          <Label className="mb-2 block">Price ($)</Label>
+                          <Input
+                            type="number"
+                            step="0.01"
+                            placeholder="0.00"
+                            value={variant.price}
+                            onChange={(e) =>
+                              updateVariant(
+                                index,
+                                "price",
+                                parseFloat(e.target.value) || 0
+                              )
+                            }
+                            className="border-primary/20 focus-visible:ring-primary"
+                          />
+                        </div>
+                        <div className="w-full sm:w-1/4 max-w-[200px]">
+                          <Label className="mb-2 block">Stock</Label>
+                          <Input
+                            type="number"
+                            placeholder="0"
+                            value={variant.stockQuantity}
+                            onChange={(e) =>
+                              updateVariant(
+                                index,
+                                "stockQuantity",
+                                parseInt(e.target.value) || 0
+                              )
+                            }
+                            className="border-primary/20 focus-visible:ring-primary"
+                          />
+                        </div>
+                        <div className="w-full sm:w-1/4 max-w-[200px]">
+                          <Label className="mb-2 block">
+                            Low Stock Threshold
+                          </Label>
+                          <Input
+                            type="number"
+                            placeholder="0"
+                            value={variant.lowStockThreshold}
+                            onChange={(e) =>
+                              updateVariant(
+                                index,
+                                "lowStockThreshold",
+                                parseInt(e.target.value) || 0
+                              )
+                            }
+                            className="border-primary/20 focus-visible:ring-primary"
+                          />
+                        </div>
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="icon"
+                          onClick={() => removeVariant(index)}
+                          className="h-10 w-10 border-destructive/30 text-destructive hover:bg-destructive/10 hover:text-destructive"
+                        >
+                          <X className="w-4 h-4" />
+                        </Button>
+                      </div>
+
+                      {/* Variant Attributes Display */}
+                      {Object.keys(variant.attributes).length > 0 && (
+                        <div className="mb-4 p-3 bg-muted/30 rounded-md">
+                          <Label className="mb-2 block text-sm font-medium">
+                            Variant Attributes
+                          </Label>
+                          <div className="flex flex-wrap gap-2">
+                            {Object.entries(variant.attributes).map(
+                              ([key, value]) => (
+                                <Badge
+                                  key={key}
+                                  variant="outline"
+                                  className="text-xs"
+                                >
+                                  {key}: {value}
+                                </Badge>
+                              )
+                            )}
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Variant Images */}
+                      <div className="mb-4">
+                        <Label className="mb-2 block">Variant Images</Label>
+                        <div className="flex items-center justify-center w-full">
+                          <label className="flex flex-col items-center justify-center w-full h-20 border-2 border-dashed border-border rounded-lg cursor-pointer hover:bg-muted/50 transition">
+                            <div className="flex flex-col items-center justify-center">
+                              <Upload className="w-5 h-5 mb-1 text-primary" />
+                              <p className="text-xs text-foreground">
+                                <span className="font-semibold">
+                                  Click to upload
+                                </span>{" "}
+                                variant images
+                              </p>
+                            </div>
+                            <input
+                              type="file"
+                              multiple
+                              accept="image/*"
+                              onChange={(e) => {
+                                if (e.target.files) {
+                                  const files = Array.from(e.target.files);
+                                  updateVariant(index, "images", files);
+                                }
+                              }}
+                              className="hidden"
+                            />
+                          </label>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+
+                  <div className="flex gap-2">
+                    <Button
+                      type="button"
+                      variant="outline"
+                      onClick={generateVariants}
+                      className="flex-1 border-primary/20 hover:bg-primary/5 hover:text-primary"
+                    >
+                      <Plus className="w-4 h-4 mr-2" />
+                      Generate Variants
+                    </Button>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      onClick={clearVariants}
+                      className="border-destructive/20 hover:bg-destructive/10 hover:text-destructive"
+                    >
+                      <Minus className="w-4 h-4 mr-2" />
+                      Clear Variants
+                    </Button>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+
             {/* Colors */}
             <Card className="border-border/40 shadow-sm">
               <CardHeader className="bg-primary/5">
@@ -694,6 +1635,7 @@ export default function CreateProductPage() {
                 <ColorPicker colors={colors} onChange={setColors} />
               </CardContent>
             </Card>
+
             {/* Sizes */}
             <Card className="border-border/40 shadow-sm">
               <CardHeader className="bg-primary/5">
@@ -775,133 +1717,288 @@ export default function CreateProductPage() {
                 </div>
               </CardContent>
             </Card>
-            {/* Categories */}
+
+            {/* Product Details */}
             <Card className="border-border/40 shadow-sm">
               <CardHeader className="bg-primary/5">
-                <CardTitle>Categories</CardTitle>
+                <CardTitle>Product Details</CardTitle>
                 <CardDescription>
-                  Select categories for this product (at least one required)
+                  Additional product specifications and details
                 </CardDescription>
               </CardHeader>
               <CardContent className="pt-6">
-                <div className="space-y-6">
-                  {categoriesLoading ? (
-                    <div className="flex justify-center p-4">
-                      <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-primary"></div>
-                    </div>
-                  ) : (
-                    <div className="grid grid-cols-2 md:grid-cols-4 gap-x-6 gap-y-4">
-                      {categories?.map((category) => (
-                        <div
-                          key={category.categoryId}
-                          className="flex items-center space-x-2"
-                        >
-                          <Checkbox
-                            id={`category-${category.categoryId}`}
-                            checked={categoryIds?.includes(category.categoryId)}
-                            onCheckedChange={(checked) => {
-                              const currentCategories =
-                                form.getValues("categoryIds") || [];
-                              if (checked) {
-                                form.setValue(
-                                  "categoryIds",
-                                  [...currentCategories, category.categoryId],
-                                  { shouldValidate: true }
-                                );
-                              } else {
-                                form.setValue(
-                                  "categoryIds",
-                                  currentCategories.filter(
-                                    (id) => id !== category.categoryId
-                                  ),
-                                  { shouldValidate: true }
-                                );
-                              }
-                            }}
-                            className="data-[state=checked]:bg-primary data-[state=checked]:border-primary"
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <FormField
+                    control={form.control}
+                    name="dimensions"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Dimensions (cm)</FormLabel>
+                        <FormControl>
+                          <Input
+                            placeholder="e.g., 5.4 x 4.5 x 2.1"
+                            {...field}
+                            className="border-primary/20 focus-visible:ring-primary"
                           />
-                          <Label
-                            htmlFor={`category-${category.categoryId}`}
-                            className="text-sm cursor-pointer"
-                          >
-                            {category.name}
-                          </Label>
-                        </div>
-                      ))}
-                    </div>
-                  )}
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
 
-                  {/* Selected categories badges */}
-                  {categoryIds?.length > 0 && categories && (
-                    <div className="flex flex-wrap gap-2 mt-4">
-                      {categoryIds.map((id) => {
-                        const category = categories.find(
-                          (c) => c.categoryId === id
-                        );
-                        return category ? (
-                          <Badge
-                            key={id}
-                            variant="secondary"
-                            className="pl-2 pr-1 py-1 flex items-center gap-1"
-                          >
-                            {category.name}
-                            <Button
-                              type="button"
-                              variant="ghost"
-                              size="icon"
-                              className="h-4 w-4 rounded-full"
-                              onClick={() => {
-                                const currentCategories =
-                                  form.getValues("categoryIds");
-                                form.setValue(
-                                  "categoryIds",
-                                  currentCategories.filter((cid) => cid !== id),
-                                  { shouldValidate: true }
-                                );
-                              }}
-                            >
-                              <X className="w-3 h-3" />
-                            </Button>
-                          </Badge>
-                        ) : null;
-                      })}
-                    </div>
-                  )}
+                  <FormField
+                    control={form.control}
+                    name="weight"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Weight (kg)</FormLabel>
+                        <FormControl>
+                          <Input
+                            type="number"
+                            step="0.001"
+                            placeholder="0.056"
+                            {...field}
+                            className="border-primary/20 focus-visible:ring-primary"
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
 
-                  {categoryIds?.length === 0 && (
-                    <p className="text-sm text-destructive">
-                      At least one category must be selected
-                    </p>
+                  <FormField
+                    control={form.control}
+                    name="material"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Material</FormLabel>
+                        <FormControl>
+                          <Input
+                            placeholder="e.g., Plastic, Silicone"
+                            {...field}
+                            className="border-primary/20 focus-visible:ring-primary"
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+
+                  <FormField
+                    control={form.control}
+                    name="warranty"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Warranty</FormLabel>
+                        <FormControl>
+                          <Input
+                            placeholder="e.g., 1 year limited warranty"
+                            {...field}
+                            className="border-primary/20 focus-visible:ring-primary"
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                </div>
+
+                <FormField
+                  control={form.control}
+                  name="careInstructions"
+                  render={({ field }) => (
+                    <FormItem className="mt-4">
+                      <FormLabel>Care Instructions</FormLabel>
+                      <FormControl>
+                        <Textarea
+                          placeholder="Product care and maintenance instructions..."
+                          className="min-h-[100px] border-primary/20 focus-visible:ring-primary"
+                          {...field}
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
                   )}
+                />
+              </CardContent>
+            </Card>
+
+            {/* SEO & Meta Information */}
+            <Card className="border-border/40 shadow-sm">
+              <CardHeader className="bg-primary/5">
+                <CardTitle>SEO & Meta Information</CardTitle>
+                <CardDescription>
+                  Search engine optimization and meta data
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="pt-6">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <FormField
+                    control={form.control}
+                    name="metaTitle"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Meta Title</FormLabel>
+                        <FormControl>
+                          <Input
+                            placeholder="SEO title for search engines"
+                            {...field}
+                            className="border-primary/20 focus-visible:ring-primary"
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+
+                  <FormField
+                    control={form.control}
+                    name="metaDescription"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Meta Description</FormLabel>
+                        <FormControl>
+                          <Input
+                            placeholder="SEO description for search engines"
+                            {...field}
+                            className="border-primary/20 focus-visible:ring-primary"
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+
+                  <FormField
+                    control={form.control}
+                    name="metaKeywords"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Meta Keywords</FormLabel>
+                        <FormControl>
+                          <Input
+                            placeholder="Comma-separated keywords"
+                            {...field}
+                            className="border-primary/20 focus-visible:ring-primary"
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+
+                  <FormField
+                    control={form.control}
+                    name="searchKeywords"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Search Keywords</FormLabel>
+                        <FormControl>
+                          <Input
+                            placeholder="Internal search keywords"
+                            {...field}
+                            className="border-primary/20 focus-visible:ring-primary"
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
                 </div>
               </CardContent>
             </Card>
+
             {/* Submit Button */}
             <div className="flex flex-col sm:flex-row justify-end gap-4 bottom-6 bg-background py-4 border-t border-border/30 mt-8">
-              {" "}
-              {/* Made sticky to always be accessible */}
               <Button
                 type="button"
                 variant="outline"
                 onClick={() => router.push("/dashboard/products")}
-                className="border-primary/20 hover:bg-primary/5 hover:text-primary"
+                className="border-border/30 hover:bg-muted/50"
               >
+                <ArrowLeft className="w-4 h-4 mr-2" />
                 Cancel
               </Button>
+
               <Button
                 type="submit"
-                disabled={categoryIds?.length === 0 || isSubmitting}
+                disabled={!form.watch("categoryId") || isSubmitting}
                 className="bg-primary hover:bg-primary/90"
                 onClick={() => {
                   console.log("Submit button clicked");
-                  if (!isSubmitting && categoryIds?.length > 0) {
+                  if (!isSubmitting && form.watch("categoryId")) {
                     form.handleSubmit(onSubmit)();
                   }
                 }}
               >
-                {isSubmitting ? "Creating..." : "Create Product"}
+                {isSubmitting ? (
+                  <>
+                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                    Creating...
+                  </>
+                ) : (
+                  <>
+                    <Plus className="w-4 h-4 mr-2" />
+                    Create Product
+                  </>
+                )}
               </Button>
             </div>
+
+            {/* Success Modal */}
+            <Dialog open={showSuccessModal} onOpenChange={setShowSuccessModal}>
+              <DialogContent className="sm:max-w-md">
+                <DialogHeader>
+                  <DialogTitle className="flex items-center gap-2">
+                    <div className="w-8 h-8 bg-green-100 rounded-full flex items-center justify-center">
+                      <div className="w-4 h-4 bg-green-600 rounded-full"></div>
+                    </div>
+                    Product Created Successfully!
+                  </DialogTitle>
+                  <DialogDescription>
+                    Your product has been created and is now available in your
+                    inventory.
+                  </DialogDescription>
+                </DialogHeader>
+                <div className="space-y-4">
+                  <div className="flex items-center space-x-2">
+                    <Checkbox
+                      id="dontShowAgain"
+                      checked={dontShowAgain}
+                      onCheckedChange={(checked) =>
+                        setDontShowAgain(checked as boolean)
+                      }
+                    />
+                    <Label htmlFor="dontShowAgain" className="text-sm">
+                      Don't show this message again
+                    </Label>
+                  </div>
+                </div>
+                <DialogFooter className="flex flex-col sm:flex-row gap-2">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={() => {
+                      setShowSuccessModal(false);
+                      router.push("/dashboard/products");
+                    }}
+                    className="w-full sm:w-auto"
+                  >
+                    View All Products
+                  </Button>
+                  <Button
+                    type="button"
+                    onClick={() => {
+                      setShowSuccessModal(false);
+                      // Form is already reset, so we can stay on the page
+                    }}
+                    className="w-full sm:w-auto"
+                  >
+                    Create Another Product
+                  </Button>
+                </DialogFooter>
+              </DialogContent>
+            </Dialog>
           </form>
         </Form>
       </div>

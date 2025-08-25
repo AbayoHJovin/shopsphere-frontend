@@ -1,35 +1,76 @@
-// Response types - matching Java DTOs
+// Response types - matching Java DTOs exactly
 export interface CategoryResponse {
-  categoryId: string;
+  id: number;
   name: string;
   description: string | null;
-  parentId: string | null;
+  imageUrl: string | null;
+  slug: string | null;
+  parentId: number | null;
   parentName: string | null;
-  hasSubcategories: boolean;
-  subcategoryCount: number;
-  productCount: number;
+  sortOrder: number;
+  isActive: boolean;
+  isFeatured: boolean;
+  metaTitle: string | null;
+  metaDescription: string | null;
+  metaKeywords: string | null;
+  createdAt: string | null;
+  updatedAt: string | null;
+  children: CategoryResponse[];
+  level: number;
 }
 
-export interface CategorySummaryResponse {
-  categoryId: string;
-  name: string;
-  productCount: number;
-  hasSubcategories: boolean;
-  totalSold: number;
-  percentageOfTotalSales: number;
-}
-
-// Request types - matching Java DTOs
+// Request types - matching Java DTOs exactly
 export interface CategoryCreateRequest {
   name: string;
   description?: string;
-  parentId?: string | null;
+  imageUrl?: string;
+  slug?: string;
+  parentId?: number | null;
+  sortOrder?: number;
+  isActive?: boolean;
+  isFeatured?: boolean;
+  metaTitle?: string;
+  metaDescription?: string;
+  metaKeywords?: string;
 }
 
 export interface CategoryUpdateRequest {
-  name: string;
+  name?: string;
   description?: string;
-  parentId?: string | null;
+  imageUrl?: string;
+  slug?: string;
+  parentId?: number | null;
+  sortOrder?: number;
+  isActive?: boolean;
+  isFeatured?: boolean;
+  metaTitle?: string;
+  metaDescription?: string;
+  metaKeywords?: string;
+}
+
+// Search DTO - matching backend CategorySearchDTO
+export interface CategorySearchDTO {
+  name?: string;
+  description?: string;
+  isActive?: boolean;
+  isFeatured?: boolean;
+  slug?: string;
+  page?: number;
+  size?: number;
+  sortBy?: string;
+  sortDir?: string;
+}
+
+// Pagination response - matching Spring Data Page
+export interface CategoryPageResponse {
+  content: CategoryResponse[];
+  totalElements: number;
+  totalPages: number;
+  size: number;
+  number: number;
+  first: boolean;
+  last: boolean;
+  numberOfElements: number;
 }
 
 // Type for pagination params
@@ -37,4 +78,6 @@ export interface CategoryPaginationParams {
   page: number;
   size: number;
   search?: string;
-} 
+  sortBy?: string;
+  sortDir?: string;
+}

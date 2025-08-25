@@ -1,9 +1,9 @@
-'use client';
+"use client";
 
-import { useEffect } from 'react';
-import { useRouter, usePathname } from 'next/navigation';
-import { useAppSelector } from '@/lib/redux/hooks';
-import { UserRole } from '@/lib/constants';
+import { useEffect } from "react";
+import { useRouter, usePathname } from "next/navigation";
+import { useAppSelector } from "@/lib/redux/hooks";
+import { UserRole } from "@/lib/constants";
 
 interface ProtectedRouteProps {
   children: React.ReactNode;
@@ -15,11 +15,13 @@ interface ProtectedRouteProps {
  * Redirects to login page if user is not authenticated
  * Can also check for specific roles
  */
-export default function ProtectedRoute({ 
-  children, 
-  allowedRoles = [UserRole.ADMIN, UserRole.CO_WORKER] 
+export default function ProtectedRoute({
+  children,
+  allowedRoles = [UserRole.ADMIN, UserRole.EMPLOYEE],
 }: ProtectedRouteProps) {
-  const { isAuthenticated, user, checkingAuth } = useAppSelector(state => state.auth);
+  const { isAuthenticated, user, checkingAuth } = useAppSelector(
+    (state) => state.auth
+  );
   const router = useRouter();
   const pathname = usePathname();
 
@@ -28,7 +30,7 @@ export default function ProtectedRoute({
     if (checkingAuth) {
       return;
     }
-    
+
     // Check if user is authenticated
     if (!isAuthenticated) {
       router.push(`/auth?returnUrl=${encodeURIComponent(pathname)}`);
@@ -37,7 +39,7 @@ export default function ProtectedRoute({
 
     // Check if user has required role
     if (user && allowedRoles.length > 0 && !allowedRoles.includes(user.role)) {
-      router.push('/dashboard'); // Redirect to dashboard as fallback
+      router.push("/dashboard"); // Redirect to dashboard as fallback
     }
   }, [isAuthenticated, user, allowedRoles, router, pathname, checkingAuth]);
 
@@ -56,4 +58,4 @@ export default function ProtectedRoute({
 
   // Return null while redirecting
   return null;
-} 
+}

@@ -1,150 +1,82 @@
 "use client";
 
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import {
-  Area,
-  AreaChart,
-  ResponsiveContainer,
-  Tooltip,
-  XAxis,
-  YAxis,
-} from "recharts";
-import { AdminDashboardResponse, CoWorkerDashboardResponse, DashboardResponse } from "@/lib/types/dashboard";
-import { dashboardService } from "@/lib/services/dashboard-service";
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import { DashboardResponseDTO } from "@/lib/types/dashboard";
 import { formatCurrency } from "@/lib/utils";
-import { Info } from "lucide-react";
+import { Info, TrendingUp, TrendingDown } from "lucide-react";
 
 interface RevenueChartProps {
-  data: DashboardResponse | undefined;
+  data: DashboardResponseDTO | undefined;
   isAdmin: boolean;
 }
 
 export function RevenueChart({ data, isAdmin }: RevenueChartProps) {
   // If no data or not admin, don't render this component
   if (!data || !isAdmin) return null;
-  
-  const adminData = data as AdminDashboardResponse;
-  
-  // Extract revenue data directly from API response
-  const chartData = adminData.revenueByMonth || [];
-  
-  // Check if we have any non-zero data
-  const hasData = chartData.some(item => Number(item.revenue) > 0);
-  
-  // If no data available, show empty state
-  if (!hasData || chartData.length === 0) {
+
+  // Check if user has access to revenue data
+  const hasRevenueAccess = data.totalRevenue !== null;
+
+  if (!hasRevenueAccess) {
     return (
       <Card className="col-span-4 lg:col-span-5">
         <CardHeader className="border-b border-border/50 bg-primary/5">
-          <CardTitle className="text-primary">Revenue Trend</CardTitle>
-          <CardDescription>No revenue data available</CardDescription>
+          <CardTitle className="text-primary">Revenue Overview</CardTitle>
+          <CardDescription>Revenue data not available</CardDescription>
         </CardHeader>
         <CardContent className="pt-6 flex items-center justify-center min-h-[300px]">
           <div className="text-center text-muted-foreground">
             <div className="flex justify-center mb-2">
               <Info className="h-6 w-6" />
             </div>
-            <p>No revenue has been recorded yet.</p>
-            <p className="mt-1 text-sm">Revenue chart will appear once orders are completed.</p>
+            <p>Revenue data is not available for your role.</p>
+            <p className="mt-1 text-sm">Contact an administrator for access.</p>
           </div>
         </CardContent>
       </Card>
     );
   }
 
-  const formatTooltipCurrency = (value: number) => {
-    return formatCurrency(value);
-  };
-
-  // Calculate appropriate Y-axis format based on revenue amounts
-  const maxRevenue = Math.max(...chartData.map(item => Number(item.revenue || 0)));
-  const tickFormatter = (value: number) => {
-    if (maxRevenue >= 1000000) {
-      return `$${value / 1000000}M`;
-    } else if (maxRevenue >= 1000) {
-      return `$${value / 1000}k`;
-    } else {
-      return `$${value}`;
-    }
-  };
-
   return (
     <Card className="col-span-4 lg:col-span-5">
       <CardHeader className="border-b border-border/50 bg-primary/5">
-        <CardTitle className="text-primary">Revenue Trend</CardTitle>
-        <CardDescription>
-          {adminData.revenueThisMonth > 0 
-            ? `Current month: ${formatCurrency(adminData.revenueThisMonth)}`
-            : 'Monthly revenue overview'
-          }
-        </CardDescription>
+        <CardTitle className="text-primary">Revenue Overview</CardTitle>
+        <CardDescription>Total revenue summary</CardDescription>
       </CardHeader>
-      <CardContent className="p-0 pt-6">
-        <div className="h-[350px] w-full">
-          <ResponsiveContainer width="100%" height="100%">
-            <AreaChart
-              data={chartData.map(item => ({
-                month: item.month,
-                revenue: Number(item.revenue || 0)
-              }))}
-              margin={{
-                top: 20,
-                right: 30,
-                left: 20,
-                bottom: 20,
-              }}
-            >
-              <defs>
-                <linearGradient id="colorRevenue" x1="0" y1="0" x2="0" y2="1">
-                  <stop
-                    offset="5%"
-                    stopColor="hsl(var(--primary))"
-                    stopOpacity={0.3}
-                  />
-                  <stop
-                    offset="95%"
-                    stopColor="hsl(var(--primary))"
-                    stopOpacity={0}
-                  />
-                </linearGradient>
-              </defs>
-              <XAxis
-                dataKey="month"
-                stroke="hsl(var(--muted-foreground))"
-                fontSize={12}
-                tickLine={false}
-                axisLine={false}
-              />
-              <YAxis
-                stroke="hsl(var(--muted-foreground))"
-                fontSize={12}
-                tickLine={false}
-                axisLine={false}
-                tickFormatter={tickFormatter}
-              />
-              <Tooltip
-                formatter={(value: number) => formatTooltipCurrency(value)}
-                labelFormatter={(label) => `Month: ${label}`}
-                contentStyle={{
-                  backgroundColor: "hsl(var(--card))",
-                  border: "1px solid hsl(var(--border))",
-                  borderRadius: "var(--radius)",
-                  boxShadow: "0 1px 3px rgba(0, 0, 0, 0.1)",
-                }}
-              />
-              <Area
-                type="monotone"
-                dataKey="revenue"
-                stroke="hsl(var(--primary))"
-                strokeWidth={2}
-                fillOpacity={1}
-                fill="url(#colorRevenue)"
-                activeDot={{ r: 6, fill: "hsl(var(--primary))", stroke: "white", strokeWidth: 2 }}
-              />
-            </AreaChart>
-          </ResponsiveContainer>
+      <CardContent className="pt-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <div className="text-center">
+            <div className="text-3xl font-bold text-primary mb-2">
+              {formatCurrency(data.totalRevenue || 0)}
+            </div>
+            <p className="text-sm text-muted-foreground">Total Revenue</p>
+          </div>
+
+          <div className="text-center">
+            <div className="text-3xl font-bold text-green-600 mb-2">
+              {data.totalOrders || 0}
+            </div>
+            <p className="text-sm text-muted-foreground">Total Orders</p>
+          </div>
+        </div>
+
+        <div className="mt-6 p-4 bg-muted/50 rounded-lg">
+          <div className="flex items-center justify-between">
+            <span className="text-sm font-medium">Revenue per Order</span>
+            <span className="text-lg font-semibold">
+              {data.totalOrders > 0
+                ? formatCurrency((data.totalRevenue || 0) / data.totalOrders)
+                : formatCurrency(0)}
+            </span>
+          </div>
         </div>
       </CardContent>
     </Card>
   );
-} 
+}

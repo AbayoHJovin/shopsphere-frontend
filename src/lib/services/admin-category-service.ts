@@ -1,17 +1,26 @@
-import axios from "axios";
+import apiClient from "../api-client";
 import { handleApiError } from "../utils/error-handler";
-import { CategoryResponse, CategoryCreateRequest, CategoryUpdateRequest, CategorySummaryResponse } from "../types/category";
-
-const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8080/api";
+import {
+  CategoryResponse,
+  CategoryCreateRequest,
+  CategoryUpdateRequest,
+  CategorySearchDTO,
+  CategoryPageResponse,
+} from "../types/category";
 
 class AdminCategoryService {
   /**
-   * Get all categories
+   * Get all categories with pagination
    */
-  async getAllCategories(): Promise<CategoryResponse[]> {
+  async getAllCategories(
+    page: number = 0,
+    size: number = 10,
+    sortBy: string = "name",
+    sortDir: string = "asc"
+  ): Promise<CategoryPageResponse> {
     try {
-      const response = await axios.get(`${API_URL}/admin/categories`, {
-        withCredentials: true,
+      const response = await apiClient.get(`/categories`, {
+        params: { page, size, sortBy, sortDir },
       });
       return response.data;
     } catch (error) {
@@ -24,9 +33,7 @@ class AdminCategoryService {
    */
   async getTopLevelCategories(): Promise<CategoryResponse[]> {
     try {
-      const response = await axios.get(`${API_URL}/admin/categories/top-level`, {
-        withCredentials: true,
-      });
+      const response = await apiClient.get(`/categories/top-level`);
       return response.data;
     } catch (error) {
       throw handleApiError(error);
@@ -36,11 +43,11 @@ class AdminCategoryService {
   /**
    * Get subcategories of a specific category
    */
-  async getSubcategories(categoryId: string): Promise<CategoryResponse[]> {
+  async getSubcategories(parentId: number): Promise<CategoryResponse[]> {
     try {
-      const response = await axios.get(`${API_URL}/admin/categories/${categoryId}/subcategories`, {
-        withCredentials: true,
-      });
+      const response = await apiClient.get(
+        `/categories/sub-categories/${parentId}`
+      );
       return response.data;
     } catch (error) {
       throw handleApiError(error);
@@ -50,11 +57,9 @@ class AdminCategoryService {
   /**
    * Get category by ID
    */
-  async getCategoryById(categoryId: string): Promise<CategoryResponse> {
+  async getCategoryById(categoryId: number): Promise<CategoryResponse> {
     try {
-      const response = await axios.get(`${API_URL}/admin/categories/${categoryId}`, {
-        withCredentials: true,
-      });
+      const response = await apiClient.get(`/categories/${categoryId}`);
       return response.data;
     } catch (error) {
       throw handleApiError(error);
@@ -62,13 +67,13 @@ class AdminCategoryService {
   }
 
   /**
-   * Get category summaries
+   * Search categories
    */
-  async getCategorySummaries(): Promise<CategorySummaryResponse[]> {
+  async searchCategories(
+    searchDTO: CategorySearchDTO
+  ): Promise<CategoryPageResponse> {
     try {
-      const response = await axios.get(`${API_URL}/admin/categories/summaries`, {
-        withCredentials: true,
-      });
+      const response = await apiClient.post(`/categories/search`, searchDTO);
       return response.data;
     } catch (error) {
       throw handleApiError(error);
@@ -78,11 +83,11 @@ class AdminCategoryService {
   /**
    * Create a new category
    */
-  async createCategory(categoryData: CategoryCreateRequest): Promise<CategoryResponse> {
+  async createCategory(
+    categoryData: CategoryCreateRequest
+  ): Promise<CategoryResponse> {
     try {
-      const response = await axios.post(`${API_URL}/admin/categories`, categoryData, {
-        withCredentials: true,
-      });
+      const response = await apiClient.post(`/categories`, categoryData);
       return response.data;
     } catch (error) {
       throw handleApiError(error);
@@ -92,11 +97,15 @@ class AdminCategoryService {
   /**
    * Update an existing category
    */
-  async updateCategory(categoryId: string, categoryData: CategoryUpdateRequest): Promise<CategoryResponse> {
+  async updateCategory(
+    categoryId: number,
+    categoryData: CategoryUpdateRequest
+  ): Promise<CategoryResponse> {
     try {
-      const response = await axios.put(`${API_URL}/admin/categories/${categoryId}`, categoryData, {
-        withCredentials: true,
-      });
+      const response = await apiClient.put(
+        `/categories/${categoryId}`,
+        categoryData
+      );
       return response.data;
     } catch (error) {
       throw handleApiError(error);
@@ -106,15 +115,13 @@ class AdminCategoryService {
   /**
    * Delete a category
    */
-  async deleteCategory(categoryId: string): Promise<void> {
+  async deleteCategory(categoryId: number): Promise<void> {
     try {
-      await axios.delete(`${API_URL}/admin/categories/${categoryId}`, {
-        withCredentials: true,
-      });
+      await apiClient.delete(`/categories/${categoryId}`);
     } catch (error) {
       throw handleApiError(error);
     }
   }
 }
 
-export const adminCategoryService = new AdminCategoryService(); 
+export const adminCategoryService = new AdminCategoryService();

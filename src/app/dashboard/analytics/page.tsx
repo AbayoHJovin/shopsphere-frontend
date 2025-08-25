@@ -1,37 +1,56 @@
 "use client";
 
-import { useEffect } from 'react';
-import { useQuery } from '@tanstack/react-query';
-import { useAppSelector } from '@/lib/redux/hooks';
-import { dashboardService } from '@/lib/services/dashboard-service';
-import { UserRole } from '@/lib/constants';
-import { 
-  RevenueChart,
-  OrderStatusChart,
-  TopProducts,
-  ProductCategories
-} from '@/components/dashboard';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Separator } from "@/components/ui/separator";
+import { useState } from "react";
+import { useQuery } from "@tanstack/react-query";
+import { useAppSelector } from "@/lib/redux/hooks";
+import { dashboardService } from "@/lib/services/dashboard-service";
+import { UserRole } from "@/lib/constants";
 import {
-  UsersIcon,
-  PackageIcon,
-  ShoppingCartIcon,
-  CreditCardIcon,
-  BarChart,
-  PieChart,
-  LineChart,
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Calendar } from "@/components/ui/calendar";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
+import {
+  CalendarIcon,
+  TrendingUp,
+  TrendingDown,
+  Users,
+  Package,
+  ShoppingCart,
+  CreditCard,
+  BarChart3,
 } from "lucide-react";
 import { formatCurrency } from "@/lib/utils";
-import { AdminDashboardResponse, CoWorkerDashboardResponse } from '@/lib/types/dashboard';
+import {
+  AnalyticsResponseDTO,
+  AnalyticsRequestDTO,
+} from "@/lib/types/dashboard";
+import { format } from "date-fns";
 
 // Analytics metric card component
-function MetricCard({ title, value, icon, description }: { 
-  title: string; 
-  value: string | number; 
+function MetricCard({
+  title,
+  value,
+  icon,
+  description,
+  trend,
+  trendValue,
+}: {
+  title: string;
+  value: string | number;
   icon: React.ReactNode;
   description?: string;
+  trend?: "up" | "down" | "neutral";
+  trendValue?: number;
 }) {
   return (
     <Card>
@@ -41,21 +60,70 @@ function MetricCard({ title, value, icon, description }: {
       </CardHeader>
       <CardContent>
         <div className="text-2xl font-bold">{value}</div>
-        {description && <p className="text-xs text-muted-foreground mt-1">{description}</p>}
+        {description && (
+          <p className="text-xs text-muted-foreground mt-1">{description}</p>
+        )}
+        {trend && trendValue && (
+          <div
+            className={`flex items-center mt-2 text-xs ${
+              trend === "up"
+                ? "text-green-600"
+                : trend === "down"
+                ? "text-red-600"
+                : "text-muted-foreground"
+            }`}
+          >
+            {trend === "up" ? (
+              <TrendingUp className="h-3 w-3 mr-1" />
+            ) : trend === "down" ? (
+              <TrendingDown className="h-3 w-3 mr-1" />
+            ) : null}
+            {trendValue > 0 ? "+" : ""}
+            {trendValue}%
+          </div>
+        )}
       </CardContent>
     </Card>
   );
 }
 
 export default function AnalyticsPage() {
-  const { user } = useAppSelector(state => state.auth);
+  const { user } = useAppSelector((state) => state.auth);
   const isAdmin = user?.role === UserRole.ADMIN;
 
-  // Fetch dashboard data
-  const { data, isLoading, error } = useQuery({
-    queryKey: ['dashboard'],
-    queryFn: dashboardService.getDashboardData,
+  // Date range state
+  const [dateRange, setDateRange] = useState<{
+    from: Date | undefined;
+    to: Date | undefined;
+  }>({
+    from: new Date(new Date().getFullYear(), new Date().getMonth(), 1), // Start of current month
+    to: new Date(), // Today
   });
+
+  // Analytics request
+  const analyticsRequest: AnalyticsRequestDTO = {
+    startDate: dateRange.from
+      ? format(dateRange.from, "yyyy-MM-dd")
+      : format(new Date(), "yyyy-MM-dd"),
+    endDate: dateRange.to
+      ? format(dateRange.to, "yyyy-MM-dd")
+      : format(new Date(), "yyyy-MM-dd"),
+  };
+
+  // Fetch analytics data
+  const { data, isLoading, error, refetch } = useQuery({
+    queryKey: ["analytics", analyticsRequest],
+    queryFn: () => dashboardService.getAnalyticsData(analyticsRequest),
+    enabled: !!dateRange.from && !!dateRange.to,
+  });
+
+  const handleDateChange = (from: Date | undefined, to: Date | undefined) => {
+    setDateRange({ from, to });
+  };
+
+  const handleRefresh = () => {
+    refetch();
+  };
 
   if (isLoading) {
     return (
@@ -71,288 +139,246 @@ export default function AnalyticsPage() {
     return (
       <div className="p-6">
         <div className="flex flex-col items-center justify-center h-[60vh] text-center gap-2">
-          <h2 className="text-2xl font-semibold">Failed to load analytics data</h2>
-          <p className="text-muted-foreground">Please try again later or contact support if the issue persists.</p>
+          <h2 className="text-2xl font-semibold">
+            Failed to load analytics data
+          </h2>
+          <p className="text-muted-foreground">
+            Please try again later or contact support if the issue persists.
+          </p>
+          <Button onClick={handleRefresh} variant="outline" className="mt-4">
+            Try Again
+          </Button>
         </div>
       </div>
     );
   }
 
-  const isAdminDashboard = data ? dashboardService.isAdminDashboard(data) : false;
-  
   return (
     <div className="p-6">
       <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-6">
         <div>
           <h2 className="text-3xl font-bold tracking-tight">Analytics</h2>
-          <p className="text-muted-foreground">Detailed store performance metrics and insights</p>
+          <p className="text-muted-foreground">
+            Detailed store performance metrics and insights
+          </p>
+        </div>
+
+        <div className="flex items-center gap-3">
+          <Popover>
+            <PopoverTrigger asChild>
+              <Button variant="outline" className="gap-2">
+                <CalendarIcon className="h-4 w-4" />
+                {dateRange.from ? (
+                  dateRange.to ? (
+                    <>
+                      {format(dateRange.from, "LLL dd, y")} -{" "}
+                      {format(dateRange.to, "LLL dd, y")}
+                    </>
+                  ) : (
+                    format(dateRange.from, "LLL dd, y")
+                  )
+                ) : (
+                  <span>Pick a date range</span>
+                )}
+              </Button>
+            </PopoverTrigger>
+            <PopoverContent className="w-auto p-0" align="end">
+              <Calendar
+                initialFocus
+                mode="range"
+                defaultMonth={dateRange.from}
+                selected={dateRange}
+                onSelect={(range) => handleDateChange(range?.from, range?.to)}
+                numberOfMonths={2}
+              />
+            </PopoverContent>
+          </Popover>
+
+          <Button onClick={handleRefresh} variant="outline" size="icon">
+            <BarChart3 className="h-4 w-4" />
+          </Button>
         </div>
       </div>
 
-      <Tabs defaultValue="overview" className="space-y-4">
-        <TabsList className="grid grid-cols-3 md:grid-cols-4 lg:w-[600px] mb-4">
-          <TabsTrigger value="overview">Overview</TabsTrigger>
-          <TabsTrigger value="users">Users</TabsTrigger>
-          <TabsTrigger value="products">Products</TabsTrigger>
-          {isAdmin && <TabsTrigger value="revenue">Revenue</TabsTrigger>}
-        </TabsList>
-
-        {/* Overview Tab */}
-        <TabsContent value="overview" className="space-y-4">
-          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-            <MetricCard 
-              title="Total Orders" 
-              value={isAdminDashboard 
-                ? (data as AdminDashboardResponse).totalOrders 
-                : (data as CoWorkerDashboardResponse).totalOrders}
-              icon={<ShoppingCartIcon className="h-4 w-4" />}
-              description="All-time orders"
-            />
-            
-            <MetricCard 
-              title="Total Products" 
-              value={isAdminDashboard 
-                ? (data as AdminDashboardResponse).totalProducts 
-                : (data as CoWorkerDashboardResponse).totalProducts}
-              icon={<PackageIcon className="h-4 w-4" />}
-              description="Catalog size"
-            />
-            
-            <MetricCard 
-              title="Total Users" 
-              value={isAdminDashboard 
-                ? (data as AdminDashboardResponse).totalUsers 
-                : (data as CoWorkerDashboardResponse).totalCustomers + (data as CoWorkerDashboardResponse).totalCoWorkers}
-              icon={<UsersIcon className="h-4 w-4" />}
-              description="Registered accounts"
-            />
-            
-            {isAdmin && isAdminDashboard && (
-              <MetricCard 
-                title="Total Revenue" 
-                value={formatCurrency((data as AdminDashboardResponse).totalRevenue)}
-                icon={<CreditCardIcon className="h-4 w-4" />}
-                description="All-time sales"
+      {data && (
+        <>
+          {/* Key Metrics */}
+          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4 mb-6">
+            {isAdmin && data.totalRevenue !== null && (
+              <MetricCard
+                title="Total Revenue"
+                value={formatCurrency(data.totalRevenue)}
+                icon={<CreditCard className="h-4 w-4" />}
+                description="Period revenue"
+                trend={
+                  data.totalRevenueVsPercent && data.totalRevenueVsPercent > 0
+                    ? "up"
+                    : "down"
+                }
+                trendValue={
+                  data.totalRevenueVsPercent
+                    ? Math.abs(data.totalRevenueVsPercent)
+                    : undefined
+                }
               />
             )}
+
+            <MetricCard
+              title="Total Orders"
+              value={data.totalOrders}
+              icon={<ShoppingCart className="h-4 w-4" />}
+              description="Period orders"
+              trend={
+                data.totalOrdersVsPercent && data.totalOrdersVsPercent > 0
+                  ? "up"
+                  : "down"
+              }
+              trendValue={
+                data.totalOrdersVsPercent
+                  ? Math.abs(data.totalOrdersVsPercent)
+                  : undefined
+              }
+            />
+
+            <MetricCard
+              title="New Customers"
+              value={data.newCustomers}
+              icon={<Users className="h-4 w-4" />}
+              description="Period signups"
+              trend={
+                data.newCustomersVsPercent && data.newCustomersVsPercent > 0
+                  ? "up"
+                  : "down"
+              }
+              trendValue={
+                data.newCustomersVsPercent
+                  ? Math.abs(data.newCustomersVsPercent)
+                  : undefined
+              }
+            />
+
+            <MetricCard
+              title="Active Products"
+              value={data.activeProducts}
+              icon={<Package className="h-4 w-4" />}
+              description="Available products"
+              trend={
+                data.activeProductsVsPercent && data.activeProductsVsPercent > 0
+                  ? "up"
+                  : "down"
+              }
+              trendValue={
+                data.activeProductsVsPercent
+                  ? Math.abs(data.activeProductsVsPercent)
+                  : undefined
+              }
+            />
           </div>
 
-          <div className="grid grid-cols-1 lg:grid-cols-8 gap-4 mt-6">
-            {isAdmin && <RevenueChart data={data} isAdmin={isAdmin} />}
-            <OrderStatusChart data={data} />
-          </div>
-        </TabsContent>
-
-        {/* Users Tab */}
-        <TabsContent value="users" className="space-y-6">
-          <div>
-            <h3 className="text-lg font-medium mb-4 flex items-center">
-              <UsersIcon className="mr-2 h-5 w-5" />
-              User Metrics
-            </h3>
-            
-            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-              <MetricCard 
-                title="Total Users" 
-                value={isAdminDashboard 
-                  ? (data as AdminDashboardResponse).totalUsers 
-                  : (data as CoWorkerDashboardResponse).totalCustomers + (data as CoWorkerDashboardResponse).totalCoWorkers}
-                icon={<UsersIcon className="h-4 w-4" />}
-                description="All registered accounts"
-              />
-              
-              <MetricCard 
-                title="Customers" 
-                value={isAdminDashboard 
-                  ? (data as AdminDashboardResponse).totalCustomers 
-                  : (data as CoWorkerDashboardResponse).totalCustomers}
-                icon={<UsersIcon className="h-4 w-4" />}
-                description="Customer accounts"
-              />
-              
-              {isAdmin && isAdminDashboard && (
-                <>
-                  <MetricCard 
-                    title="Administrators" 
-                    value={(data as AdminDashboardResponse).totalAdmins}
-                    icon={<UsersIcon className="h-4 w-4" />}
-                    description="Admin accounts"
-                  />
-                  
-                  <MetricCard 
-                    title="Co-Workers" 
-                    value={(data as AdminDashboardResponse).totalCoWorkers}
-                    icon={<UsersIcon className="h-4 w-4" />}
-                    description="Staff accounts"
-                  />
-                  
-                  <MetricCard 
-                    title="New Users (Month)" 
-                    value={(data as AdminDashboardResponse).newUsersThisMonth}
-                    icon={<UsersIcon className="h-4 w-4" />}
-                    description="Joined this month"
-                  />
-                </>
-              )}
-            </div>
-            
-            {/* Could add a user growth chart here */}
-            <div className="mt-6">
-              <Card>
-                <CardHeader>
-                  <CardTitle>User Distribution</CardTitle>
-                  <CardDescription>Breakdown of user accounts by type</CardDescription>
-                </CardHeader>
-                <CardContent className="py-4">
-                  <div className="h-[300px]">
-                    {/* Placeholder for user distribution chart */}
-                    <div className="flex items-center justify-center h-full">
-                      <PieChart className="h-16 w-16 text-muted-foreground/50" />
-                      <p className="text-muted-foreground ml-4">User distribution chart will be implemented here</p>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-            </div>
-          </div>
-        </TabsContent>
-
-        {/* Products Tab */}
-        <TabsContent value="products" className="space-y-6">
-          <div>
-            <h3 className="text-lg font-medium mb-4 flex items-center">
-              <PackageIcon className="mr-2 h-5 w-5" />
-              Product Metrics
-            </h3>
-            
-            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-              <MetricCard 
-                title="Total Products" 
-                value={isAdminDashboard 
-                  ? (data as AdminDashboardResponse).totalProducts 
-                  : (data as CoWorkerDashboardResponse).totalProducts}
-                icon={<PackageIcon className="h-4 w-4" />}
-                description="Catalog size"
-              />
-              
-              <MetricCard 
-                title="Out of Stock" 
-                value={isAdminDashboard 
-                  ? (data as AdminDashboardResponse).outOfStockProducts 
-                  : (data as CoWorkerDashboardResponse).outOfStockProducts}
-                icon={<PackageIcon className="h-4 w-4" />}
-                description="Need reordering"
-              />
-              
-              <MetricCard 
-                title="Low Stock" 
-                value={isAdminDashboard 
-                  ? (data as AdminDashboardResponse).lowStockProducts 
-                  : (data as CoWorkerDashboardResponse).lowStockProducts}
-                icon={<PackageIcon className="h-4 w-4" />}
-                description="Running low"
-              />
-            </div>
-          </div>
-          
-          <Separator className="my-8" />
-          
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            <TopProducts data={data} />
-            <ProductCategories data={data} />
-          </div>
-        </TabsContent>
-
-        {/* Revenue Tab - Admin Only */}
-        {isAdmin && (
-          <TabsContent value="revenue" className="space-y-6">
-            <div>
-              <h3 className="text-lg font-medium mb-4 flex items-center">
-                <CreditCardIcon className="mr-2 h-5 w-5" />
-                Revenue Metrics
-              </h3>
-              
-              <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-                <MetricCard 
-                  title="Total Revenue" 
-                  value={formatCurrency((data as AdminDashboardResponse).totalRevenue)}
-                  icon={<CreditCardIcon className="h-4 w-4" />}
-                  description="All-time earnings"
-                />
-                
-                <MetricCard 
-                  title="Current Month" 
-                  value={formatCurrency((data as AdminDashboardResponse).revenueThisMonth)}
-                  icon={<CreditCardIcon className="h-4 w-4" />}
-                  description="This month's revenue"
-                />
-                
-                <MetricCard 
-                  title="Previous Month" 
-                  value={formatCurrency((data as AdminDashboardResponse).revenueLastMonth)}
-                  icon={<CreditCardIcon className="h-4 w-4" />}
-                  description="Last month's revenue"
-                />
-                
-                <MetricCard 
-                  title="Avg. Order Value" 
-                  value={formatCurrency((data as AdminDashboardResponse).averageOrderValue)}
-                  icon={<CreditCardIcon className="h-4 w-4" />}
-                  description="Per transaction"
-                />
-              </div>
-            </div>
-            
-            <RevenueChart data={data} isAdmin={isAdmin} />
-            
-            <div>
-              <h3 className="text-lg font-medium mb-4 flex items-center">
-                <ShoppingCartIcon className="mr-2 h-5 w-5" />
-                Cart Analytics
-              </h3>
-              
-              <div className="grid gap-4 md:grid-cols-3">
-                <MetricCard 
-                  title="Active Carts" 
-                  value={(data as AdminDashboardResponse).activeCartsCount}
-                  icon={<ShoppingCartIcon className="h-4 w-4" />}
-                  description="Unpurchased items"
-                />
-                
-                <MetricCard 
-                  title="Cart Value" 
-                  value={formatCurrency((data as AdminDashboardResponse).totalCartValue)}
-                  icon={<ShoppingCartIcon className="h-4 w-4" />}
-                  description="Potential revenue"
-                />
-                
-                <MetricCard 
-                  title="Abandonment Rate" 
-                  value={`${((data as AdminDashboardResponse).cartAbandonmentRate * 100).toFixed(1)}%`}
-                  icon={<BarChart className="h-4 w-4" />}
-                  description="Carts abandoned"
-                />
-              </div>
-            </div>
-            
-            <Card>
+          {/* Top Products */}
+          {data.topProducts && data.topProducts.length > 0 && (
+            <Card className="mb-6">
               <CardHeader>
-                <CardTitle>Revenue Breakdown</CardTitle>
-                <CardDescription>Detailed view of revenue sources</CardDescription>
+                <CardTitle>Top Performing Products</CardTitle>
+                <CardDescription>
+                  Best selling products in the selected period
+                </CardDescription>
               </CardHeader>
-              <CardContent className="py-4">
-                <div className="h-[300px]">
-                  {/* Placeholder for revenue breakdown chart */}
-                  <div className="flex items-center justify-center h-full">
-                    <LineChart className="h-16 w-16 text-muted-foreground/50" />
-                    <p className="text-muted-foreground ml-4">Revenue breakdown chart will be implemented here</p>
-                  </div>
+              <CardContent>
+                <div className="space-y-4">
+                  {data.topProducts.map((product, index) => (
+                    <div
+                      key={product.productId}
+                      className="flex items-center justify-between p-3 bg-muted/30 rounded-lg"
+                    >
+                      <div className="flex items-center gap-3">
+                        <div className="w-8 h-8 bg-primary/10 rounded-full flex items-center justify-center text-sm font-bold text-primary">
+                          {index + 1}
+                        </div>
+                        <div>
+                          <p className="font-medium">{product.name}</p>
+                          <p className="text-sm text-muted-foreground">
+                            {product.totalSold} units sold
+                          </p>
+                        </div>
+                      </div>
+                      <div className="text-right">
+                        <p className="font-medium text-primary">
+                          {formatCurrency(product.totalRevenue)}
+                        </p>
+                        <p className="text-xs text-muted-foreground">Revenue</p>
+                      </div>
+                    </div>
+                  ))}
                 </div>
               </CardContent>
             </Card>
-          </TabsContent>
-        )}
-      </Tabs>
+          )}
+
+          {/* Category Performance */}
+          {data.categoryPerformance && data.categoryPerformance.length > 0 && (
+            <Card className="mb-6">
+              <CardHeader>
+                <CardTitle>Category Performance</CardTitle>
+                <CardDescription>
+                  Product categories ranked by performance
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-4">
+                  {data.categoryPerformance.map((category, index) => (
+                    <div
+                      key={category.categoryId}
+                      className="flex items-center justify-between p-3 bg-muted/30 rounded-lg"
+                    >
+                      <div className="flex items-center gap-3">
+                        <div className="w-8 h-8 bg-primary/10 rounded-full flex items-center justify-center text-sm font-bold text-primary">
+                          {index + 1}
+                        </div>
+                        <div>
+                          <p className="font-medium">{category.name}</p>
+                          <p className="text-sm text-muted-foreground">
+                            {category.productCount} products
+                          </p>
+                        </div>
+                      </div>
+                      <div className="text-right">
+                        <p className="font-medium text-primary">
+                          {category.totalSold}
+                        </p>
+                        <p className="text-xs text-muted-foreground">
+                          {category.percentageOfTotalSales.toFixed(1)}% of sales
+                        </p>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </CardContent>
+            </Card>
+          )}
+
+          {/* No Data State */}
+          {(!data.topProducts || data.topProducts.length === 0) &&
+            (!data.categoryPerformance ||
+              data.categoryPerformance.length === 0) && (
+              <Card className="text-center py-12">
+                <CardContent>
+                  <BarChart3 className="h-16 w-16 text-muted-foreground mx-auto mb-4" />
+                  <h3 className="text-lg font-medium mb-2">
+                    No Analytics Data Available
+                  </h3>
+                  <p className="text-muted-foreground mb-4">
+                    Analytics data will appear here once you have sufficient
+                    activity in the selected period.
+                  </p>
+                  <Button onClick={handleRefresh} variant="outline">
+                    Refresh Data
+                  </Button>
+                </CardContent>
+              </Card>
+            )}
+        </>
+      )}
     </div>
   );
-} 
+}

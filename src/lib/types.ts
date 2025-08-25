@@ -7,13 +7,13 @@ export interface LoginRequest {
 }
 
 export interface LoginResponse {
+  token: string;
+  userName: string;
+  userEmail: string;
+  message: string;
   userId: string;
-  username: string;
-  email: string;
+  userPhone?: string;
   role: UserRole;
-  accessToken?: string | null;
-  refreshToken?: string | null;
-  tokenType?: string | null;
 }
 
 export interface User {

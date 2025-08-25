@@ -155,7 +155,7 @@ const QRScannerModal = ({
             aspectRatio: 1.0,
             disableFlip: false, // Allow both normal and mirrored QR codes
             experimentalFeatures: {
-              useBarCodeDetectorIfSupported: true // Use native API if available
+              useBarCodeDetectorIfSupported: true, // Use native API if available
             },
             rememberLastUsedCamera: true,
             formatsToSupport: [0], // 0 is QR Code format only - focusing on just QR codes improves speed
@@ -203,10 +203,10 @@ const QRScannerModal = ({
 
     // Stop scanning immediately to prevent multiple scans
     setScanning(false);
-    
+
     // Stop the scanner to prevent multiple scans
     stopScanner();
-    
+
     // Immediately pass the scanned code to parent for backend validation
     // without closing the modal or showing success yet
     onSuccess(decodedText);

@@ -1,11 +1,9 @@
-import axios from "axios";
+import apiClient from "../api-client";
 import {
   ProductPaginationResponse,
   ProductSearchFilterRequest,
 } from "../types/product";
 import { handleApiError } from "../utils/error-handler";
-
-const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8080/api";
 
 class ProductService {
   /**
@@ -18,9 +16,8 @@ class ProductService {
     sortDir: string = "asc"
   ): Promise<ProductPaginationResponse> {
     try {
-      const response = await axios.get(`${API_URL}/products`, {
+      const response = await apiClient.get(`/products`, {
         params: { page, size, sortBy, sortDir },
-        withCredentials: true,
       });
       return response.data;
     } catch (error) {
@@ -37,13 +34,9 @@ class ProductService {
     size: number = 10
   ): Promise<ProductPaginationResponse> {
     try {
-      const response = await axios.get(
-        `${API_URL}/products/category/${categoryId}`,
-        {
-          params: { page, size },
-          withCredentials: true,
-        }
-      );
+      const response = await apiClient.get(`/products/category/${categoryId}`, {
+        params: { page, size },
+      });
       return response.data;
     } catch (error) {
       throw handleApiError(error);
@@ -55,9 +48,7 @@ class ProductService {
    */
   async getProductById(productId: string) {
     try {
-      const response = await axios.get(`${API_URL}/products/${productId}`, {
-        withCredentials: true,
-      });
+      const response = await apiClient.get(`/products/${productId}`);
       return response.data;
     } catch (error) {
       throw handleApiError(error);
@@ -69,8 +60,7 @@ class ProductService {
    */
   async createProduct(productData: FormData) {
     try {
-      const response = await axios.post(`${API_URL}/products`, productData, {
-        withCredentials: true,
+      const response = await apiClient.post(`/products`, productData, {
         headers: {
           "Content-Type": "multipart/form-data",
         },
@@ -88,13 +78,12 @@ class ProductService {
     try {
       // Check if productData is FormData or a regular object
       const isFormData = productData instanceof FormData;
-      
-      const response = await axios.put(
-        `${API_URL}/products/${productId}`,
+
+      const response = await apiClient.put(
+        `/products/${productId}`,
         productData,
         {
-          withCredentials: true,
-          headers: isFormData 
+          headers: isFormData
             ? { "Content-Type": "multipart/form-data" }
             : { "Content-Type": "application/json" },
         }
@@ -110,9 +99,7 @@ class ProductService {
    */
   async deleteProduct(productId: string) {
     try {
-      const response = await axios.delete(`${API_URL}/products/${productId}`, {
-        withCredentials: true,
-      });
+      const response = await apiClient.delete(`/products/${productId}`);
       return response.data;
     } catch (error) {
       throw handleApiError(error);
@@ -126,12 +113,9 @@ class ProductService {
     filters: ProductSearchFilterRequest
   ): Promise<ProductPaginationResponse> {
     try {
-      const response = await axios.post(
-        `${API_URL}/products/advanced-search`,
-        filters,
-        {
-          withCredentials: true,
-        }
+      const response = await apiClient.post(
+        `/products/advanced-search`,
+        filters
       );
       return response.data;
     } catch (error) {

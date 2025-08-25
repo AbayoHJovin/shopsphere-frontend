@@ -34,10 +34,14 @@ export function LoginForm() {
   const searchParams = useSearchParams();
   const returnUrl = searchParams?.get("returnUrl") || "/dashboard";
   const { toast } = useToast();
-  
+
   const dispatch = useAppDispatch();
-  const { isAuthenticated, isLoading: authLoading, error: authError } = useAppSelector(state => state.auth);
-  
+  const {
+    isAuthenticated,
+    isLoading: authLoading,
+    error: authError,
+  } = useAppSelector((state) => state.auth);
+
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
     defaultValues: {
@@ -71,30 +75,32 @@ export function LoginForm() {
       return authService.login(credentials);
     },
     onSuccess: (data) => {
-      dispatch(loginSuccess({
-        userId: data.userId,
-        username: data.username,
-        email: data.email,
-        role: data.role,
-      }));
-      
+      dispatch(
+        loginSuccess({
+          userId: data.userId,
+          username: data.userName,
+          email: data.userEmail,
+          role: data.role,
+        })
+      );
+
       toast({
         title: "Success",
-        description: "Logged in successfully",
+        description: data.message || "Logged in successfully",
       });
-      
+
       router.push(returnUrl);
     },
     onError: (error) => {
       const errorMessage = handleApiError(error);
       dispatch(loginFailure(errorMessage));
-      
+
       toast({
         title: "Login Failed",
         description: errorMessage,
         variant: "destructive",
       });
-    }
+    },
   });
 
   function onSubmit(values: z.infer<typeof formSchema>) {
@@ -122,9 +128,9 @@ export function LoginForm() {
               <FormItem>
                 <FormLabel>Email</FormLabel>
                 <FormControl>
-                  <Input 
-                    placeholder="admin@example.com" 
-                    {...field} 
+                  <Input
+                    placeholder="admin@example.com"
+                    {...field}
                     className="border-primary/20 focus-visible:ring-primary"
                     disabled={loginMutation.isPending || authLoading}
                   />
@@ -133,7 +139,7 @@ export function LoginForm() {
               </FormItem>
             )}
           />
-          
+
           <FormField
             control={form.control}
             name="password"
@@ -141,10 +147,10 @@ export function LoginForm() {
               <FormItem>
                 <FormLabel>Password</FormLabel>
                 <FormControl>
-                  <Input 
-                    type="password" 
-                    placeholder="******" 
-                    {...field} 
+                  <Input
+                    type="password"
+                    placeholder="******"
+                    {...field}
                     className="border-primary/20 focus-visible:ring-primary"
                     disabled={loginMutation.isPending || authLoading}
                   />
@@ -153,16 +159,18 @@ export function LoginForm() {
               </FormItem>
             )}
           />
-          
-          <Button 
-            type="submit" 
-            className="w-full" 
+
+          <Button
+            type="submit"
+            className="w-full"
             disabled={loginMutation.isPending || authLoading}
           >
-            {loginMutation.isPending || authLoading ? "Signing In..." : "Sign In"}
+            {loginMutation.isPending || authLoading
+              ? "Signing In..."
+              : "Sign In"}
           </Button>
         </form>
       </Form>
     </div>
   );
-} 
+}
