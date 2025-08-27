@@ -5,25 +5,37 @@ import { useRouter } from "next/navigation";
 import { useForm, useFieldArray } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Textarea } from '@/components/ui/textarea';
-import { Checkbox } from '@/components/ui/checkbox';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Button } from "@/components/ui/button";
+import {
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+  CardDescription,
+} from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+import { Checkbox } from "@/components/ui/checkbox";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { useToast } from "@/components/ui/use-toast";
-import { 
-  ArrowLeft, 
-  Save, 
-  Plus, 
-  Trash2, 
+import {
+  ArrowLeft,
+  Save,
+  Plus,
+  Trash2,
   Upload,
   X,
   Star,
   ChevronRight,
   ChevronDown,
-  Minus
+  Minus,
 } from "lucide-react";
 import { productService } from "@/lib/services/product-service";
 import { categoryService } from "@/lib/services/category-service";
@@ -31,9 +43,18 @@ import { productColorService } from "@/lib/services/product-color-service";
 import { ColorPicker } from "@/components/ColorPicker";
 import axios from "axios";
 import { API_ENDPOINTS } from "@/lib/constants";
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 import { ProductColor, Size } from "@/lib/types/product";
-import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
+import {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from "@/components/ui/collapsible";
 
 const sizes = ["SMALL", "MEDIUM", "LARGE"];
 const genders = ["MALE", "FEMALE", "UNISEX"];
@@ -53,7 +74,10 @@ const productSchema = z.object({
   sizes: z.array(
     z.object({
       value: z.string().min(1, "Size is required"),
-      stockForSize: z.number().min(0, "Stock must be a positive number").default(0),
+      stockForSize: z
+        .number()
+        .min(0, "Stock must be a positive number")
+        .default(0),
     })
   ),
 });
@@ -65,7 +89,7 @@ interface ProductUpdateProps {
 }
 
 export default function ProductUpdate({ params }: ProductUpdateProps) {
-const productId = params.id;
+  const productId = params.id;
   const router = useRouter();
   const { toast } = useToast();
   const [product, setProduct] = useState<any>(null);
@@ -77,10 +101,14 @@ const productId = params.id;
   const [isImageUploading, setIsImageUploading] = useState(false);
   const [isImageDeleting, setIsImageDeleting] = useState(false);
   const [isSettingMainImage, setIsSettingMainImage] = useState(false);
-  const [categories, setCategories] = useState<{id: string, name: string, parentId?: string, subcategories?: any[]}[]>([]);
+  const [categories, setCategories] = useState<
+    { id: string; name: string; parentId?: string; subcategories?: any[] }[]
+  >([]);
   const [stockWarning, setStockWarning] = useState<string | null>(null);
   const [productColors, setProductColors] = useState<ProductColor[]>([]);
-  const [categoryExpanded, setCategoryExpanded] = useState<Record<string, boolean>>({});
+  const [categoryExpanded, setCategoryExpanded] = useState<
+    Record<string, boolean>
+  >({});
 
   const form = useForm<ProductUpdateForm>({
     resolver: zodResolver(productSchema) as any,
@@ -98,20 +126,27 @@ const productId = params.id;
     },
   });
 
-  const { fields: sizeFields, append: appendSize, remove: removeSize } = useFieldArray({
+  const {
+    fields: sizeFields,
+    append: appendSize,
+    remove: removeSize,
+  } = useFieldArray({
     control: form.control,
     name: "sizes",
   });
 
   // Function to calculate total stock from sizes
   const calculateTotalSizeStock = (): number => {
-    return form.watch("sizes").reduce((total, size) => total + (size.stockForSize || 0), 0);
+    return form
+      .watch("sizes")
+      .reduce((total, size) => total + (size.stockForSize || 0), 0);
   };
 
   // Validate total stock against size quantities
   useEffect(() => {
     const stockValue = form.watch("stock");
-    const totalStock = typeof stockValue === "string" ? parseInt(stockValue) || 0 : stockValue;
+    const totalStock =
+      typeof stockValue === "string" ? parseInt(stockValue) || 0 : stockValue;
     const totalSizeStock = calculateTotalSizeStock();
 
     if (form.watch("sizes").length > 0) {
@@ -132,100 +167,121 @@ const productId = params.id;
     const fetchData = async () => {
       try {
         setIsLoading(true);
-        
+
         // Fetch categories
-        const categoriesData = await categoryService.getAllAdminCategories();
-        
+        const categoriesData =
+          await categoryService.getAllCategoriesForDropdown();
+
         // Organize categories into a tree structure
-        const topLevelCategories = categoriesData.filter(cat => !cat.parentId);
+        const topLevelCategories = categoriesData.filter(
+          (cat: any) => !cat.parentId
+        );
         const categoriesMap = new Map();
-        
+
         // Create a map of all categories
-        categoriesData.forEach(cat => {
-          categoriesMap.set(cat.categoryId, {
-            id: cat.categoryId,
+        categoriesData.forEach((cat: any) => {
+          categoriesMap.set(cat.id, {
+            id: cat.id,
             name: cat.name,
             parentId: cat.parentId,
-            subcategories: []
+            subcategories: [],
           });
         });
-        
+
         // Populate subcategories
-          categoriesData.forEach(cat => {
+        categoriesData.forEach((cat: any) => {
           if (cat.parentId && categoriesMap.has(cat.parentId)) {
             const parentCategory = categoriesMap.get(cat.parentId);
-            parentCategory.subcategories.push(categoriesMap.get(cat.categoryId));
+            parentCategory.subcategories.push(categoriesMap.get(cat.id));
           }
         });
-        
+
         // Set categories state with top-level categories that have their subcategories populated
-        setCategories(topLevelCategories.map(cat => categoriesMap.get(cat.categoryId)));
-        
+        setCategories(
+          topLevelCategories.map((cat: any) => categoriesMap.get(cat.id))
+        );
+
         // Fetch product
         const productData = await productService.getProductById(productId);
         setProduct(productData);
-        
+
         // Set existing images
         if (productData.images && productData.images.length > 0) {
           setExistingImages(productData.images);
         }
-        
+
         // Set product colors from the product response
         setProductColors(productData.colors || []);
-        
+
         // Pre-populate the form
         form.reset({
           name: productData.name,
           description: productData.description,
           price: productData.price.toString(),
-          previousPrice: productData.previousPrice ? productData.previousPrice.toString() : "",
+          previousPrice: productData.previousPrice
+            ? productData.previousPrice.toString()
+            : "",
           gender: productData.gender,
           stock: productData.stock.toString(),
           popularity: productData.popularity || false,
-          categories: productData.categories?.map((cat: { categoryId: string }) => cat.categoryId) || [],
-          colorIds: (productData.colors || []).map((color: { colorId: string }) => color.colorId),
-          sizes: (productData.sizes || []).map((size: { size: string, stockForSize: number }) => ({ 
-            value: size.size, 
-            stockForSize: size.stockForSize || 0 
-          })),
+          categories:
+            productData.categories?.map(
+              (cat: { categoryId: string }) => cat.categoryId
+            ) || [],
+          colorIds: (productData.colors || []).map(
+            (color: { colorId: string }) => color.colorId
+          ),
+          sizes: (productData.sizes || []).map(
+            (size: { size: string; stockForSize: number }) => ({
+              value: size.size,
+              stockForSize: size.stockForSize || 0,
+            })
+          ),
         });
       } catch (error) {
         console.error("Error fetching data:", error);
         toast({
           title: "Error loading data",
-          description: "There was an error loading the product data. Please try again.",
-          variant: "destructive"
+          description:
+            "There was an error loading the product data. Please try again.",
+          variant: "destructive",
         });
       } finally {
         setIsLoading(false);
       }
     };
-    
+
     fetchData();
   }, [productId, form, toast]);
 
   const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     try {
       const files = Array.from(e.target.files || []);
-      const newImages = files.slice(0, 5 - selectedImages.length - existingImages.length);
-      
-      if (existingImages.length + selectedImages.length + newImages.length > 5) {
+      const newImages = files.slice(
+        0,
+        5 - selectedImages.length - existingImages.length
+      );
+
+      if (
+        existingImages.length + selectedImages.length + newImages.length >
+        5
+      ) {
         toast({
           title: "Maximum 5 images allowed",
           description: "You can upload a maximum of 5 images per product",
-          variant: "destructive"
+          variant: "destructive",
         });
         return;
       }
-      
+
       // Upload images to server immediately
       setIsImageUploading(true);
-      
+
       const formData = new FormData();
-      newImages.forEach(image => {
-        formData.append('images', image);
+      newImages.forEach((image) => {
+        formData.append("images", image);
       });
-      
+
       const response = await axios.post(
         `${API_ENDPOINTS.PRODUCTS.BY_ID(productId)}/images`,
         formData,
@@ -236,16 +292,16 @@ const productId = params.id;
           },
         }
       );
-      
+
       // Update product with new images
       setProduct(response.data);
       setExistingImages(response.data.images);
-      
+
       toast({
         title: "Images uploaded",
         description: "Images have been uploaded successfully",
       });
-      
+
       // Clear selected images
       setSelectedImages([]);
       setImageUrls([]);
@@ -253,8 +309,9 @@ const productId = params.id;
       console.error("Error uploading images:", error);
       toast({
         title: "Error uploading images",
-        description: "There was an error uploading the images. Please try again.",
-        variant: "destructive"
+        description:
+          "There was an error uploading the images. Please try again.",
+        variant: "destructive",
       });
     } finally {
       setIsImageUploading(false);
@@ -263,22 +320,24 @@ const productId = params.id;
 
   const removeSelectedImage = (index: number) => {
     URL.revokeObjectURL(imageUrls[index]);
-    setSelectedImages(prev => prev.filter((_, i) => i !== index));
-    setImageUrls(prev => prev.filter((_, i) => i !== index));
+    setSelectedImages((prev) => prev.filter((_, i) => i !== index));
+    setImageUrls((prev) => prev.filter((_, i) => i !== index));
   };
 
   const removeExistingImage = async (imageId: string) => {
     try {
       setIsImageDeleting(true);
-      
+
       await axios.delete(
         `${API_ENDPOINTS.PRODUCTS.BY_ID(productId)}/images/${imageId}`,
         { withCredentials: true }
       );
-      
+
       // Update existing images list
-      setExistingImages(prev => prev.filter(img => img.imageId !== imageId));
-      
+      setExistingImages((prev) =>
+        prev.filter((img) => img.imageId !== imageId)
+      );
+
       toast({
         title: "Image removed",
         description: "Image has been removed successfully",
@@ -288,27 +347,27 @@ const productId = params.id;
       toast({
         title: "Error removing image",
         description: "There was an error removing the image. Please try again.",
-        variant: "destructive"
+        variant: "destructive",
       });
     } finally {
       setIsImageDeleting(false);
     }
   };
-  
+
   const setMainImage = async (imageId: string) => {
     try {
       setIsSettingMainImage(true);
-      
+
       const response = await axios.put(
         `${API_ENDPOINTS.PRODUCTS.BY_ID(productId)}/images/${imageId}/main`,
         {},
         { withCredentials: true }
       );
-      
+
       // Update product with new main image
       setProduct(response.data);
       setExistingImages(response.data.images);
-      
+
       toast({
         title: "Main image set",
         description: "Main image has been set successfully",
@@ -317,8 +376,9 @@ const productId = params.id;
       console.error("Error setting main image:", error);
       toast({
         title: "Error setting main image",
-        description: "There was an error setting the main image. Please try again.",
-        variant: "destructive"
+        description:
+          "There was an error setting the main image. Please try again.",
+        variant: "destructive",
       });
     } finally {
       setIsSettingMainImage(false);
@@ -328,21 +388,21 @@ const productId = params.id;
   const onSubmit = async (data: ProductUpdateForm) => {
     try {
       setIsSubmitting(true);
-      
+
       // Validate that the number of sizes matches the total stock
       const totalStock = parseInt(data.stock) || 0;
       const totalSizeCount = data.sizes.length;
-      
+
       if (data.sizes.length > 0 && totalStock !== totalSizeCount) {
         toast({
           title: "Validation Error",
           description: `The number of sizes (${totalSizeCount}) must equal the total stock (${totalStock}).`,
-          variant: "destructive"
+          variant: "destructive",
         });
         setIsSubmitting(false);
         return;
       }
-      
+
       // Prepare JSON data for API call according to ProductUpdateRequest
       const jsonData = {
         name: data.name,
@@ -352,32 +412,35 @@ const productId = params.id;
         stock: parseInt(data.stock),
         popular: data.popularity,
         colorIds: data.colorIds,
-        sizes: data.sizes.map(size => ({
+        sizes: data.sizes.map((size) => ({
           size: size.value,
-          stockForSize: size.stockForSize || 0
+          stockForSize: size.stockForSize || 0,
         })),
-        categoryIds: data.categories
+        categoryIds: data.categories,
       };
-      
+
       // If previousPrice exists, add it to the request
       if (data.previousPrice) {
-        Object.assign(jsonData, { previousPrice: parseFloat(data.previousPrice) });
+        Object.assign(jsonData, {
+          previousPrice: parseFloat(data.previousPrice),
+        });
       }
-      
+
       await productService.updateProduct(productId, jsonData);
-      
+
       toast({
         title: "Product updated",
-        description: "Product has been updated successfully"
+        description: "Product has been updated successfully",
       });
-      
+
       router.push(`/dashboard/products/${productId}`);
     } catch (error) {
       console.error("Error updating product:", error);
       toast({
         title: "Error updating product",
-        description: "There was an error updating the product. Please try again.",
-        variant: "destructive"
+        description:
+          "There was an error updating the product. Please try again.",
+        variant: "destructive",
       });
     } finally {
       setIsSubmitting(false);
@@ -397,9 +460,11 @@ const productId = params.id;
       <div className="p-6">
         <div className="flex items-center justify-center h-96">
           <div className="text-center">
-            <h2 className="text-2xl font-semibold text-muted-foreground">Product not found</h2>
-            <Button 
-              variant="outline" 
+            <h2 className="text-2xl font-semibold text-muted-foreground">
+              Product not found
+            </h2>
+            <Button
+              variant="outline"
               onClick={() => router.push("/dashboard/products")}
               className="mt-4"
             >
@@ -418,8 +483,8 @@ const productId = params.id;
       <div className="border-b border-border/40 pb-4">
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
           <div className="flex items-center gap-4">
-            <Button 
-              variant="outline" 
+            <Button
+              variant="outline"
               size="sm"
               onClick={() => router.push(`/dashboard/products/${productId}`)}
               className="border-primary/20 hover:bg-primary/5 hover:text-primary"
@@ -428,14 +493,19 @@ const productId = params.id;
               Back
             </Button>
             <div>
-              <h1 className="text-2xl sm:text-3xl font-bold text-primary">Update Product</h1>
+              <h1 className="text-2xl sm:text-3xl font-bold text-primary">
+                Update Product
+              </h1>
               <p className="text-muted-foreground">Modify product details</p>
             </div>
           </div>
         </div>
       </div>
 
-      <form onSubmit={form.handleSubmit(onSubmit as any)} className="space-y-8 max-w-5xl mx-auto">
+      <form
+        onSubmit={form.handleSubmit(onSubmit as any)}
+        className="space-y-8 max-w-5xl mx-auto"
+      >
         {/* Basic Information */}
         <Card className="border-border/40 shadow-sm">
           <CardHeader className="bg-primary/5">
@@ -452,7 +522,9 @@ const productId = params.id;
                   className="border-primary/20 focus-visible:ring-primary mt-2"
                 />
                 {form.formState.errors.name && (
-                  <p className="text-sm text-destructive mt-1">{form.formState.errors.name.message}</p>
+                  <p className="text-sm text-destructive mt-1">
+                    {form.formState.errors.name.message}
+                  </p>
                 )}
               </div>
 
@@ -466,7 +538,9 @@ const productId = params.id;
                   rows={4}
                 />
                 {form.formState.errors.description && (
-                  <p className="text-sm text-destructive mt-1">{form.formState.errors.description.message}</p>
+                  <p className="text-sm text-destructive mt-1">
+                    {form.formState.errors.description.message}
+                  </p>
                 )}
               </div>
 
@@ -481,12 +555,16 @@ const productId = params.id;
                   className="border-primary/20 focus-visible:ring-primary mt-2"
                 />
                 {form.formState.errors.price && (
-                  <p className="text-sm text-destructive mt-1">{form.formState.errors.price.message}</p>
+                  <p className="text-sm text-destructive mt-1">
+                    {form.formState.errors.price.message}
+                  </p>
                 )}
               </div>
 
               <div>
-                <Label htmlFor="previousPrice">Previous Price ($) - Optional</Label>
+                <Label htmlFor="previousPrice">
+                  Previous Price ($) - Optional
+                </Label>
                 <Input
                   id="previousPrice"
                   type="number"
@@ -505,7 +583,10 @@ const productId = params.id;
                     if (value === "clear") {
                       form.setValue("gender", undefined);
                     } else {
-                      form.setValue("gender", value as "MALE" | "FEMALE" | "UNISEX");
+                      form.setValue(
+                        "gender",
+                        value as "MALE" | "FEMALE" | "UNISEX"
+                      );
                     }
                   }}
                   value={form.watch("gender") || ""}
@@ -519,11 +600,15 @@ const productId = params.id;
                         {gender}
                       </SelectItem>
                     ))}
-                    <SelectItem value="clear">No gender (clear selection)</SelectItem>
+                    <SelectItem value="clear">
+                      No gender (clear selection)
+                    </SelectItem>
                   </SelectContent>
                 </Select>
                 {form.formState.errors.gender && (
-                  <p className="text-sm text-destructive mt-1">{form.formState.errors.gender.message}</p>
+                  <p className="text-sm text-destructive mt-1">
+                    {form.formState.errors.gender.message}
+                  </p>
                 )}
               </div>
 
@@ -537,10 +622,14 @@ const productId = params.id;
                   className="border-primary/20 focus-visible:ring-primary mt-2"
                 />
                 {form.formState.errors.stock && (
-                  <p className="text-sm text-destructive mt-1">{form.formState.errors.stock.message}</p>
+                  <p className="text-sm text-destructive mt-1">
+                    {form.formState.errors.stock.message}
+                  </p>
                 )}
                 {stockWarning && (
-                  <p className="text-sm text-destructive mt-1">{stockWarning}</p>
+                  <p className="text-sm text-destructive mt-1">
+                    {stockWarning}
+                  </p>
                 )}
               </div>
 
@@ -548,10 +637,14 @@ const productId = params.id;
                 <Checkbox
                   id="popularity"
                   checked={form.watch("popularity")}
-                  onCheckedChange={(checked) => form.setValue("popularity", !!checked)}
+                  onCheckedChange={(checked) =>
+                    form.setValue("popularity", !!checked)
+                  }
                   className="data-[state=checked]:bg-primary data-[state=checked]:border-primary"
                 />
-                <Label htmlFor="popularity" className="text-sm cursor-pointer">Mark as Popular Product</Label>
+                <Label htmlFor="popularity" className="text-sm cursor-pointer">
+                  Mark as Popular Product
+                </Label>
               </div>
             </div>
           </CardContent>
@@ -578,9 +671,15 @@ const productId = params.id;
                         onCheckedChange={(checked) => {
                           const current = form.watch("categories");
                           if (checked) {
-                            form.setValue("categories", [...current, category.id]);
+                            form.setValue("categories", [
+                              ...current,
+                              category.id,
+                            ]);
                           } else {
-                            form.setValue("categories", current.filter((id) => id !== category.id));
+                            form.setValue(
+                              "categories",
+                              current.filter((id) => id !== category.id)
+                            );
                           }
                         }}
                         className="data-[state=checked]:bg-primary data-[state=checked]:border-primary mt-0.5"
@@ -589,58 +688,78 @@ const productId = params.id;
                         <Collapsible
                           open={categoryExpanded[category.id] || false}
                           onOpenChange={(open: boolean) => {
-                            setCategoryExpanded(prev => ({
+                            setCategoryExpanded((prev) => ({
                               ...prev,
-                              [category.id]: open
+                              [category.id]: open,
                             }));
                           }}
                         >
                           <div className="flex items-center">
-                            <Label 
-                              htmlFor={`category-${category.id}`} 
+                            <Label
+                              htmlFor={`category-${category.id}`}
                               className="text-sm font-medium cursor-pointer flex-1"
                             >
                               {category.name}
                             </Label>
-                            {category.subcategories && category.subcategories.length > 0 && (
-                              <CollapsibleTrigger asChild>
-                                <Button variant="ghost" size="sm" className="p-0 h-7 w-7">
-                                  {categoryExpanded[category.id] ? (
-                                    <ChevronDown className="h-4 w-4" />
-                                  ) : (
-                                    <ChevronRight className="h-4 w-4" />
-                                  )}
-                                </Button>
-                              </CollapsibleTrigger>
-                            )}
-                          </div>
-                          {category.subcategories && category.subcategories.length > 0 && (
-                            <CollapsibleContent className="pl-6 mt-1 space-y-1 border-l-2 border-muted ml-1">
-                              {category.subcategories.map((subCategory) => (
-                                <div key={subCategory.id} className="flex items-start space-x-2 py-1">
-                                  <Checkbox
-                                    id={`category-${subCategory.id}`}
-                                    checked={form.watch("categories").includes(subCategory.id)}
-                                    onCheckedChange={(checked) => {
-                                      const current = form.watch("categories");
-                                      if (checked) {
-                                        form.setValue("categories", [...current, subCategory.id]);
-                                      } else {
-                                        form.setValue("categories", current.filter((id) => id !== subCategory.id));
-                                      }
-                                    }}
-                                    className="data-[state=checked]:bg-primary data-[state=checked]:border-primary mt-0.5"
-                                  />
-                                  <Label
-                                    htmlFor={`category-${subCategory.id}`}
-                                    className="text-sm font-normal cursor-pointer"
+                            {category.subcategories &&
+                              category.subcategories.length > 0 && (
+                                <CollapsibleTrigger asChild>
+                                  <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    className="p-0 h-7 w-7"
                                   >
-                                    {subCategory.name}
-                                  </Label>
-                                </div>
-                              ))}
-                            </CollapsibleContent>
-                          )}
+                                    {categoryExpanded[category.id] ? (
+                                      <ChevronDown className="h-4 w-4" />
+                                    ) : (
+                                      <ChevronRight className="h-4 w-4" />
+                                    )}
+                                  </Button>
+                                </CollapsibleTrigger>
+                              )}
+                          </div>
+                          {category.subcategories &&
+                            category.subcategories.length > 0 && (
+                              <CollapsibleContent className="pl-6 mt-1 space-y-1 border-l-2 border-muted ml-1">
+                                {category.subcategories.map((subCategory) => (
+                                  <div
+                                    key={subCategory.id}
+                                    className="flex items-start space-x-2 py-1"
+                                  >
+                                    <Checkbox
+                                      id={`category-${subCategory.id}`}
+                                      checked={form
+                                        .watch("categories")
+                                        .includes(subCategory.id)}
+                                      onCheckedChange={(checked) => {
+                                        const current =
+                                          form.watch("categories");
+                                        if (checked) {
+                                          form.setValue("categories", [
+                                            ...current,
+                                            subCategory.id,
+                                          ]);
+                                        } else {
+                                          form.setValue(
+                                            "categories",
+                                            current.filter(
+                                              (id) => id !== subCategory.id
+                                            )
+                                          );
+                                        }
+                                      }}
+                                      className="data-[state=checked]:bg-primary data-[state=checked]:border-primary mt-0.5"
+                                    />
+                                    <Label
+                                      htmlFor={`category-${subCategory.id}`}
+                                      className="text-sm font-normal cursor-pointer"
+                                    >
+                                      {subCategory.name}
+                                    </Label>
+                                  </div>
+                                ))}
+                              </CollapsibleContent>
+                            )}
                         </Collapsible>
                       </div>
                     </div>
@@ -649,7 +768,9 @@ const productId = params.id;
               )}
             </div>
             {form.formState.errors.categories && (
-              <p className="text-sm text-destructive mt-4">{form.formState.errors.categories.message}</p>
+              <p className="text-sm text-destructive mt-4">
+                {form.formState.errors.categories.message}
+              </p>
             )}
           </CardContent>
         </Card>
@@ -667,7 +788,13 @@ const productId = params.id;
                 <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-4 mt-2">
                   {existingImages.map((image) => (
                     <div key={image.imageId} className="relative group">
-                      <div className={`aspect-square w-full h-24 overflow-hidden bg-muted rounded-md border ${image.mainImage ? 'border-primary border-2' : 'border-border/40'}`}>
+                      <div
+                        className={`aspect-square w-full h-24 overflow-hidden bg-muted rounded-md border ${
+                          image.mainImage
+                            ? "border-primary border-2"
+                            : "border-border/40"
+                        }`}
+                      >
                         <img
                           src={image.imageUrl}
                           alt={`Product image`}
@@ -767,11 +894,16 @@ const productId = params.id;
                 <div className="flex flex-col items-center justify-center pt-4 pb-4">
                   <Upload className="w-7 h-7 mb-2 text-primary" />
                   <p className="text-sm text-foreground">
-                    <span className="font-semibold">Click to upload</span> or drag and drop
+                    <span className="font-semibold">Click to upload</span> or
+                    drag and drop
                   </p>
-                  <p className="text-xs text-muted-foreground">PNG, JPG, JPEG (MAX. 5 files)</p>
+                  <p className="text-xs text-muted-foreground">
+                    PNG, JPG, JPEG (MAX. 5 files)
+                  </p>
                   <p className="text-xs text-muted-foreground mt-1">
-                    {isImageUploading ? 'Uploading...' : `${existingImages.length}/5 images used`}
+                    {isImageUploading
+                      ? "Uploading..."
+                      : `${existingImages.length}/5 images used`}
                   </p>
                 </div>
                 <input
@@ -791,17 +923,18 @@ const productId = params.id;
         <Card className="border-border/40 shadow-sm">
           <CardHeader className="bg-primary/5">
             <CardTitle>Product Colors</CardTitle>
-            <CardDescription>
-              Manage colors for this product
-            </CardDescription>
+            <CardDescription>Manage colors for this product</CardDescription>
           </CardHeader>
           <CardContent className="pt-6">
-            <ColorPicker 
-              colors={productColors} 
+            <ColorPicker
+              colors={productColors}
               onChange={(colors) => {
                 setProductColors(colors);
-                form.setValue('colorIds', colors.map(c => c.colorId || ''));
-              }} 
+                form.setValue(
+                  "colorIds",
+                  colors.map((c) => c.colorId || "")
+                );
+              }}
             />
           </CardContent>
         </Card>
@@ -825,7 +958,9 @@ const productId = params.id;
                     <Label className="mb-2 block">Size</Label>
                     <Select
                       value={form.watch(`sizes.${index}.value`)}
-                      onValueChange={(value) => form.setValue(`sizes.${index}.value`, value)}
+                      onValueChange={(value) =>
+                        form.setValue(`sizes.${index}.value`, value)
+                      }
                     >
                       <SelectTrigger className="border-primary/20 focus-visible:ring-primary">
                         <SelectValue placeholder="Select a size" />
@@ -855,7 +990,7 @@ const productId = params.id;
                       id={`size-stock-${index}`}
                       type="number"
                       placeholder="0"
-                      value={form.watch(`sizes.${index}.stockForSize`) || ''}
+                      value={form.watch(`sizes.${index}.stockForSize`) || ""}
                       onChange={(e) =>
                         form.setValue(
                           `sizes.${index}.stockForSize`,
@@ -866,7 +1001,10 @@ const productId = params.id;
                     />
                     {form.formState.errors.sizes?.[index]?.stockForSize && (
                       <p className="text-sm text-destructive mt-1">
-                        {form.formState.errors.sizes[index]?.stockForSize?.message}
+                        {
+                          form.formState.errors.sizes[index]?.stockForSize
+                            ?.message
+                        }
                       </p>
                     )}
                   </div>
@@ -908,8 +1046,8 @@ const productId = params.id;
           >
             Cancel
           </Button>
-          <Button 
-            type="submit" 
+          <Button
+            type="submit"
             disabled={isSubmitting}
             className="bg-primary hover:bg-primary/90"
           >

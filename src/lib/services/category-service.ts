@@ -1,37 +1,54 @@
-import axios from "axios";
-import { CategoryResponse } from "../types/product";
+import apiClient from "../api-client";
+import { CategoryResponse } from "../types/category";
 import { handleApiError } from "../utils/error-handler";
-
-const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8080/api";
 
 export interface CategoryCreateRequest {
   name: string;
-  description: string;
-  parentId?: string;
+  description?: string;
+  imageUrl?: string;
+  parentId?: number;
+  sortOrder?: number;
+  isActive?: boolean;
+  isFeatured?: boolean;
+  metaTitle?: string;
+  metaDescription?: string;
+  metaKeywords?: string;
 }
 
 export interface CategoryUpdateRequest {
-  name: string;
-  description: string;
-  parentId?: string;
+  name?: string;
+  description?: string;
+  imageUrl?: string;
+  parentId?: number;
+  sortOrder?: number;
+  isActive?: boolean;
+  isFeatured?: boolean;
+  metaTitle?: string;
+  metaDescription?: string;
+  metaKeywords?: string;
 }
 
-export interface CategorySummary {
-  categoryId: string;
-  name: string;
-  description: string;
-  productCount: number;
-  subcategoryCount: number;
+export interface CategoryPageResponse {
+  content: CategoryResponse[];
+  totalPages: number;
+  totalElements: number;
+  size: number;
+  number: number;
 }
 
 class CategoryService {
   /**
-   * Get all categories (public endpoint)
+   * Get all categories with pagination
    */
-  async getAllCategories(): Promise<CategoryResponse[]> {
+  async getAllCategories(
+    page: number = 0,
+    size: number = 10,
+    sortBy: string = "name",
+    sortDir: string = "asc"
+  ): Promise<CategoryPageResponse> {
     try {
-      const response = await axios.get(`${API_URL}/public/categories`, {
-        withCredentials: true,
+      const response = await apiClient.get(`/categories`, {
+        params: { page, size, sortBy, sortDir },
       });
       return response.data;
     } catch (error) {
@@ -40,13 +57,13 @@ class CategoryService {
   }
 
   /**
-   * Get subcategories for a specific category (public endpoint)
+   * Get subcategories for a specific category
    */
-  async getSubcategories(categoryId: string): Promise<CategoryResponse[]> {
+  async getSubcategories(parentId: number): Promise<CategoryResponse[]> {
     try {
-      const response = await axios.get(`${API_URL}/public/categories/${categoryId}/subcategories`, {
-        withCredentials: true,
-      });
+      const response = await apiClient.get(
+        `/categories/sub-categories/${parentId}`
+      );
       return response.data;
     } catch (error) {
       throw handleApiError(error);
@@ -54,27 +71,11 @@ class CategoryService {
   }
 
   /**
-   * Get all categories (admin endpoint)
-   */
-  async getAllAdminCategories(): Promise<CategoryResponse[]> {
-    try {
-      const response = await axios.get(`${API_URL}/admin/categories`, {
-        withCredentials: true,
-      });
-      return response.data;
-    } catch (error) {
-      throw handleApiError(error);
-    }
-  }
-
-  /**
-   * Get top-level categories (admin endpoint)
+   * Get top-level categories
    */
   async getTopLevelCategories(): Promise<CategoryResponse[]> {
     try {
-      const response = await axios.get(`${API_URL}/admin/categories/top-level`, {
-        withCredentials: true,
-      });
+      const response = await apiClient.get(`/categories/top-level`);
       return response.data;
     } catch (error) {
       throw handleApiError(error);
@@ -82,13 +83,11 @@ class CategoryService {
   }
 
   /**
-   * Get subcategories for a specific category (admin endpoint)
+   * Search categories with criteria
    */
-  async getAdminSubcategories(categoryId: string): Promise<CategoryResponse[]> {
+  async searchCategories(searchDTO: any): Promise<CategoryPageResponse> {
     try {
-      const response = await axios.get(`${API_URL}/admin/categories/${categoryId}/subcategories`, {
-        withCredentials: true,
-      });
+      const response = await apiClient.post(`/categories/search`, searchDTO);
       return response.data;
     } catch (error) {
       throw handleApiError(error);
@@ -96,27 +95,11 @@ class CategoryService {
   }
 
   /**
-   * Get category summaries for admin dashboard
+   * Get category by ID
    */
-  async getCategorySummaries(): Promise<CategorySummary[]> {
+  async getCategoryById(id: number): Promise<CategoryResponse> {
     try {
-      const response = await axios.get(`${API_URL}/admin/categories/summaries`, {
-        withCredentials: true,
-      });
-      return response.data;
-    } catch (error) {
-      throw handleApiError(error);
-    }
-  }
-
-  /**
-   * Get a category by ID (admin endpoint)
-   */
-  async getCategoryById(categoryId: string): Promise<CategoryResponse> {
-    try {
-      const response = await axios.get(`${API_URL}/admin/categories/${categoryId}`, {
-        withCredentials: true,
-      });
+      const response = await apiClient.get(`/categories/${id}`);
       return response.data;
     } catch (error) {
       throw handleApiError(error);
@@ -126,11 +109,11 @@ class CategoryService {
   /**
    * Create a new category
    */
-  async createCategory(categoryData: CategoryCreateRequest): Promise<CategoryResponse> {
+  async createCategory(
+    categoryData: CategoryCreateRequest
+  ): Promise<CategoryResponse> {
     try {
-      const response = await axios.post(`${API_URL}/admin/categories`, categoryData, {
-        withCredentials: true,
-      });
+      const response = await apiClient.post(`/categories`, categoryData);
       return response.data;
     } catch (error) {
       throw handleApiError(error);
@@ -140,15 +123,12 @@ class CategoryService {
   /**
    * Update an existing category
    */
-  async updateCategory(categoryId: string, categoryData: CategoryUpdateRequest): Promise<CategoryResponse> {
+  async updateCategory(
+    id: number,
+    categoryData: CategoryUpdateRequest
+  ): Promise<CategoryResponse> {
     try {
-      const response = await axios.put(
-        `${API_URL}/admin/categories/${categoryId}`,
-        categoryData,
-        {
-          withCredentials: true,
-        }
-      );
+      const response = await apiClient.put(`/categories/${id}`, categoryData);
       return response.data;
     } catch (error) {
       throw handleApiError(error);
@@ -158,11 +138,23 @@ class CategoryService {
   /**
    * Delete a category
    */
-  async deleteCategory(categoryId: string): Promise<void> {
+  async deleteCategory(id: number): Promise<void> {
     try {
-      await axios.delete(`${API_URL}/admin/categories/${categoryId}`, {
-        withCredentials: true,
+      await apiClient.delete(`/categories/${id}`);
+    } catch (error) {
+      throw handleApiError(error);
+    }
+  }
+
+  /**
+   * Get all categories for dropdown (non-paginated, limited to 1000)
+   */
+  async getAllCategoriesForDropdown(): Promise<CategoryResponse[]> {
+    try {
+      const response = await apiClient.get(`/categories`, {
+        params: { page: 0, size: 1000, sortBy: "name", sortDir: "asc" },
       });
+      return response.data.content;
     } catch (error) {
       throw handleApiError(error);
     }

@@ -151,6 +151,9 @@ export default function CategoriesPage() {
   const [sortBy, setSortBy] = useState("name");
   const [sortDir, setSortDir] = useState<"asc" | "desc">("asc");
 
+  // Brand-specific sort field (brands use 'brandName', categories use 'name')
+  const brandSortBy = "brandName";
+
   // Type guard to check if data is paginated
   const isPaginatedData = (
     data: any
@@ -287,9 +290,9 @@ export default function CategoriesPage() {
     isError: isErrorBrands,
     error: errorBrands,
   } = useQuery({
-    queryKey: ["brands", currentPage, pageSize, sortBy, sortDir],
+    queryKey: ["brands", currentPage, pageSize, brandSortBy, sortDir],
     queryFn: () =>
-      brandService.getAllBrands(currentPage, pageSize, sortBy, sortDir),
+      brandService.getAllBrands(currentPage, pageSize, brandSortBy, sortDir),
   });
 
   const brands = brandsData?.content || [];

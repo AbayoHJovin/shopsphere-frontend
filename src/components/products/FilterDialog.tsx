@@ -1,16 +1,29 @@
 "use client";
 
-import React, { useState, useEffect } from 'react';
-import { useQuery } from '@tanstack/react-query';
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
-import { Button } from '@/components/ui/button';
-import { ScrollArea } from '@/components/ui/scroll-area';
-import { Loader2, Filter as FilterIcon, X } from 'lucide-react';
-import { useMediaQuery } from '@/hooks/use-media-query';
-import { categoryService } from '@/lib/services/category-service';
-import { ProductSearchFilterRequest, CategoryResponse } from '@/lib/types/product';
-import { AdvancedSearchFilters } from './AdvancedSearchFilters';
+import React, { useState, useEffect } from "react";
+import { useQuery } from "@tanstack/react-query";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import {
+  Sheet,
+  SheetContent,
+  SheetHeader,
+  SheetTitle,
+} from "@/components/ui/sheet";
+import { Button } from "@/components/ui/button";
+import { ScrollArea } from "@/components/ui/scroll-area";
+import { Loader2, Filter as FilterIcon, X } from "lucide-react";
+import { useMediaQuery } from "@/hooks/use-media-query";
+import { categoryService } from "@/lib/services/category-service";
+import {
+  ProductSearchFilterRequest,
+  CategoryResponse,
+} from "@/lib/types/product";
+import { AdvancedSearchFilters } from "./AdvancedSearchFilters";
 
 interface FilterDialogProps {
   open: boolean;
@@ -19,65 +32,69 @@ interface FilterDialogProps {
   currentFilters: ProductSearchFilterRequest;
 }
 
-export function FilterDialog({ 
-  open, 
-  onOpenChange, 
+export function FilterDialog({
+  open,
+  onOpenChange,
   onApplyFilters,
-  currentFilters
+  currentFilters,
 }: FilterDialogProps) {
   // Check if we're on mobile
   const isMobile = useMediaQuery("(max-width: 768px)");
-  
+
   // Fetch all categories
   const { data: categories, isLoading: isCategoriesLoading } = useQuery({
-    queryKey: ['categories'],
+    queryKey: ["categories"],
     queryFn: () => categoryService.getAllCategories(),
   });
 
   // Format categories for display
   const formattedCategories = React.useMemo(() => {
     if (!categories) return [];
-    
+
+    // Handle both paginated and non-paginated responses
+    const categoryList = categories.content || categories;
+
     // Create a map of parent categories and their children
-    const parentCategories = categories.filter(cat => !cat.parentId);
-    
-    return parentCategories.map(category => ({
-      id: category.categoryId,
+    const parentCategories = categoryList.filter((cat: any) => !cat.parentId);
+
+    return parentCategories.map((category: any) => ({
+      id: category.id || category.categoryId,
       name: category.name,
-      hasSubcategories: category.hasSubcategories
+      hasSubcategories: category.hasSubcategories,
     }));
   }, [categories]);
-  
+
   // For fetching subcategories when a parent is selected
-  const [selectedCategoryId, setSelectedCategoryId] = useState<string | null>(null);
-  
+  const [selectedCategoryId, setSelectedCategoryId] = useState<string | null>(
+    null
+  );
+
   // Fetch subcategories for a selected category
   const { data: subcategories, isLoading: isSubcategoriesLoading } = useQuery({
-    queryKey: ['subcategories', selectedCategoryId],
-    queryFn: () => selectedCategoryId ? categoryService.getSubcategories(selectedCategoryId) : Promise.resolve([]),
+    queryKey: ["subcategories", selectedCategoryId],
+    queryFn: () =>
+      selectedCategoryId
+        ? categoryService.getSubcategories(parseInt(selectedCategoryId))
+        : Promise.resolve([]),
     enabled: !!selectedCategoryId,
   });
 
   // Format colors (in a real app these would come from the API)
   const colors = [
-    { name: 'Black' },
-    { name: 'White' },
-    { name: 'Red' },
-    { name: 'Blue' },
-    { name: 'Green' },
-    { name: 'Yellow' },
-    { name: 'Purple' },
-    { name: 'Orange' },
-    { name: 'Gray' },
-    { name: 'Brown' }
+    { name: "Black" },
+    { name: "White" },
+    { name: "Red" },
+    { name: "Blue" },
+    { name: "Green" },
+    { name: "Yellow" },
+    { name: "Purple" },
+    { name: "Orange" },
+    { name: "Gray" },
+    { name: "Brown" },
   ];
 
   // Format sizes based on the enum
-  const sizes = [
-    { name: 'SMALL' },
-    { name: 'MEDIUM' },
-    { name: 'LARGE' }
-  ];
+  const sizes = [{ name: "SMALL" }, { name: "MEDIUM" }, { name: "LARGE" }];
 
   // Handle applying filters and closing dialog
   const handleApplyFilters = (filters: ProductSearchFilterRequest) => {
@@ -105,7 +122,17 @@ export function FilterDialog({
               <AdvancedSearchFilters
                 onSearch={handleApplyFilters}
                 categories={formattedCategories}
-                subcategories={subcategories || []}
+                subcategories={
+                  subcategories
+                    ? subcategories.map((cat: any) => ({
+                        categoryId:
+                          cat.id?.toString() ||
+                          cat.categoryId?.toString() ||
+                          "",
+                        name: cat.name,
+                      }))
+                    : []
+                }
                 onCategorySelect={setSelectedCategoryId}
                 selectedCategoryId={selectedCategoryId}
                 colors={colors}
@@ -138,7 +165,15 @@ export function FilterDialog({
             <AdvancedSearchFilters
               onSearch={handleApplyFilters}
               categories={formattedCategories}
-              subcategories={subcategories || []}
+              subcategories={
+                subcategories
+                  ? subcategories.map((cat: any) => ({
+                      categoryId:
+                        cat.id?.toString() || cat.categoryId?.toString() || "",
+                      name: cat.name,
+                    }))
+                  : []
+              }
               onCategorySelect={setSelectedCategoryId}
               selectedCategoryId={selectedCategoryId}
               colors={colors}
@@ -151,4 +186,4 @@ export function FilterDialog({
       </DialogContent>
     </Dialog>
   );
-} 
+}

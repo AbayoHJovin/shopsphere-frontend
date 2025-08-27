@@ -45,13 +45,14 @@ import {
 } from "@/components/ui/dialog";
 import { ColorPicker } from "@/components/ColorPicker";
 import { ArrowLeft, Upload, X, Plus, Minus, AlertTriangle } from "lucide-react";
-import { categoryService } from "@/lib/services/category-service";
 import { productColorService } from "@/lib/services/product-color-service";
 import { productSizeService } from "@/lib/services/product-size-service";
 import { productService } from "@/lib/services/product-service";
-import { Size, Gender, CategoryResponse } from "@/lib/types/product";
+import { Size, Gender } from "@/lib/types/product";
+import { CategoryDropdown } from "@/components/products/CategoryDropdown";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { useToast } from "@/components/ui/use-toast";
+import FetchAttributesDialog from "@/components/products/FetchAttributesDialog";
 
 // Product schema with validation
 const productSchema = z.object({
@@ -213,12 +214,6 @@ export default function CreateProductPage() {
   const [colors, setColors] = useState<ProductColor[]>([]);
   const [sizes, setSizes] = useState<ProductSize[]>([]);
 
-  // Fetch categories from backend
-  const { data: categories, isLoading: categoriesLoading } = useQuery({
-    queryKey: ["admin-categories"],
-    queryFn: categoryService.getAllAdminCategories,
-  });
-
   // Fetch available colors for reuse
   const { data: availableColors, isLoading: colorsLoading } = useQuery({
     queryKey: ["product-colors"],
@@ -306,26 +301,112 @@ export default function CreateProductPage() {
     if (!event.target.files || event.target.files.length === 0) return;
 
     const files = Array.from(event.target.files);
-    const newImages = files.slice(0, 10 - mainImages.length);
+
+    // Validate each image file
+    const validImages: File[] = [];
+    const errors: string[] = [];
+
+    for (const file of files) {
+      // Check file size (max 50MB)
+      if (file.size > 50 * 1024 * 1024) {
+        errors.push(`${file.name}: File size exceeds 50MB limit`);
+        continue;
+      }
+
+      // Check file type
+      if (!file.type.startsWith("image/")) {
+        errors.push(
+          `${file.name}: Invalid file type. Only image files are allowed.`
+        );
+        continue;
+      }
+
+      validImages.push(file);
+    }
+
+    // Show errors if any
+    if (errors.length > 0) {
+      toast({
+        title: "Image Upload Errors",
+        description: errors.join("\n"),
+        variant: "destructive",
+      });
+    }
+
+    // Only add valid images
+    const newImages = validImages.slice(0, 10 - mainImages.length);
+
+    if (newImages.length === 0) return;
 
     // Create URLs for preview
     const newUrls = newImages.map((file) => URL.createObjectURL(file));
 
     setMainImages((prev) => [...prev, ...newImages]);
     setMainImageUrls((prev) => [...prev, ...newUrls]);
+
+    if (newImages.length > 0) {
+      toast({
+        title: "Images Added",
+        description: `Successfully added ${newImages.length} image(s)`,
+        variant: "default",
+      });
+    }
   };
 
   const handleVideoUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
     if (!event.target.files || event.target.files.length === 0) return;
 
     const files = Array.from(event.target.files);
-    const newVideos = files.slice(0, 5 - productVideos.length);
+
+    // Validate each video file
+    const validVideos: File[] = [];
+    const errors: string[] = [];
+
+    for (const file of files) {
+      // Check file size (max 100MB)
+      if (file.size > 100 * 1024 * 1024) {
+        errors.push(`${file.name}: File size exceeds 100MB limit`);
+        continue;
+      }
+
+      // Check file type
+      if (!file.type.startsWith("video/")) {
+        errors.push(
+          `${file.name}: Invalid file type. Only video files are allowed.`
+        );
+        continue;
+      }
+
+      validVideos.push(file);
+    }
+
+    // Show errors if any
+    if (errors.length > 0) {
+      toast({
+        title: "Video Upload Errors",
+        description: errors.join("\n"),
+        variant: "destructive",
+      });
+    }
+
+    // Only add valid videos
+    const newVideos = validVideos.slice(0, 5 - productVideos.length);
+
+    if (newVideos.length === 0) return;
 
     // Create URLs for preview
     const newUrls = newVideos.map((file) => URL.createObjectURL(file));
 
     setProductVideos((prev) => [...prev, ...newVideos]);
     setVideoUrls((prev) => [...prev, ...newUrls]);
+
+    if (newVideos.length > 0) {
+      toast({
+        title: "Videos Added",
+        description: `Successfully added ${newVideos.length} video(s)`,
+        variant: "default",
+      });
+    }
   };
 
   const removeMainImage = (index: number) => {
@@ -391,6 +472,33 @@ export default function CreateProductPage() {
           : attr
       )
     );
+  };
+
+  // Handle attributes fetched from backend
+  const handleAttributesFromBackend = (
+    backendAttributes: Array<{ name: string; values: string[] }>
+  ) => {
+    // Convert backend attributes to frontend format
+    const newAttributes: ProductAttribute[] = backendAttributes.map((attr) => ({
+      name: attr.name,
+      required: false,
+      values: attr.values,
+    }));
+
+    // Add to existing attributes, avoiding duplicates
+    setAttributes((prev) => {
+      const existingNames = new Set(prev.map((a) => a.name.toLowerCase()));
+      const newOnes = newAttributes.filter(
+        (attr) => !existingNames.has(attr.name.toLowerCase())
+      );
+      return [...prev, ...newOnes];
+    });
+
+    toast({
+      title: "Attributes Added",
+      description: `Added ${newAttributes.length} attributes from backend`,
+      variant: "default",
+    });
   };
 
   // Variant management functions
@@ -629,60 +737,45 @@ export default function CreateProductPage() {
         });
       }
 
-      // Variants
+      // Variants - send as JSON string to avoid Spring parsing issues
       if (variants.length > 0) {
-        variants.forEach((variant, index) => {
-          formData.append(`variants[${index}][variantSku]`, variant.variantSku);
-          formData.append(
-            `variants[${index}][price]`,
-            variant.price.toString()
-          );
-          formData.append(
-            `variants[${index}][stockQuantity]`,
-            variant.stockQuantity.toString()
-          );
-          formData.append(
-            `variants[${index}][lowStockThreshold]`,
-            variant.lowStockThreshold.toString()
-          );
-          formData.append(
-            `variants[${index}][sortOrder]`,
-            variant.sortOrder.toString()
-          );
-          formData.append(
-            `variants[${index}][isActive]`,
-            String(variant.isActive)
-          );
+        const variantsData = variants.map((variant) => ({
+          variantSku: variant.variantSku,
+          price: variant.price,
+          stockQuantity: variant.stockQuantity,
+          lowStockThreshold: variant.lowStockThreshold,
+          sortOrder: variant.sortOrder,
+          isActive: variant.isActive,
+          attributes: variant.attributes,
+        }));
 
-          // Variant attributes
-          Object.entries(variant.attributes).forEach(([key, value]) => {
-            formData.append(`variants[${index}][attributes][${key}]`, value);
-          });
+        formData.append("variants", JSON.stringify(variantsData));
 
-          // Variant images
-          variant.images.forEach((image) => {
-            formData.append(`variants[${index}][variantImages]`, image);
-          });
+        const variantImageMapping: { [key: string]: number[] } = {};
+        let imageIndex = 0;
+
+        variants.forEach((variant, variantIndex) => {
+          if (variant.images && variant.images.length > 0) {
+            variantImageMapping[variantIndex] = [];
+            variant.images.forEach((image) => {
+              formData.append(`variantImages`, image);
+              variantImageMapping[variantIndex].push(imageIndex);
+              imageIndex++;
+            });
+          }
         });
+
+        // Add the mapping as JSON string
+        if (Object.keys(variantImageMapping).length > 0) {
+          formData.append(
+            "variantImageMapping",
+            JSON.stringify(variantImageMapping)
+          );
+          console.log("Variant image mapping:", variantImageMapping);
+        }
       }
 
-      // Colors and sizes (if not using variants)
-      if (colors.length > 0 && variants.length === 0) {
-        colors.forEach((color, index) => {
-          formData.append(`colors[${index}][colorName]`, color.colorName);
-          formData.append(`colors[${index}][colorHexCode]`, color.colorHexCode);
-        });
-      }
-
-      if (sizes.length > 0 && variants.length === 0) {
-        sizes.forEach((size, index) => {
-          formData.append(`sizes[${index}][size]`, size.size);
-          formData.append(
-            `sizes[${index}][stockForSize]`,
-            size.stockForSize.toString()
-          );
-        });
-      }
+      // Colors and sizes are now handled through variants/attributes
 
       console.log("Submitting form data:", formData);
 
@@ -709,8 +802,6 @@ export default function CreateProductPage() {
       setMainImageUrls([]);
       setProductVideos([]);
       setVideoUrls([]);
-      setColors([]);
-      setSizes([]);
       setAttributes([]);
       setVariants([]);
     } catch (error: any) {
@@ -1110,31 +1201,16 @@ export default function CreateProductPage() {
                   <FormField
                     control={form.control}
                     name="categoryId"
-                    render={({ field }) => (
+                    render={({ field, fieldState }) => (
                       <FormItem>
-                        <FormLabel>Category *</FormLabel>
-                        <Select
-                          onValueChange={(value) =>
-                            field.onChange(parseInt(value))
-                          }
-                          value={field.value?.toString() || ""}
-                        >
-                          <FormControl>
-                            <SelectTrigger className="border-primary/20 focus-visible:ring-primary">
-                              <SelectValue placeholder="Select Category" />
-                            </SelectTrigger>
-                          </FormControl>
-                          <SelectContent>
-                            {categories?.map((category) => (
-                              <SelectItem
-                                key={category.categoryId}
-                                value={category.categoryId.toString()}
-                              >
-                                {category.name}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
+                        <CategoryDropdown
+                          value={field.value}
+                          onValueChange={field.onChange}
+                          placeholder="Select Category"
+                          label="Category *"
+                          required={true}
+                          error={fieldState.error?.message}
+                        />
                         <FormMessage />
                       </FormItem>
                     )}
@@ -1158,39 +1234,6 @@ export default function CreateProductPage() {
                     )}
                   />
                 </div>
-
-                {/* Selected category badge */}
-                {form.watch("categoryId") && categories && (
-                  <div className="flex items-center gap-2 mt-4">
-                    <Badge
-                      variant="secondary"
-                      className="pl-2 pr-1 py-1 flex items-center gap-1"
-                    >
-                      {
-                        categories.find(
-                          (c) =>
-                            c.categoryId ===
-                            form.watch("categoryId")?.toString()
-                        )?.name
-                      }
-                      <Button
-                        type="button"
-                        variant="ghost"
-                        size="icon"
-                        className="h-4 w-4 rounded-full"
-                        onClick={() => form.setValue("categoryId", 0)}
-                      >
-                        <X className="w-3 h-3" />
-                      </Button>
-                    </Badge>
-                  </div>
-                )}
-
-                {!form.watch("categoryId") && (
-                  <p className="text-sm text-destructive">
-                    Please select a category
-                  </p>
-                )}
               </CardContent>
             </Card>
 
@@ -1213,7 +1256,7 @@ export default function CreateProductPage() {
                           or drag and drop
                         </p>
                         <p className="text-xs text-muted-foreground">
-                          PNG, JPG, JPEG (MAX. 10 files)
+                          PNG, JPG, JPEG (MAX. 10 files, 50MB each)
                         </p>
                       </div>
                       <input
@@ -1272,7 +1315,7 @@ export default function CreateProductPage() {
                           or drag and drop
                         </p>
                         <p className="text-xs text-muted-foreground">
-                          MP4, WebM, Ogg (MAX. 5 files)
+                          MP4, WebM, Ogg (MAX. 5 files, 100MB each)
                         </p>
                       </div>
                       <input
@@ -1437,15 +1480,20 @@ export default function CreateProductPage() {
                     </div>
                   ))}
 
-                  <Button
-                    type="button"
-                    variant="outline"
-                    onClick={addAttribute}
-                    className="w-full mt-2 border-primary/20 hover:bg-primary/5 hover:text-primary"
-                  >
-                    <Plus className="w-4 h-4 mr-2" />
-                    Add Attribute
-                  </Button>
+                  <div className="flex gap-2">
+                    <Button
+                      type="button"
+                      variant="outline"
+                      onClick={addAttribute}
+                      className="flex-1 border-primary/20 hover:bg-primary/5 hover:text-primary"
+                    >
+                      <Plus className="w-4 h-4 mr-2" />
+                      Add Attribute
+                    </Button>
+                    <FetchAttributesDialog
+                      onAttributesSelected={handleAttributesFromBackend}
+                    />
+                  </div>
                 </div>
               </CardContent>
             </Card>
@@ -1570,6 +1618,41 @@ export default function CreateProductPage() {
                       {/* Variant Images */}
                       <div className="mb-4">
                         <Label className="mb-2 block">Variant Images</Label>
+
+                        {/* Show selected images */}
+                        {variant.images && variant.images.length > 0 && (
+                          <div className="mb-3">
+                            <div className="flex flex-wrap gap-2">
+                              {variant.images.map((image, imgIndex) => (
+                                <div key={imgIndex} className="relative">
+                                  <img
+                                    src={
+                                      typeof image === "string"
+                                        ? image
+                                        : URL.createObjectURL(image)
+                                    }
+                                    alt={`Variant image ${imgIndex + 1}`}
+                                    className="w-16 h-16 object-cover rounded border"
+                                  />
+                                  <button
+                                    type="button"
+                                    onClick={() => {
+                                      const newImages = variant.images.filter(
+                                        (_, i) => i !== imgIndex
+                                      );
+                                      updateVariant(index, "images", newImages);
+                                    }}
+                                    className="absolute -top-2 -right-2 bg-destructive text-white rounded-full w-5 h-5 flex items-center justify-center text-xs hover:bg-destructive/80"
+                                  >
+                                    ×
+                                  </button>
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                        )}
+
+                        {/* Upload button */}
                         <div className="flex items-center justify-center w-full">
                           <label className="flex flex-col items-center justify-center w-full h-20 border-2 border-dashed border-border rounded-lg cursor-pointer hover:bg-muted/50 transition">
                             <div className="flex flex-col items-center justify-center">
@@ -1578,7 +1661,7 @@ export default function CreateProductPage() {
                                 <span className="font-semibold">
                                   Click to upload
                                 </span>{" "}
-                                variant images
+                                variant images (50MB each)
                               </p>
                             </div>
                             <input
@@ -1588,7 +1671,54 @@ export default function CreateProductPage() {
                               onChange={(e) => {
                                 if (e.target.files) {
                                   const files = Array.from(e.target.files);
-                                  updateVariant(index, "images", files);
+
+                                  // Validate each image file
+                                  const validImages: File[] = [];
+                                  const errors: string[] = [];
+
+                                  for (const file of files) {
+                                    // Check file size (max 50MB)
+                                    if (file.size > 50 * 1024 * 1024) {
+                                      errors.push(
+                                        `${file.name}: File size exceeds 50MB limit`
+                                      );
+                                      continue;
+                                    }
+
+                                    // Check file type
+                                    if (!file.type.startsWith("image/")) {
+                                      errors.push(
+                                        `${file.name}: Invalid file type. Only image files are allowed.`
+                                      );
+                                      continue;
+                                    }
+
+                                    validImages.push(file);
+                                  }
+
+                                  // Show errors if any
+                                  if (errors.length > 0) {
+                                    toast({
+                                      title: "Variant Image Upload Errors",
+                                      description: errors.join("\n"),
+                                      variant: "destructive",
+                                    });
+                                  }
+
+                                  // Only add valid images
+                                  if (validImages.length > 0) {
+                                    const currentImages = variant.images || [];
+                                    updateVariant(index, "images", [
+                                      ...currentImages,
+                                      ...validImages,
+                                    ]);
+
+                                    toast({
+                                      title: "Variant Images Added",
+                                      description: `Successfully added ${validImages.length} image(s)`,
+                                      variant: "default",
+                                    });
+                                  }
                                 }
                               }}
                               className="hidden"
@@ -1623,100 +1753,9 @@ export default function CreateProductPage() {
               </CardContent>
             </Card>
 
-            {/* Colors */}
-            <Card className="border-border/40 shadow-sm">
-              <CardHeader className="bg-primary/5">
-                <CardTitle>Colors</CardTitle>
-                <CardDescription>
-                  Add color variants for your product
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="pt-6">
-                <ColorPicker colors={colors} onChange={setColors} />
-              </CardContent>
-            </Card>
+            {/* Colors are now handled through variants/attributes */}
 
-            {/* Sizes */}
-            <Card className="border-border/40 shadow-sm">
-              <CardHeader className="bg-primary/5">
-                <CardTitle>Sizes & Stock</CardTitle>
-                <CardDescription>
-                  Add size variants and their specific stock levels
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="pt-6">
-                <div className="space-y-4">
-                  {sizes.map((size, index) => (
-                    <div
-                      key={index}
-                      className="flex flex-col sm:flex-row sm:items-end gap-4 p-4 border border-border/30 rounded-md"
-                    >
-                      <div className="w-full sm:w-1/3 max-w-[200px]">
-                        <Label className="mb-2 block">Size</Label>
-                        <Select
-                          value={size.size}
-                          onValueChange={(value) =>
-                            updateSize(index, "size", value as Size)
-                          }
-                        >
-                          <SelectTrigger className="border-primary/20 focus-visible:ring-primary">
-                            <SelectValue />
-                          </SelectTrigger>
-                          <SelectContent>
-                            {Object.values(Size).map((option) => (
-                              <SelectItem key={option} value={option}>
-                                {option}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                      </div>
-                      <div className="w-full sm:w-1/3 max-w-[200px]">
-                        <Label
-                          htmlFor={`size-stock-${index}`}
-                          className="mb-2 block"
-                        >
-                          Stock Quantity
-                        </Label>
-                        <Input
-                          id={`size-stock-${index}`}
-                          type="number"
-                          placeholder="0"
-                          value={size.stockForSize}
-                          onChange={(e) =>
-                            updateSize(
-                              index,
-                              "stockForSize",
-                              parseInt(e.target.value) || 0
-                            )
-                          }
-                          className="border-primary/20 focus-visible:ring-primary"
-                        />
-                      </div>
-                      <Button
-                        type="button"
-                        variant="outline"
-                        size="icon"
-                        onClick={() => removeSize(index)}
-                        className="h-10 w-10 border-destructive/30 text-destructive hover:bg-destructive/10 hover:text-destructive"
-                      >
-                        <Minus className="w-4 h-4" />
-                      </Button>
-                    </div>
-                  ))}
-
-                  <Button
-                    type="button"
-                    variant="outline"
-                    onClick={addSize}
-                    className="w-full mt-2 border-primary/20 hover:bg-primary/5 hover:text-primary"
-                  >
-                    <Plus className="w-4 h-4 mr-2" />
-                    Add Size Variant
-                  </Button>
-                </div>
-              </CardContent>
-            </Card>
+            {/* Sizes are now handled through variants/attributes */}
 
             {/* Product Details */}
             <Card className="border-border/40 shadow-sm">

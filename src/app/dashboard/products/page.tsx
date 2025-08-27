@@ -1,11 +1,12 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { useQuery } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { Input } from "@/components/ui/input";
 import {
   Table,
   TableBody,
@@ -22,7 +23,15 @@ import {
   PaginationNext,
   PaginationPrevious,
 } from "@/components/ui/pagination";
-import { Eye, Edit, Percent, Plus, FilterIcon, Star, Trash } from "lucide-react";
+import {
+  Eye,
+  Edit,
+  Percent,
+  Plus,
+  FilterIcon,
+  Trash,
+  Search,
+} from "lucide-react";
 import {
   Tooltip,
   TooltipContent,
@@ -33,14 +42,20 @@ import { DiscountModal } from "@/components/DiscountModal";
 import { FilterDialog } from "@/components/products/FilterDialog";
 import { FilterButton } from "@/components/products/FilterButton";
 import { productService } from "@/lib/services/product-service";
-import { categoryService } from "@/lib/services/category-service";
 import {
-  Gender,
-  ProductResponse,
+  ManyProductsDto,
+  ProductSearchDTO,
   ProductSearchFilterRequest,
 } from "@/lib/types/product";
 import { formatCurrency } from "@/lib/utils";
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { Checkbox } from "@/components/ui/checkbox";
 import { toast } from "@/components/ui/use-toast";
 
@@ -48,13 +63,15 @@ export default function ProductsPage() {
   const router = useRouter();
 
   // Pagination and filter state
-  const [searchFilters, setSearchFilters] =
-    useState<ProductSearchFilterRequest>({
-      page: 0,
-      size: 10,
-      sortBy: "name",
-      sortDirection: "asc",
-    });
+  const [searchFilters, setSearchFilters] = useState<ProductSearchDTO>({
+    page: 0,
+    size: 10,
+    sortBy: "createdAt",
+    sortDirection: "desc",
+  });
+
+  // Search keyword state
+  const [searchKeyword, setSearchKeyword] = useState("");
 
   // Filter dialog state
   const [filterDialogOpen, setFilterDialogOpen] = useState(false);
@@ -72,16 +89,27 @@ export default function ProductsPage() {
   const { data, isLoading, isError, error, refetch } = useQuery({
     queryKey: ["products", searchFilters],
     queryFn: () => {
-      // If we have category IDs, fetch products by category
-      if (searchFilters.categoryIds && searchFilters.categoryIds.length === 1) {
-        return productService.getProductsByCategory(
-          searchFilters.categoryIds[0] as string,
-          searchFilters.page || 0,
-          searchFilters.size || 10
-        );
+      // If we have search criteria, use search endpoint
+      if (
+        searchFilters.searchKeyword ||
+        searchFilters.categoryId ||
+        searchFilters.brandId ||
+        searchFilters.isOnSale ||
+        searchFilters.isFeatured ||
+        searchFilters.isBestseller ||
+        searchFilters.basePriceMin ||
+        searchFilters.basePriceMax ||
+        searchFilters.inStock
+      ) {
+        return productService.advancedSearchProducts(searchFilters);
       }
-      // Otherwise use advanced search
-      return productService.advancedSearchProducts(searchFilters);
+      // Otherwise use getAllProducts
+      return productService.getAllProducts(
+        searchFilters.page || 0,
+        searchFilters.size || 10,
+        searchFilters.sortBy || "createdAt",
+        searchFilters.sortDirection || "desc"
+      );
     },
   });
 
@@ -107,10 +135,10 @@ export default function ProductsPage() {
   const handleDeleteProduct = async (productId: string) => {
     try {
       await productService.deleteProduct(productId);
-      
+
       // Refresh the product list
       refetch();
-      
+
       toast({
         title: "Success",
         description: "Product deleted successfully",
@@ -131,51 +159,90 @@ export default function ProductsPage() {
     if (dontAskAgain) {
       localStorage.setItem("productDeletePreference", "true");
     }
-    
+
     // Delete the product
     handleDeleteProduct(productToDelete);
-    
+
     // Close the modal
     setDeleteModalOpen(false);
   };
 
   // Handle pagination
   const handlePageChange = (newPage: number) => {
-    if (newPage >= 0 && (!data || newPage < data.totalPages)) {
+    if (
+      newPage >= 0 &&
+      (!data || !data.totalPages || newPage < data.totalPages)
+    ) {
       setSearchFilters((prev) => ({ ...prev, page: newPage }));
     }
   };
 
   // Apply filters from dialog
   const handleApplyFilters = (filters: ProductSearchFilterRequest) => {
-    // Keep pagination size but reset to page 0
-    setSearchFilters({ ...filters, page: 0, size: searchFilters.size });
+    // Convert legacy filters to new format
+    const newFilters: ProductSearchDTO = {
+      page: 0, // Reset to first page
+      size: searchFilters.size,
+      sortBy: filters.sortBy || "createdAt",
+      sortDirection: filters.sortDirection || "desc",
+      searchKeyword: filters.keyword,
+      basePriceMin: filters.minPrice,
+      basePriceMax: filters.maxPrice,
+      inStock: filters.inStock,
+      isOnSale: filters.onSale,
+      isFeatured: filters.popular,
+      isBestseller: filters.popular,
+    };
+
+    // Add category filters if present
+    if (filters.categoryIds && filters.categoryIds.length > 0) {
+      newFilters.categoryIds = filters.categoryIds.map((id) => parseInt(id));
+    }
+
+    setSearchFilters(newFilters);
   };
 
   // Handle search
   const handleSearch = (filters: ProductSearchFilterRequest) => {
-    // Keep pagination size but reset to page 0
-    setSearchFilters({ ...filters, page: 0, size: searchFilters.size });
+    handleApplyFilters(filters);
+  };
+
+  // Handle keyword search
+  const handleKeywordSearch = () => {
+    if (searchKeyword.trim()) {
+      setSearchFilters((prev) => ({
+        ...prev,
+        searchKeyword: searchKeyword.trim(),
+        page: 0, // Reset to first page
+      }));
+    } else {
+      // Remove search keyword and reset to getAllProducts
+      setSearchFilters((prev) => {
+        const { searchKeyword, ...rest } = prev;
+        return { ...rest, page: 0 };
+      });
+    }
+  };
+
+  // Handle Enter key in search input
+  const handleSearchKeyPress = (e: React.KeyboardEvent) => {
+    if (e.key === "Enter") {
+      handleKeywordSearch();
+    }
   };
 
   // Get active filter count for the button badge
   const getActiveFilterCount = (): number => {
     let count = 0;
-    if (searchFilters.categories?.length)
-      count += searchFilters.categories.length;
-    if (searchFilters.categoryIds?.length)
-      count += searchFilters.categoryIds.length;
-    if (searchFilters.colors?.length) count += 1;
-    if (searchFilters.sizes?.length) count += 1;
-    if (searchFilters.discountRanges?.length) count += 1;
-    if (searchFilters.rating) count += 1;
-    if (searchFilters.gender) count += 1;
-    if (searchFilters.inStock) count += 1;
-    if (searchFilters.onSale) count += 1;
-    if (searchFilters.popular) count += 1;
-    if (searchFilters.newArrivals) count += 1;
-    if (searchFilters.keyword) count += 1;
-    if (searchFilters.minPrice || searchFilters.maxPrice) count += 1;
+    if (searchFilters.searchKeyword) count += 1;
+    if (searchFilters.categoryId || searchFilters.categoryIds?.length)
+      count += 1;
+    if (searchFilters.brandId || searchFilters.brandIds?.length) count += 1;
+    if (searchFilters.basePriceMin || searchFilters.basePriceMax) count += 1;
+    if (searchFilters.inStock !== undefined) count += 1;
+    if (searchFilters.isOnSale !== undefined) count += 1;
+    if (searchFilters.isFeatured !== undefined) count += 1;
+    if (searchFilters.isBestseller !== undefined) count += 1;
     return count;
   };
 
@@ -195,7 +262,7 @@ export default function ProductsPage() {
         <div className="flex items-center gap-2">
           <FilterButton
             onApplyFilters={handleSearch}
-            currentFilters={searchFilters}
+            currentFilters={searchFilters as any}
           />
 
           <Button
@@ -206,6 +273,37 @@ export default function ProductsPage() {
             Add Product
           </Button>
         </div>
+      </div>
+
+      {/* Search Bar */}
+      <div className="flex gap-4 items-center">
+        <div className="relative flex-1 max-w-md">
+          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
+          <Input
+            placeholder="Search products by name, description, SKU..."
+            value={searchKeyword}
+            onChange={(e) => setSearchKeyword(e.target.value)}
+            onKeyPress={handleSearchKeyPress}
+            className="pl-10"
+          />
+        </div>
+        <Button onClick={handleKeywordSearch} variant="outline">
+          Search
+        </Button>
+        {searchFilters.searchKeyword && (
+          <Button
+            variant="ghost"
+            onClick={() => {
+              setSearchKeyword("");
+              setSearchFilters((prev) => {
+                const { searchKeyword, ...rest } = prev;
+                return { ...rest, page: 0 };
+              });
+            }}
+          >
+            Clear
+          </Button>
+        )}
       </div>
 
       {/* Product List */}
@@ -229,11 +327,13 @@ export default function ProductsPage() {
                 Try Again
               </Button>
             </div>
-          ) : !data || data.content.length === 0 ? (
+          ) : !data || !data.content || data.content.length === 0 ? (
             <div className="flex flex-col items-center justify-center py-12">
               <h3 className="text-lg font-medium mb-2">No products found</h3>
               <p className="text-muted-foreground mb-4">
-                Try adjusting your filters or add some products.
+                {searchFilters.searchKeyword
+                  ? `No products found matching "${searchFilters.searchKeyword}". Try adjusting your search.`
+                  : "Try adjusting your filters or add some products."}
               </p>
               <div className="flex gap-2">
                 <Button
@@ -256,23 +356,27 @@ export default function ProductsPage() {
               <TableHeader>
                 <TableRow>
                   <TableHead>Product</TableHead>
+                  <TableHead>Category</TableHead>
+                  <TableHead>Brand</TableHead>
                   <TableHead>Price</TableHead>
                   <TableHead>Stock</TableHead>
-                  <TableHead>Gender</TableHead>
-                  <TableHead>Rating</TableHead>
+                  <TableHead>Status</TableHead>
                   <TableHead>Actions</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {data.content.map((product: ProductResponse) => (
+                {data.content.map((product: ManyProductsDto) => (
                   <TableRow key={product.productId}>
                     <TableCell>
                       <div className="flex items-center gap-3">
-                        {product.mainImage ? (
+                        {product.primaryImage ? (
                           <div className="h-10 w-10 rounded-md bg-muted overflow-hidden">
                             <img
-                              src={product.mainImage}
-                              alt={product.name}
+                              src={product.primaryImage.imageUrl}
+                              alt={
+                                product.primaryImage.altText ||
+                                product.productName
+                              }
                               className="h-full w-full object-cover"
                             />
                           </div>
@@ -295,42 +399,78 @@ export default function ProductsPage() {
                           </div>
                         )}
                         <div className="flex flex-col">
-                          <span className="font-medium">{product.name}</span>
-                          {product.popular && (
-                            <Badge
-                              variant="outline"
-                              className="mt-1 text-xs bg-primary/10 text-primary border-primary/30"
-                            >
-                              Popular
-                            </Badge>
+                          <span className="font-medium">
+                            {product.productName}
+                          </span>
+                          {product.shortDescription && (
+                            <span className="text-sm text-muted-foreground">
+                              {product.shortDescription}
+                            </span>
                           )}
+                          <div className="flex gap-1 mt-1">
+                            {product.isBestSeller && (
+                              <Badge
+                                variant="outline"
+                                className="text-xs bg-yellow-50 text-yellow-700 border-yellow-200"
+                              >
+                                Best Seller
+                              </Badge>
+                            )}
+                            {product.isFeatured && (
+                              <Badge
+                                variant="outline"
+                                className="text-xs bg-blue-50 text-blue-700 border-blue-200"
+                              >
+                                Featured
+                              </Badge>
+                            )}
+                          </div>
                         </div>
                       </div>
+                    </TableCell>
+                    <TableCell>
+                      {product.category ? (
+                        <Badge variant="secondary">
+                          {product.category.name}
+                        </Badge>
+                      ) : (
+                        <span className="text-muted-foreground">-</span>
+                      )}
+                    </TableCell>
+                    <TableCell>
+                      {product.brand ? (
+                        <Badge variant="outline">
+                          {product.brand.brandName}
+                        </Badge>
+                      ) : (
+                        <span className="text-muted-foreground">-</span>
+                      )}
                     </TableCell>
                     <TableCell>
                       <div className="flex flex-col">
                         <span className="font-medium">
                           {formatCurrency(product.price)}
                         </span>
-                        {product.previousPrice && (
-                          <span className="text-xs text-muted-foreground line-through">
-                            {formatCurrency(product.previousPrice)}
-                          </span>
-                        )}
-                        {product.onSale && product.activeDiscount && (
+                        {product.compareAtPrice &&
+                          product.compareAtPrice > product.price && (
+                            <span className="text-xs text-muted-foreground line-through">
+                              {formatCurrency(product.compareAtPrice)}
+                            </span>
+                          )}
+                        {product.discountInfo && (
                           <span className="text-xs text-primary font-medium mt-1">
-                            {product.activeDiscount.percentage}% OFF
+                            {product.discountInfo.percentage}% OFF
                           </span>
                         )}
                       </div>
                     </TableCell>
                     <TableCell>
-                      {product.stock > 0 ? (
+                      {product.stockQuantity > 0 ? (
                         <Badge
                           variant="outline"
                           className="bg-green-50 text-green-700 border-green-200"
                         >
-                          {product.stock} in stock
+                          {product.stockQuantity} in stock
                         </Badge>
                       ) : (
                         <Badge
@@ -342,15 +482,15 @@ export default function ProductsPage() {
                       )}
                     </TableCell>
                     <TableCell>
-                      <Badge variant="secondary">{product.gender}</Badge>
-                    </TableCell>
-                    <TableCell>
-                      <div className="flex items-center gap-1">
-                        <Star className="h-4 w-4 fill-primary text-primary" />
-                        <span>{product.averageRating} </span>
-                        <span className="text-muted-foreground text-xs">
-                          ({product.ratingCount})
-                        </span>
+                      <div className="flex flex-col gap-1">
+                        {product.discountInfo && (
+                          <Badge
+                            variant="outline"
+                            className="text-xs bg-orange-50 text-orange-700 border-orange-200"
+                          >
+                            On Sale
+                          </Badge>
+                        )}
                       </div>
                     </TableCell>
                     <TableCell>
@@ -441,82 +581,86 @@ export default function ProductsPage() {
       </Card>
 
       {/* Pagination */}
-      {!isLoading && !isError && data && data.content.length > 0 && (
-        <div className="flex justify-center">
-          <Pagination>
-            <PaginationContent>
-              <PaginationItem>
-                <PaginationPrevious
-                  onClick={() => handlePageChange(searchFilters.page! - 1)}
-                  className={
-                    searchFilters.page === 0
-                      ? "pointer-events-none opacity-50"
-                      : "cursor-pointer"
-                  }
-                />
-              </PaginationItem>
+      {!isLoading &&
+        !isError &&
+        data &&
+        data.content &&
+        data.content.length > 0 && (
+          <div className="flex justify-center">
+            <Pagination>
+              <PaginationContent>
+                <PaginationItem>
+                  <PaginationPrevious
+                    onClick={() => handlePageChange(searchFilters.page! - 1)}
+                    className={
+                      searchFilters.page === 0
+                        ? "pointer-events-none opacity-50"
+                        : "cursor-pointer"
+                    }
+                  />
+                </PaginationItem>
 
-              {/* Generate page numbers */}
-              {Array.from({ length: data.totalPages }, (_, i) => {
-                // Show current page, first, last, and pages around current
-                const shouldShowPage =
-                  i === 0 || // First page
-                  i === data.totalPages - 1 || // Last page
-                  Math.abs(i - searchFilters.page!) <= 1; // Pages around current
+                {/* Generate page numbers */}
+                {Array.from({ length: data.totalPages || 0 }, (_, i) => {
+                  // Show current page, first, last, and pages around current
+                  const shouldShowPage =
+                    i === 0 || // First page
+                    i === (data.totalPages || 0) - 1 || // Last page
+                    Math.abs(i - searchFilters.page!) <= 1; // Pages around current
 
-                if (!shouldShowPage) {
-                  // Return ellipsis for skipped pages, but only once
-                  if (i === searchFilters.page! - 2) {
-                    return (
-                      <PaginationItem key={`ellipsis-${i}`}>
-                        <span className="px-4">...</span>
-                      </PaginationItem>
-                    );
+                  if (!shouldShowPage) {
+                    // Return ellipsis for skipped pages, but only once
+                    if (i === searchFilters.page! - 2) {
+                      return (
+                        <PaginationItem key={`ellipsis-${i}`}>
+                          <span className="px-4">...</span>
+                        </PaginationItem>
+                      );
+                    }
+                    if (i === searchFilters.page! + 2) {
+                      return (
+                        <PaginationItem key={`ellipsis-${i}`}>
+                          <span className="px-4">...</span>
+                        </PaginationItem>
+                      );
+                    }
+                    return null;
                   }
-                  if (i === searchFilters.page! + 2) {
-                    return (
-                      <PaginationItem key={`ellipsis-${i}`}>
-                        <span className="px-4">...</span>
-                      </PaginationItem>
-                    );
-                  }
-                  return null;
-                }
 
-                return (
-                  <PaginationItem key={i}>
-                    <PaginationLink
-                      isActive={searchFilters.page === i}
-                      onClick={() => handlePageChange(i)}
-                      className="cursor-pointer"
-                    >
-                      {i + 1}
-                    </PaginationLink>
-                  </PaginationItem>
-                );
-              })}
+                  return (
+                    <PaginationItem key={i}>
+                      <PaginationLink
+                        isActive={searchFilters.page === i}
+                        onClick={() => handlePageChange(i)}
+                        className="cursor-pointer"
+                      >
+                        {i + 1}
+                      </PaginationLink>
+                    </PaginationItem>
+                  );
+                })}
 
-              <PaginationItem>
-                <PaginationNext
-                  onClick={() => handlePageChange(searchFilters.page! + 1)}
-                  className={
-                    searchFilters.page === data.totalPages - 1
-                      ? "pointer-events-none opacity-50"
-                      : "cursor-pointer"
-                  }
-                />
-              </PaginationItem>
-            </PaginationContent>
-          </Pagination>
-        </div>
-      )}
+                <PaginationItem>
+                  <PaginationNext
+                    onClick={() => handlePageChange(searchFilters.page! + 1)}
+                    className={
+                      searchFilters.page === (data.totalPages || 0) - 1
+                        ? "pointer-events-none opacity-50"
+                        : "cursor-pointer"
+                    }
+                  />
+                </PaginationItem>
+              </PaginationContent>
+            </Pagination>
+          </div>
+        )}
 
       {/* Filters Dialog */}
       <FilterDialog
         open={filterDialogOpen}
         onOpenChange={setFilterDialogOpen}
         onApplyFilters={handleApplyFilters}
-        currentFilters={searchFilters}
+        currentFilters={searchFilters as any}
       />
 
       {/* Discount Modal */}
@@ -530,12 +674,15 @@ export default function ProductsPage() {
       <Dialog open={deleteModalOpen} onOpenChange={setDeleteModalOpen}>
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
-            <DialogTitle className="text-destructive">Confirm Deletion</DialogTitle>
+            <DialogTitle className="text-destructive">
+              Confirm Deletion
+            </DialogTitle>
             <DialogDescription>
-              Are you sure you want to delete this product? This action cannot be undone.
+              Are you sure you want to delete this product? This action cannot
+              be undone.
             </DialogDescription>
           </DialogHeader>
-          
+
           <div className="flex items-center space-x-2 py-4">
             <Checkbox
               id="dont-ask-again"
@@ -549,7 +696,7 @@ export default function ProductsPage() {
               Don't ask again
             </label>
           </div>
-          
+
           <DialogFooter className="sm:justify-end">
             <Button
               type="button"
@@ -559,11 +706,7 @@ export default function ProductsPage() {
             >
               Cancel
             </Button>
-            <Button 
-              type="button" 
-              variant="destructive"
-              onClick={confirmDelete}
-            >
+            <Button type="button" variant="destructive" onClick={confirmDelete}>
               <Trash className="w-4 h-4 mr-2" />
               Delete
             </Button>

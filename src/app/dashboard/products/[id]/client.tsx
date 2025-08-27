@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   ArrowLeft,
   Edit,
@@ -15,22 +16,44 @@ import {
   Ruler,
   Star,
   DollarSign,
-  Users,
   Calendar,
   Percent,
   ShoppingBag,
+  Info,
+  FileText,
+  Settings,
+  Image as ImageIcon,
+  Video,
+  Layers,
+  BarChart3,
+  Weight,
+  Hash,
+  Barcode,
+  Globe,
+  Clock,
+  Eye,
+  EyeOff,
+  TrendingUp,
+  Sparkles,
+  Award,
+  Zap,
 } from "lucide-react";
 
-import { ProductResponse } from "@/lib/types/product";
+import { ProductDTO } from "@/lib/types/product";
 
 interface ProductClientProps {
-  product: ProductResponse;
+  product: ProductDTO;
   id: string;
 }
 
 export default function ProductClient({ product, id }: ProductClientProps) {
   const router = useRouter();
-  const [selectedImage, setSelectedImage] = useState<string | null>(product.mainImage || (product.images && product.images.length > 0 ? product.images[0].imageUrl : null));
+  const [selectedImage, setSelectedImage] = useState<string | null>(
+    product.images && product.images.length > 0
+      ? product.images.find((img) => img.isPrimary)?.url ||
+          product.images[0].url
+      : null
+  );
 
   if (!product) {
     return (
@@ -53,6 +76,32 @@ export default function ProductClient({ product, id }: ProductClientProps) {
       </div>
     );
   }
+
+  const formatDate = (dateString: string) => {
+    return new Date(dateString).toLocaleDateString("en-US", {
+      year: "numeric",
+      month: "long",
+      day: "numeric",
+      hour: "2-digit",
+      minute: "2-digit",
+    });
+  };
+
+  const formatPrice = (price: number) => {
+    return new Intl.NumberFormat("en-US", {
+      style: "currency",
+      currency: "USD",
+    }).format(price);
+  };
+
+  const getPrimaryImage = () => {
+    if (product.images && product.images.length > 0) {
+      return product.images.find((img) => img.isPrimary) || product.images[0];
+    }
+    return null;
+  };
+
+  const primaryImage = getPrimaryImage();
 
   return (
     <div className="space-y-6 pb-10">
@@ -86,301 +135,743 @@ export default function ProductClient({ product, id }: ProductClientProps) {
         </div>
       </div>
 
-      <div className="grid gap-6 lg:grid-cols-3">
-        {/* Product Images */}
-        <Card className="lg:col-span-1 border-border/40 shadow-sm">
-          <CardHeader className="bg-primary/5">
-            <CardTitle className="flex items-center gap-2">
-              <Package className="h-5 w-5" />
-              Product Images
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="pt-6">
-            <div className="grid grid-cols-2 gap-2">
-              {product.images && product.images.length > 0 ? (
-                <>
-                  <div className="col-span-2 aspect-square rounded-lg overflow-hidden bg-muted">
-                    <img
-                      src={selectedImage || product.mainImage || product.images[0].imageUrl}
-                      alt={product.name}
-                      className="w-full h-full object-contain"
-                    />
+      {/* Status Badges */}
+      <div className="flex flex-wrap gap-2">
+        <Badge variant={product.isActive ? "default" : "destructive"}>
+          {product.isActive ? (
+            <Eye className="h-3 w-3 mr-1" />
+          ) : (
+            <EyeOff className="h-3 w-3 mr-1" />
+          )}
+          {product.isActive ? "Active" : "Inactive"}
+        </Badge>
+        {product.isFeatured && (
+          <Badge className="bg-purple-600 hover:bg-purple-700">
+            <Sparkles className="h-3 w-3 mr-1" />
+            Featured
+          </Badge>
+        )}
+        {product.isBestseller && (
+          <Badge className="bg-yellow-600 hover:bg-yellow-700">
+            <Award className="h-3 w-3 mr-1" />
+            Bestseller
+          </Badge>
+        )}
+        {product.isNewArrival && (
+          <Badge className="bg-green-600 hover:bg-green-700">
+            <Zap className="h-3 w-3 mr-1" />
+            New Arrival
+          </Badge>
+        )}
+        {product.isOnSale && (
+          <Badge className="bg-red-600 hover:bg-red-700">
+            <TrendingUp className="h-3 w-3 mr-1" />
+            On Sale
+          </Badge>
+        )}
+      </div>
+
+      <Tabs defaultValue="overview" className="space-y-6">
+        <TabsList className="grid w-full grid-cols-4">
+          <TabsTrigger value="overview">Overview</TabsTrigger>
+          <TabsTrigger value="media">Media</TabsTrigger>
+          <TabsTrigger value="variants">Variants</TabsTrigger>
+          <TabsTrigger value="details">Details</TabsTrigger>
+        </TabsList>
+
+        {/* Overview Tab */}
+        <TabsContent value="overview" className="space-y-6">
+          <div className="grid gap-6 lg:grid-cols-3">
+            {/* Product Images */}
+            <Card className="lg:col-span-1 border-border/40 shadow-sm">
+              <CardHeader className="bg-primary/5">
+                <CardTitle className="flex items-center gap-2">
+                  <ImageIcon className="h-5 w-5" />
+                  Product Images
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="pt-6">
+                <div className="grid grid-cols-2 gap-2">
+                  {primaryImage ? (
+                    <>
+                      <div className="col-span-2 aspect-square rounded-lg overflow-hidden bg-muted">
+                        <img
+                          src={selectedImage || primaryImage.url}
+                          alt={product.name}
+                          className="w-full h-full object-contain"
+                        />
+                      </div>
+                      {product.images && product.images.length > 1 && (
+                        <div className="col-span-2 grid grid-cols-4 gap-2 mt-2">
+                          {product.images.map((image, index) => (
+                            <div
+                              key={image.imageId}
+                              className={`aspect-square rounded-lg overflow-hidden bg-muted cursor-pointer transition-all ${
+                                selectedImage === image.url
+                                  ? "ring-2 ring-primary"
+                                  : "hover:opacity-80"
+                              }`}
+                              onClick={() => setSelectedImage(image.url)}
+                            >
+                              <img
+                                src={image.url}
+                                alt={`${product.name} - Image ${index + 1}`}
+                                className="w-full h-full object-contain"
+                              />
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </>
+                  ) : (
+                    <div className="col-span-2 aspect-square rounded-lg bg-muted flex items-center justify-center">
+                      <ImageIcon className="h-12 w-12 text-muted-foreground" />
+                      <span className="text-sm text-muted-foreground mt-2">
+                        No images
+                      </span>
+                    </div>
+                  )}
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Product Information */}
+            <Card className="lg:col-span-2 border-border/40 shadow-sm">
+              <CardHeader className="bg-primary/5">
+                <CardTitle className="flex items-center gap-2">
+                  <Info className="h-5 w-5" />
+                  Basic Information
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-6 pt-6">
+                {/* Basic Info */}
+                <div className="grid gap-4 md:grid-cols-2">
+                  <div>
+                    <label className="text-sm font-medium text-muted-foreground">
+                      Base Price
+                    </label>
+                    <div className="flex items-center gap-2 mt-1">
+                      <DollarSign className="h-4 w-4 text-primary" />
+                      <span className="text-2xl font-bold text-primary">
+                        {formatPrice(product.basePrice)}
+                      </span>
+                    </div>
                   </div>
-                  {product.images.length > 1 && (
-                    <div className="col-span-2 grid grid-cols-4 gap-2 mt-2">
-                      {product.images.map((image, index) => (
-                        <div
-                          key={image.imageId}
-                          className={`aspect-square rounded-lg overflow-hidden bg-muted cursor-pointer transition-all ${selectedImage === image.imageUrl ? 'ring-2 ring-primary' : 'hover:opacity-80'}`}
-                          onClick={() => setSelectedImage(image.imageUrl)}
-                        >
+                  <div>
+                    <label className="text-sm font-medium text-muted-foreground">
+                      Stock Quantity
+                    </label>
+                    <div className="flex items-center gap-2 mt-1">
+                      <Package className="h-4 w-4" />
+                      <span className="text-lg font-semibold">
+                        {product.stockQuantity} units
+                      </span>
+                    </div>
+                  </div>
+                </div>
+
+                {product.salePrice && (
+                  <div className="grid gap-4 md:grid-cols-2">
+                    <div>
+                      <label className="text-sm font-medium text-muted-foreground">
+                        Sale Price
+                      </label>
+                      <div className="flex items-center gap-2 mt-1">
+                        <DollarSign className="h-4 w-4 text-green-600" />
+                        <span className="text-xl font-bold text-green-600">
+                          {formatPrice(product.salePrice)}
+                        </span>
+                      </div>
+                    </div>
+                    <div>
+                      <label className="text-sm font-medium text-muted-foreground">
+                        Savings
+                      </label>
+                      <div className="flex items-center gap-2 mt-1">
+                        <Percent className="h-4 w-4 text-green-600" />
+                        <span className="text-lg font-semibold text-green-600">
+                          {formatPrice(product.basePrice - product.salePrice)}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {product.discountedPrice && (
+                  <div>
+                    <label className="text-sm font-medium text-muted-foreground">
+                      Final Price (After Discounts)
+                    </label>
+                    <div className="flex items-center gap-2 mt-1">
+                      <DollarSign className="h-4 w-4 text-red-600" />
+                      <span className="text-2xl font-bold text-red-600">
+                        {formatPrice(product.discountedPrice)}
+                      </span>
+                    </div>
+                  </div>
+                )}
+
+                <Separator />
+
+                {/* Description */}
+                <div>
+                  <label className="text-sm font-medium text-muted-foreground">
+                    Description
+                  </label>
+                  <p className="mt-1 text-foreground leading-relaxed">
+                    {product.description || "No description available"}
+                  </p>
+                </div>
+
+                {product.fullDescription && (
+                  <div>
+                    <label className="text-sm font-medium text-muted-foreground">
+                      Full Description
+                    </label>
+                    <p className="mt-1 text-foreground leading-relaxed">
+                      {product.fullDescription}
+                    </p>
+                  </div>
+                )}
+
+                <Separator />
+
+                {/* Product Identifiers */}
+                <div className="grid gap-4 md:grid-cols-2">
+                  <div>
+                    <label className="text-sm font-medium text-muted-foreground flex items-center gap-2">
+                      <Hash className="h-4 w-4" />
+                      SKU
+                    </label>
+                    <span className="mt-1 text-sm font-mono bg-muted px-2 py-1 rounded">
+                      {product.sku}
+                    </span>
+                  </div>
+                  <div>
+                    <label className="text-sm font-medium text-muted-foreground flex items-center gap-2">
+                      <Barcode className="h-4 w-4" />
+                      Barcode
+                    </label>
+                    <span className="mt-1 text-sm font-mono bg-muted px-2 py-1 rounded">
+                      {product.barcode || "Not set"}
+                    </span>
+                  </div>
+                </div>
+
+                {product.model && (
+                  <div>
+                    <label className="text-sm font-medium text-muted-foreground">
+                      Model
+                    </label>
+                    <span className="mt-1 text-sm bg-muted px-2 py-1 rounded">
+                      {product.model}
+                    </span>
+                  </div>
+                )}
+
+                <Separator />
+
+                {/* Categories and Brand */}
+                <div className="grid gap-4 md:grid-cols-2">
+                  {product.categoryName && (
+                    <div>
+                      <label className="text-sm font-medium text-muted-foreground flex items-center gap-2">
+                        <Tag className="h-4 w-4" />
+                        Category
+                      </label>
+                      <Badge variant="outline" className="mt-1">
+                        {product.categoryName}
+                      </Badge>
+                    </div>
+                  )}
+                  {product.brandName && (
+                    <div>
+                      <label className="text-sm font-medium text-muted-foreground flex items-center gap-2">
+                        <Globe className="h-4 w-4" />
+                        Brand
+                      </label>
+                      <Badge variant="outline" className="mt-1">
+                        {product.brandName}
+                      </Badge>
+                    </div>
+                  )}
+                </div>
+
+                {/* Ratings */}
+                {(product.averageRating !== undefined ||
+                  product.reviewCount !== undefined) && (
+                  <>
+                    <Separator />
+                    <div className="grid gap-4 md:grid-cols-2">
+                      {product.averageRating !== undefined && (
+                        <div>
+                          <label className="text-sm font-medium text-muted-foreground flex items-center gap-2">
+                            <Star className="h-4 w-4" />
+                            Average Rating
+                          </label>
+                          <div className="flex items-center gap-2 mt-1">
+                            <span className="text-lg font-semibold">
+                              {product.averageRating.toFixed(1)}
+                            </span>
+                            <div className="flex items-center">
+                              {Array.from({ length: 5 }).map((_, i) => (
+                                <Star
+                                  key={i}
+                                  className={`h-4 w-4 ${
+                                    i < Math.round(product.averageRating!)
+                                      ? "text-yellow-500 fill-yellow-500"
+                                      : "text-muted-foreground"
+                                  }`}
+                                />
+                              ))}
+                            </div>
+                          </div>
+                        </div>
+                      )}
+                      {product.reviewCount !== undefined && (
+                        <div>
+                          <label className="text-sm font-medium text-muted-foreground">
+                            Review Count
+                          </label>
+                          <span className="mt-1 text-lg font-semibold">
+                            {product.reviewCount} reviews
+                          </span>
+                        </div>
+                      )}
+                    </div>
+                  </>
+                )}
+
+                {/* Physical Properties */}
+                {(product.dimensionsCm || product.weightKg) && (
+                  <>
+                    <Separator />
+                    <div className="grid gap-4 md:grid-cols-2">
+                      {product.dimensionsCm && (
+                        <div>
+                          <label className="text-sm font-medium text-muted-foreground flex items-center gap-2">
+                            <Ruler className="h-4 w-4" />
+                            Dimensions
+                          </label>
+                          <span className="mt-1 text-sm bg-muted px-2 py-1 rounded">
+                            {product.dimensionsCm}
+                          </span>
+                        </div>
+                      )}
+                      {product.weightKg && (
+                        <div>
+                          <label className="text-sm font-medium text-muted-foreground flex items-center gap-2">
+                            <Weight className="h-4 w-4" />
+                            Weight
+                          </label>
+                          <span className="mt-1 text-sm bg-muted px-2 py-1 rounded">
+                            {product.weightKg} kg
+                          </span>
+                        </div>
+                      )}
+                    </div>
+                  </>
+                )}
+
+                {/* Timestamps */}
+                <Separator />
+                <div className="grid gap-4 md:grid-cols-2">
+                  <div>
+                    <label className="text-sm font-medium text-muted-foreground flex items-center gap-2">
+                      <Clock className="h-4 w-4" />
+                      Created
+                    </label>
+                    <span className="mt-1 text-sm text-muted-foreground">
+                      {formatDate(product.createdAt)}
+                    </span>
+                  </div>
+                  <div>
+                    <label className="text-sm font-medium text-muted-foreground flex items-center gap-2">
+                      <Calendar className="h-4 w-4" />
+                      Last Updated
+                    </label>
+                    <span className="mt-1 text-sm text-muted-foreground">
+                      {formatDate(product.updatedAt)}
+                    </span>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+        </TabsContent>
+
+        {/* Media Tab */}
+        <TabsContent value="media" className="space-y-6">
+          <div className="grid gap-6 lg:grid-cols-2">
+            {/* Images */}
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <ImageIcon className="h-5 w-5" />
+                  Product Images ({product.images?.length || 0})
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                {product.images && product.images.length > 0 ? (
+                  <div className="grid grid-cols-2 gap-4">
+                    {product.images.map((image, index) => (
+                      <div key={image.imageId} className="space-y-2">
+                        <div className="aspect-square rounded-lg overflow-hidden bg-muted">
                           <img
-                            src={image.imageUrl}
+                            src={image.url}
                             alt={`${product.name} - Image ${index + 1}`}
                             className="w-full h-full object-contain"
                           />
                         </div>
-                      ))}
-                    </div>
-                  )}
-                </>
-              ) : (
-                <div className="col-span-2 aspect-square rounded-lg bg-muted flex items-center justify-center">
-                  <Package className="h-12 w-12 text-muted-foreground" />
-                </div>
-              )}
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* Product Details */}
-        <Card className="lg:col-span-2 border-border/40 shadow-sm">
-          <CardHeader className="bg-primary/5">
-            <CardTitle>Product Information</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-6 pt-6">
-            {/* Basic Info */}
-            <div className="grid gap-4 md:grid-cols-2">
-              <div>
-                <label className="text-sm font-medium text-muted-foreground">
-                  Price
-                </label>
-                <div className="flex items-center gap-2 mt-1">
-                  <DollarSign className="h-4 w-4 text-primary" />
-                  <span className="text-2xl font-bold text-primary">
-                    ${product.price}
-                  </span>
-                  {product.previousPrice && (
-                    <span className="text-lg text-muted-foreground line-through">
-                      ${product.previousPrice}
-                    </span>
-                  )}
-                </div>
-              </div>
-              <div>
-                <label className="text-sm font-medium text-muted-foreground">
-                  Stock
-                </label>
-                <div className="flex items-center gap-2 mt-1">
-                  <Package className="h-4 w-4" />
-                  <span className="text-lg font-semibold">
-                    {product.stock} units
-                  </span>
-                </div>
-              </div>
-            </div>
-
-            <Separator />
-
-            {/* Description */}
-            <div>
-              <label className="text-sm font-medium text-muted-foreground">
-                Description
-              </label>
-              <p className="mt-1 text-foreground leading-relaxed">
-                {product.description}
-              </p>
-            </div>
-
-            <Separator />
-
-            {/* Properties */}
-            <div className="grid gap-4 md:grid-cols-2">
-              <div>
-                <label className="text-sm font-medium text-muted-foreground flex items-center gap-2">
-                  <Users className="h-4 w-4" />
-                  Gender
-                </label>
-                <Badge variant="secondary" className="mt-1">
-                  {product.gender}
-                </Badge>
-              </div>
-              <div>
-                <label className="text-sm font-medium text-muted-foreground flex items-center gap-2">
-                  <Star className="h-4 w-4" />
-                  Rating
-                </label>
-                <div className="flex items-center gap-2 mt-1">
-                  <span className="text-lg font-semibold">
-                    {product.averageRating !== null ? product.averageRating.toFixed(1) : "0.0"}
-                  </span>
-                  <span className="text-muted-foreground">
-                    ({product.ratingCount || 0} reviews)
-                  </span>
-                </div>
-              </div>
-            </div>
-
-            {/* Colors */}
-            {product.colors && product.colors.length > 0 && (
-              <>
-                <Separator />
-                <div>
-                  <label className="text-sm font-medium text-muted-foreground flex items-center gap-2">
-                    <Palette className="h-4 w-4" />
-                    Available Colors
-                  </label>
-                  <div className="flex flex-wrap gap-2 mt-2">
-                    {product.colors.map((color: any, index: number) => (
-                      <div
-                        key={index}
-                        className="flex items-center gap-2 p-2 border rounded-lg"
-                      >
-                        <div
-                          className="w-4 h-4 rounded-full border"
-                          style={{ backgroundColor: color.colorHexCode }}
-                        />
-                        <span className="text-sm">{color.colorName}</span>
+                        <div className="text-center space-y-1">
+                          <div className="flex items-center justify-center gap-2">
+                            {image.isPrimary && (
+                              <Badge variant="default" className="text-xs">
+                                Primary
+                              </Badge>
+                            )}
+                            <Badge variant="outline" className="text-xs">
+                              Order: {image.sortOrder}
+                            </Badge>
+                          </div>
+                          {image.altText && (
+                            <p className="text-xs text-muted-foreground">
+                              {image.altText}
+                            </p>
+                          )}
+                        </div>
                       </div>
                     ))}
                   </div>
-                </div>
-              </>
-            )}
-
-            {/* Sizes */}
-            {product.sizes && product.sizes.length > 0 && (
-              <>
-                <Separator />
-                <div>
-                  <label className="text-sm font-medium text-muted-foreground flex items-center gap-2">
-                    <Ruler className="h-4 w-4" />
-                    Available Sizes
-                  </label>
-                  <div className="flex flex-wrap gap-2 mt-2">
-                    {product.sizes.map((size: any, index: number) => (
-                      <Badge key={index} variant="outline" className="px-3">
-                        {size.size} ({size.stockForSize} in stock)
-                      </Badge>
-                    ))}
+                ) : (
+                  <div className="text-center py-8 text-muted-foreground">
+                    <ImageIcon className="h-12 w-12 mx-auto mb-2" />
+                    <p>No images available</p>
                   </div>
-                </div>
-              </>
-            )}
+                )}
+              </CardContent>
+            </Card>
 
-            {/* Categories */}
-            {product.categories && product.categories.length > 0 && (
-              <>
-                <Separator />
-                <div>
-                  <label className="text-sm font-medium text-muted-foreground flex items-center gap-2">
-                    <Tag className="h-4 w-4" />
-                    Categories
-                  </label>
-                  <div className="flex flex-wrap gap-2 mt-2">
-                    {product.categories.map((category) => (
-                      <Badge key={category.categoryId} variant="outline">
-                        {category.name}
-                      </Badge>
-                    ))}
-                  </div>
-                </div>
-              </>
-            )}
-
-            {/* Discounts */}
-            {product.discounts && product.discounts.length > 0 && (
-              <>
-                <Separator />
-                <div>
-                  <label className="text-sm font-medium text-muted-foreground flex items-center gap-2">
-                    <Percent className="h-4 w-4" />
-                    Discounts
-                  </label>
-                  <div className="space-y-2 mt-2">
-                    {product.discounts.map((discount) => (
-                      <div 
-                        key={discount.discountId} 
-                        className={`p-2 rounded-lg border ${discount.current ? 'border-primary bg-primary/5' : 'border-muted'}`}
-                      >
-                        <div className="flex justify-between items-center">
-                          <span className="font-medium">{discount.name}</span>
-                          <Badge variant={discount.active ? "default" : "outline"}>
-                            {discount.active ? "Active" : "Inactive"}
-                          </Badge>
+            {/* Videos */}
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Video className="h-5 w-5" />
+                  Product Videos ({product.videos?.length || 0})
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                {product.videos && product.videos.length > 0 ? (
+                  <div className="space-y-4">
+                    {product.videos.map((video, index) => (
+                      <div key={video.videoId} className="space-y-2">
+                        <div className="aspect-video rounded-lg overflow-hidden bg-muted">
+                          <video
+                            src={video.url}
+                            controls
+                            className="w-full h-full object-contain"
+                          />
                         </div>
-                        <div className="text-sm text-muted-foreground mt-1">
-                          <div className="flex items-center gap-1">
-                            <Percent className="h-3 w-3" />
-                            <span>{discount.percentage}% off</span>
+                        <div className="space-y-1">
+                          {video.title && (
+                            <h4 className="font-medium">{video.title}</h4>
+                          )}
+                          {video.description && (
+                            <p className="text-sm text-muted-foreground">
+                              {video.description}
+                            </p>
+                          )}
+                          <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                            <span>Order: {video.sortOrder}</span>
+                            {video.durationSeconds && (
+                              <span>Duration: {video.durationSeconds}s</span>
+                            )}
                           </div>
-                          <div className="flex items-center gap-1 mt-1">
-                            <Calendar className="h-3 w-3" />
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="text-center py-8 text-muted-foreground">
+                    <Video className="h-12 w-12 mx-auto mb-2" />
+                    <p>No videos available</p>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          </div>
+        </TabsContent>
+
+        {/* Variants Tab */}
+        <TabsContent value="variants" className="space-y-6">
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Layers className="h-5 w-5" />
+                Product Variants ({product.variants?.length || 0})
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              {product.variants && product.variants.length > 0 ? (
+                <div className="space-y-4">
+                  {product.variants.map((variant) => (
+                    <Card key={variant.variantId} className="border-border/40">
+                      <CardContent className="pt-6">
+                        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+                          <div>
+                            <label className="text-sm font-medium text-muted-foreground">
+                              Variant SKU
+                            </label>
+                            <p className="mt-1 font-mono text-sm bg-muted px-2 py-1 rounded">
+                              {variant.variantSku}
+                            </p>
+                          </div>
+                          <div>
+                            <label className="text-sm font-medium text-muted-foreground">
+                              Price
+                            </label>
+                            <p className="mt-1 font-semibold">
+                              {formatPrice(variant.price)}
+                            </p>
+                          </div>
+                          <div>
+                            <label className="text-sm font-medium text-muted-foreground">
+                              Stock
+                            </label>
+                            <p className="mt-1 font-semibold">
+                              {variant.stockQuantity} units
+                            </p>
+                          </div>
+                          <div>
+                            <label className="text-sm font-medium text-muted-foreground">
+                              Status
+                            </label>
+                            <div className="mt-1">
+                              <Badge
+                                variant={
+                                  variant.isActive ? "default" : "secondary"
+                                }
+                              >
+                                {variant.isActive ? "Active" : "Inactive"}
+                              </Badge>
+                            </div>
+                          </div>
+                        </div>
+
+                        {variant.variantName && (
+                          <div className="mt-4">
+                            <label className="text-sm font-medium text-muted-foreground">
+                              Variant Name
+                            </label>
+                            <p className="mt-1">{variant.variantName}</p>
+                          </div>
+                        )}
+
+                        {variant.variantBarcode && (
+                          <div className="mt-4">
+                            <label className="text-sm font-medium text-muted-foreground">
+                              Variant Barcode
+                            </label>
+                            <p className="mt-1 font-mono text-sm bg-muted px-2 py-1 rounded">
+                              {variant.variantBarcode}
+                            </p>
+                          </div>
+                        )}
+
+                        {variant.salePrice && (
+                          <div className="mt-4">
+                            <label className="text-sm font-medium text-muted-foreground">
+                              Sale Price
+                            </label>
+                            <p className="mt-1 font-semibold text-green-600">
+                              {formatPrice(variant.salePrice)}
+                            </p>
+                          </div>
+                        )}
+
+                        {variant.costPrice && (
+                          <div className="mt-4">
+                            <label className="text-sm font-medium text-muted-foreground">
+                              Cost Price
+                            </label>
+                            <p className="mt-1 font-semibold text-muted-foreground">
+                              {formatPrice(variant.costPrice)}
+                            </p>
+                          </div>
+                        )}
+
+                        {/* Variant Attributes */}
+                        {variant.attributes &&
+                          variant.attributes.length > 0 && (
+                            <div className="mt-4">
+                              <label className="text-sm font-medium text-muted-foreground">
+                                Attributes
+                              </label>
+                              <div className="mt-2 flex flex-wrap gap-2">
+                                {variant.attributes.map((attr) => (
+                                  <Badge
+                                    key={attr.attributeValueId}
+                                    variant="outline"
+                                  >
+                                    {attr.attributeType}: {attr.attributeValue}
+                                  </Badge>
+                                ))}
+                              </div>
+                            </div>
+                          )}
+
+                        {/* Variant Images */}
+                        {variant.images && variant.images.length > 0 && (
+                          <div className="mt-4">
+                            <label className="text-sm font-medium text-muted-foreground">
+                              Variant Images
+                            </label>
+                            <div className="mt-2 grid grid-cols-4 gap-2">
+                              {variant.images.map((img) => (
+                                <div
+                                  key={img.imageId}
+                                  className="aspect-square rounded-lg overflow-hidden bg-muted"
+                                >
+                                  <img
+                                    src={img.url}
+                                    alt={`Variant ${variant.variantSku}`}
+                                    className="w-full h-full object-contain"
+                                  />
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                        )}
+
+                        <div className="mt-4 pt-4 border-t border-border/40">
+                          <div className="flex items-center gap-4 text-xs text-muted-foreground">
                             <span>
-                              {new Date(discount.startDate).toLocaleDateString()} - {new Date(discount.endDate).toLocaleDateString()}
+                              Created: {formatDate(variant.createdAt)}
+                            </span>
+                            <span>
+                              Updated: {formatDate(variant.updatedAt)}
                             </span>
                           </div>
                         </div>
-                      </div>
-                    ))}
-                  </div>
+                      </CardContent>
+                    </Card>
+                  ))}
                 </div>
-              </>
-            )}
+              ) : (
+                <div className="text-center py-8 text-muted-foreground">
+                  <Layers className="h-12 w-12 mx-auto mb-2" />
+                  <p>No variants available</p>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        </TabsContent>
 
-            {/* Top Ratings */}
-            {product.topRatings && product.topRatings.length > 0 && (
-              <>
-                <Separator />
+        {/* Details Tab */}
+        <TabsContent value="details" className="space-y-6">
+          <div className="grid gap-6 lg:grid-cols-2">
+            {/* SEO Information */}
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <FileText className="h-5 w-5" />
+                  SEO Information
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
                 <div>
-                  <label className="text-sm font-medium text-muted-foreground flex items-center gap-2">
-                    <Star className="h-4 w-4" />
-                    Top Reviews
+                  <label className="text-sm font-medium text-muted-foreground">
+                    Meta Title
                   </label>
-                  <div className="space-y-3 mt-2">
-                    {product.topRatings.map((rating) => (
-                      <div key={rating.ratingId} className="p-3 rounded-lg border border-muted bg-muted/10">
-                        <div className="flex justify-between items-center">
-                          <div className="flex items-center gap-2">
-                            <div className="flex items-center">
-                              {Array.from({ length: 5 }).map((_, i) => (
-                                <Star 
-                                  key={i} 
-                                  className={`h-3 w-3 ${i < rating.stars ? 'text-yellow-500 fill-yellow-500' : 'text-muted-foreground'}`} 
-                                />
-                              ))}
-                            </div>
-                            <span className="text-sm font-medium">{rating.username}</span>
-                          </div>
-                          {rating.verifiedPurchase && (
-                            <Badge variant="outline" className="text-xs">Verified Purchase</Badge>
-                          )}
-                        </div>
-                        <p className="text-sm mt-2">{rating.comment}</p>
-                        <p className="text-xs text-muted-foreground mt-1">
-                          {new Date(rating.createdAt).toLocaleDateString()}
-                        </p>
-                      </div>
-                    ))}
-                  </div>
+                  <p className="mt-1 text-sm bg-muted px-2 py-1 rounded">
+                    {product.metaTitle || "Not set"}
+                  </p>
                 </div>
-              </>
-            )}
+                <div>
+                  <label className="text-sm font-medium text-muted-foreground">
+                    Meta Description
+                  </label>
+                  <p className="mt-1 text-sm bg-muted px-2 py-1 rounded">
+                    {product.metaDescription || "Not set"}
+                  </p>
+                </div>
+                <div>
+                  <label className="text-sm font-medium text-muted-foreground">
+                    Meta Keywords
+                  </label>
+                  <p className="mt-1 text-sm bg-muted px-2 py-1 rounded">
+                    {product.metaKeywords || "Not set"}
+                  </p>
+                </div>
+                <div>
+                  <label className="text-sm font-medium text-muted-foreground">
+                    Slug
+                  </label>
+                  <p className="mt-1 text-sm font-mono bg-muted px-2 py-1 rounded">
+                    {product.slug}
+                  </p>
+                </div>
+              </CardContent>
+            </Card>
 
-            {/* Special Properties */}
-            <div className="flex flex-wrap gap-2">
-              {product.popular && (
-                <Badge className="bg-primary hover:bg-primary/90">
-                  <ShoppingBag className="h-3 w-3 mr-1" />
-                  Popular
-                </Badge>
-              )}
-              {product.onSale && (
-                <Badge variant="secondary">
-                  <Percent className="h-3 w-3 mr-1" />
-                  On Sale
-                </Badge>
-              )}
-              {product.discountedPrice && (
-                <Badge variant="outline" className="text-green-600 border-green-600">
-                  <DollarSign className="h-3 w-3 mr-1" />
-                  Save ${(product.price - product.discountedPrice).toFixed(2)}
-                </Badge>
-              )}
-            </div>
-          </CardContent>
-        </Card>
-      </div>
+            {/* Technical Information */}
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Settings className="h-5 w-5" />
+                  Technical Information
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div>
+                  <label className="text-sm font-medium text-muted-foreground">
+                    Product ID
+                  </label>
+                  <p className="mt-1 text-sm font-mono bg-muted px-2 py-1 rounded">
+                    {product.productId}
+                  </p>
+                </div>
+                {product.categoryId && (
+                  <div>
+                    <label className="text-sm font-medium text-muted-foreground">
+                      Category ID
+                    </label>
+                    <p className="mt-1 text-sm font-mono bg-muted px-2 py-1 rounded">
+                      {product.categoryId}
+                    </p>
+                  </div>
+                )}
+                {product.brandId && (
+                  <div>
+                    <label className="text-sm font-medium text-muted-foreground">
+                      Brand ID
+                    </label>
+                    <p className="mt-1 text-sm font-mono bg-muted px-2 py-1 rounded">
+                      {product.brandId}
+                    </p>
+                  </div>
+                )}
+                <div>
+                  <label className="text-sm font-medium text-muted-foreground">
+                    Created At
+                  </label>
+                  <p className="mt-1 text-sm bg-muted px-2 py-1 rounded">
+                    {formatDate(product.createdAt)}
+                  </p>
+                </div>
+                <div>
+                  <label className="text-sm font-medium text-muted-foreground">
+                    Updated At
+                  </label>
+                  <p className="mt-1 text-sm bg-muted px-2 py-1 rounded">
+                    {formatDate(product.updatedAt)}
+                  </p>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+        </TabsContent>
+      </Tabs>
     </div>
   );
 }
