@@ -47,7 +47,7 @@ class CategoryService {
     sortDir: string = "asc"
   ): Promise<CategoryPageResponse> {
     try {
-      const response = await apiClient.get(`/categories`, {
+      const response = await apiClient.get(`/v1/categories`, {
         params: { page, size, sortBy, sortDir },
       });
       return response.data;
@@ -62,7 +62,7 @@ class CategoryService {
   async getSubcategories(parentId: number): Promise<CategoryResponse[]> {
     try {
       const response = await apiClient.get(
-        `/categories/sub-categories/${parentId}`
+        `/v1/categories/sub-categories/${parentId}`
       );
       return response.data;
     } catch (error) {
@@ -75,7 +75,7 @@ class CategoryService {
    */
   async getTopLevelCategories(): Promise<CategoryResponse[]> {
     try {
-      const response = await apiClient.get(`/categories/top-level`);
+      const response = await apiClient.get(`/v1/categories/top-level`);
       return response.data;
     } catch (error) {
       throw handleApiError(error);
@@ -87,7 +87,7 @@ class CategoryService {
    */
   async searchCategories(searchDTO: any): Promise<CategoryPageResponse> {
     try {
-      const response = await apiClient.post(`/categories/search`, searchDTO);
+      const response = await apiClient.post(`/v1/categories/search`, searchDTO);
       return response.data;
     } catch (error) {
       throw handleApiError(error);
@@ -99,7 +99,7 @@ class CategoryService {
    */
   async getCategoryById(id: number): Promise<CategoryResponse> {
     try {
-      const response = await apiClient.get(`/categories/${id}`);
+      const response = await apiClient.get(`/v1/categories/${id}`);
       return response.data;
     } catch (error) {
       throw handleApiError(error);
@@ -113,7 +113,7 @@ class CategoryService {
     categoryData: CategoryCreateRequest
   ): Promise<CategoryResponse> {
     try {
-      const response = await apiClient.post(`/categories`, categoryData);
+      const response = await apiClient.post(`/v1/categories`, categoryData);
       return response.data;
     } catch (error) {
       throw handleApiError(error);
@@ -128,7 +128,7 @@ class CategoryService {
     categoryData: CategoryUpdateRequest
   ): Promise<CategoryResponse> {
     try {
-      const response = await apiClient.put(`/categories/${id}`, categoryData);
+      const response = await apiClient.put(`/v1/categories/${id}`, categoryData);
       return response.data;
     } catch (error) {
       throw handleApiError(error);
@@ -140,7 +140,7 @@ class CategoryService {
    */
   async deleteCategory(id: number): Promise<void> {
     try {
-      await apiClient.delete(`/categories/${id}`);
+      await apiClient.delete(`/v1/categories/${id}`);
     } catch (error) {
       throw handleApiError(error);
     }
@@ -151,7 +151,7 @@ class CategoryService {
    */
   async getAllCategoriesForDropdown(): Promise<CategoryResponse[]> {
     try {
-      const response = await apiClient.get(`/categories`, {
+      const response = await apiClient.get(`/v1/categories`, {
         params: { page: 0, size: 1000, sortBy: "name", sortDir: "asc" },
       });
       return response.data.content;
