@@ -16,6 +16,7 @@ import {
   Layers,
   Mail,
   TagIcon,
+  MapPin,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -104,6 +105,13 @@ export function Sidebar({ className }: SidebarProps) {
             collapsed={collapsed}
             isActive={pathname.startsWith("/dashboard/categories")}
           />
+          <SidebarItem
+            href="/dashboard/delivery-areas"
+            icon={MapPin}
+            label="Delivery Areas"
+            collapsed={collapsed}
+            isActive={pathname.startsWith("/dashboard/delivery-areas")}
+          />
           <Separator className="my-2" />
           <SidebarItem
             href="/dashboard/settings"
@@ -132,13 +140,19 @@ interface SidebarItemProps {
   isActive?: boolean;
 }
 
-function SidebarItem({ href, icon: Icon, label, collapsed, isActive }: SidebarItemProps) {
+function SidebarItem({
+  href,
+  icon: Icon,
+  label,
+  collapsed,
+  isActive,
+}: SidebarItemProps) {
   return (
     <Link
       href={href}
       className={cn(
         "flex h-10 items-center rounded-md px-3 py-2 transition-colors",
-        isActive 
+        isActive
           ? "bg-primary text-primary-foreground"
           : "text-muted-foreground hover:bg-primary hover:text-primary-foreground",
         collapsed ? "justify-center" : "justify-start"
@@ -149,4 +163,4 @@ function SidebarItem({ href, icon: Icon, label, collapsed, isActive }: SidebarIt
       {collapsed && <span className="sr-only">{label}</span>}
     </Link>
   );
-} 
+}
