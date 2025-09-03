@@ -1,5 +1,6 @@
 import apiClient from "../api-client";
 import { handleApiError } from "../utils/error-handler";
+import { API_ENDPOINTS } from "../constants";
 import {
   BrandResponse,
   CreateBrandRequest,
@@ -16,7 +17,7 @@ class BrandService {
     sortDir: string = "asc"
   ): Promise<BrandPageResponse> {
     try {
-      const response = await apiClient.get(`/v1/brands`, {
+      const response = await apiClient.get(API_ENDPOINTS.BRANDS.BASE, {
         params: { page, size, sortBy, sortDir },
       });
       return response.data;
@@ -27,7 +28,7 @@ class BrandService {
 
   async getBrandById(brandId: string): Promise<BrandResponse> {
     try {
-      const response = await apiClient.get(`/v1/brands/${brandId}`);
+      const response = await apiClient.get(API_ENDPOINTS.BRANDS.BY_ID(brandId));
       return response.data;
     } catch (error) {
       throw handleApiError(error);
@@ -36,7 +37,9 @@ class BrandService {
 
   async getBrandBySlug(slug: string): Promise<BrandResponse> {
     try {
-      const response = await apiClient.get(`/v1/brands/slug/${slug}`);
+      const response = await apiClient.get(
+        `${API_ENDPOINTS.BRANDS.BASE}/slug/${slug}`
+      );
       return response.data;
     } catch (error) {
       throw handleApiError(error);
@@ -45,7 +48,7 @@ class BrandService {
 
   async getActiveBrands(): Promise<BrandResponse[]> {
     try {
-      const response = await apiClient.get(`/v1/brands/active`);
+      const response = await apiClient.get(API_ENDPOINTS.BRANDS.ACTIVE);
       return response.data;
     } catch (error) {
       throw handleApiError(error);
@@ -54,7 +57,7 @@ class BrandService {
 
   async getFeaturedBrands(): Promise<BrandResponse[]> {
     try {
-      const response = await apiClient.get(`/v1/brands/featured`);
+      const response = await apiClient.get(API_ENDPOINTS.BRANDS.FEATURED);
       return response.data;
     } catch (error) {
       throw handleApiError(error);

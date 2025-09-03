@@ -6,82 +6,77 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import {
   Popover,
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover";
 import { Badge } from "@/components/ui/badge";
 import { X, Search, ChevronDown, Loader2 } from "lucide-react";
-import { categoryService } from "@/lib/services/category-service";
-import { CategoryResponse } from "@/lib/types/category";
+import { brandService } from "@/lib/services/brand-service";
+import { BrandResponse } from "@/lib/types/brand";
 
-interface CategoryDropdownProps {
-  value?: number;
-  onValueChange: (value: number) => void;
+interface BrandDropdownProps {
+  value?: string;
+  onValueChange: (value: string) => void;
   placeholder?: string;
   label?: string;
   required?: boolean;
   error?: string;
 }
 
-export function CategoryDropdown({
+export function BrandDropdown({
   value,
   onValueChange,
-  placeholder = "Select Category",
-  label = "Category",
+  placeholder = "Select Brand",
+  label = "Brand",
   required = false,
   error,
-}: CategoryDropdownProps) {
+}: BrandDropdownProps) {
   const [searchQuery, setSearchQuery] = useState("");
   const [currentPage, setCurrentPage] = useState(0);
   const [isOpen, setIsOpen] = useState(false);
-  const pageSize = 5;
+  const pageSize = 5; // Display 5 brands per page
 
+  // Fetch brands with pagination
   const {
-    data: categoriesData,
+    data: brandsData,
     isLoading,
     isError,
     error: fetchError,
   } = useQuery({
-    queryKey: ["categories", currentPage, pageSize, "name", "asc"],
+    queryKey: ["brands", currentPage, pageSize, "brandName", "asc"],
     queryFn: () =>
-      categoryService.getAllCategories(currentPage, pageSize, "name", "asc"),
+      brandService.getAllBrands(currentPage, pageSize, "brandName", "asc"),
     enabled: isOpen,
   });
 
+  // Search brands
   const {
     data: searchData,
     isLoading: isSearching,
     refetch: refetchSearch,
   } = useQuery({
-    queryKey: ["categories-search", searchQuery],
+    queryKey: ["brands-search", searchQuery],
     queryFn: () =>
-      categoryService.searchCategories({
-        name: searchQuery,
+      brandService.searchBrands({
+        brandName: searchQuery,
         page: 0,
         size: 100, // Get more results for search
       }),
     enabled: searchQuery.length > 0 && isOpen,
   });
 
-  const categories =
+  const brands =
     searchQuery.length > 0
       ? searchData?.content || []
-      : categoriesData?.content || [];
+      : brandsData?.content || [];
   const totalPages =
     searchQuery.length > 0
       ? searchData?.totalPages || 0
-      : categoriesData?.totalPages || 0;
-
-  // Get selected category name
-  const selectedCategory = categories.find((cat) => cat.id === value);
+      : brandsData?.totalPages || 0;
+  console.log("Value", value);
+  // Get selected brand name
+  const selectedBrand = brands.find((brand) => brand.id === value);
 
   // Handle search
   useEffect(() => {
@@ -99,15 +94,15 @@ export function CategoryDropdown({
     setCurrentPage(newPage);
   };
 
-  const handleCategorySelect = (categoryId: number) => {
-    onValueChange(categoryId);
+  const handleBrandSelect = (brandId: string) => {
+    onValueChange(brandId);
     setIsOpen(false);
     setSearchQuery("");
     setCurrentPage(0);
   };
 
   const handleClearSelection = () => {
-    onValueChange(0);
+    onValueChange("");
     setSearchQuery("");
     setCurrentPage(0);
   };
@@ -178,7 +173,7 @@ export function CategoryDropdown({
             aria-expanded={isOpen}
             className="w-full justify-between border-primary/20 focus-visible:ring-primary"
           >
-            {selectedCategory ? selectedCategory.name : placeholder}
+            {selectedBrand ? selectedBrand.brandName : placeholder}
             <ChevronDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
           </Button>
         </PopoverTrigger>
@@ -188,7 +183,7 @@ export function CategoryDropdown({
             <div className="relative">
               <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
               <Input
-                placeholder="Search categories..."
+                placeholder="Search brands..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 className="pl-8"
@@ -201,37 +196,35 @@ export function CategoryDropdown({
               <div className="flex items-center justify-center py-8">
                 <Loader2 className="h-6 w-6 animate-spin" />
                 <span className="ml-2 text-sm text-muted-foreground">
-                  Loading categories...
+                  Loading brands...
                 </span>
               </div>
             ) : isError ? (
               <div className="p-4 text-center text-sm text-destructive">
-                Failed to load categories
+                Failed to load brands
               </div>
-            ) : categories.length === 0 ? (
+            ) : brands.length === 0 ? (
               <div className="p-4 text-center text-sm text-muted-foreground">
-                {searchQuery
-                  ? "No categories found"
-                  : "No categories available"}
+                {searchQuery ? "No brands found" : "No brands available"}
               </div>
             ) : (
               <>
                 <div className="p-2">
-                  {categories.map((category) => (
+                  {brands.map((brand) => (
                     <div
-                      key={category.id}
+                      key={brand.id}
                       className="flex items-center justify-between p-2 hover:bg-accent rounded-md cursor-pointer"
-                      onClick={() => handleCategorySelect(category.id)}
+                      onClick={() => handleBrandSelect(brand.id)}
                     >
                       <div className="flex flex-col">
-                        <span className="font-medium">{category.name}</span>
-                        {category.description && (
+                        <span className="font-medium">{brand.brandName}</span>
+                        {brand.description && (
                           <span className="text-xs text-muted-foreground">
-                            {category.description}
+                            {brand.description}
                           </span>
                         )}
                       </div>
-                      {category.id === value && (
+                      {brand.id === value && (
                         <Badge variant="secondary" className="text-xs">
                           Selected
                         </Badge>
@@ -247,14 +240,15 @@ export function CategoryDropdown({
         </PopoverContent>
       </Popover>
 
-      {/* Selected category badge */}
-      {selectedCategory && (
+      {/* Selected brand badge */}
+      {selectedBrand && (
         <div className="flex items-center gap-2 mt-2">
           <Badge
             variant="secondary"
             className="pl-2 pr-1 py-1 flex items-center gap-1"
           >
-            {selectedCategory.name}
+            {selectedBrand.brandName}
+            <h1>waht</h1>
             <Button
               type="button"
               variant="ghost"
@@ -268,7 +262,6 @@ export function CategoryDropdown({
         </div>
       )}
 
-      {/* Error message */}
       {error && <p className="text-sm text-destructive">{error}</p>}
     </div>
   );

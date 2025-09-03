@@ -17,6 +17,7 @@ import {
   Mail,
   TagIcon,
   MapPin,
+  Gift,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -111,6 +112,13 @@ export function Sidebar({ className }: SidebarProps) {
             label="Delivery Areas"
             collapsed={collapsed}
             isActive={pathname.startsWith("/dashboard/delivery-areas")}
+          />
+          <SidebarItem
+            href="/dashboard/reward-system"
+            icon={Gift}
+            label="Reward System"
+            collapsed={collapsed}
+            isActive={pathname.startsWith("/dashboard/reward-system")}
           />
           <Separator className="my-2" />
           <SidebarItem

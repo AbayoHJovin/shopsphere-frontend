@@ -50,6 +50,7 @@ import { productSizeService } from "@/lib/services/product-size-service";
 import { productService } from "@/lib/services/product-service";
 import { Size, Gender } from "@/lib/types/product";
 import { CategoryDropdown } from "@/components/products/CategoryDropdown";
+import { BrandDropdown } from "@/components/products/BrandDropdown";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { useToast } from "@/components/ui/use-toast";
 import FetchAttributesDialog from "@/components/products/FetchAttributesDialog";
@@ -1219,14 +1220,16 @@ export default function CreateProductPage() {
                   <FormField
                     control={form.control}
                     name="brandId"
-                    render={({ field }) => (
+                    render={({ field, fieldState }) => (
                       <FormItem>
-                        <FormLabel>Brand</FormLabel>
                         <FormControl>
-                          <Input
-                            placeholder="Brand ID (UUID)"
-                            {...field}
-                            className="border-primary/20 focus-visible:ring-primary"
+                          <BrandDropdown
+                            value={field.value}
+                            onValueChange={field.onChange}
+                            placeholder="Select Brand"
+                            label="Brand"
+                            required={false}
+                            error={fieldState.error?.message}
                           />
                         </FormControl>
                         <FormMessage />
