@@ -22,7 +22,21 @@ export const API_ENDPOINTS = {
   },
   ORDERS: {
     BASE: `${API_URL}/v1/orders`,
-    BY_ID: (id: string) => `${API_URL}/v1/orders/${id}`,
+    CREATE: `${API_URL}/v1/orders/create`,
+    CANCEL: (id: string) => `${API_URL}/v1/orders/${id}/cancel`,
+    TRACKING: (id: string) => `${API_URL}/v1/orders/${id}/tracking`,
+  },
+  ADMIN_ORDERS: {
+    BASE: `${API_URL}/v1/admin/orders`,
+    ALL: `${API_URL}/v1/admin/orders`,
+    BY_ID: (id: string) => `${API_URL}/v1/admin/orders/${id}`,
+    BY_NUMBER: (orderNumber: string) =>
+      `${API_URL}/v1/admin/orders/number/${orderNumber}`,
+    BY_STATUS: (status: string) =>
+      `${API_URL}/v1/admin/orders/status/${status}`,
+    UPDATE_STATUS: (id: string) => `${API_URL}/v1/admin/orders/${id}/status`,
+    UPDATE_TRACKING: (id: string) =>
+      `${API_URL}/v1/admin/orders/${id}/tracking`,
   },
   INVITATIONS: {
     BASE: `${API_URL}/v1/admin-invitations`,
@@ -31,6 +45,17 @@ export const API_ENDPOINTS = {
   USERS: {
     BASE: `${API_URL}/v1/users`,
     BY_ID: (id: string) => `${API_URL}/v1/users/${id}`,
+    DELIVERY_AGENTS: `${API_URL}/v1/auth/users/delivery-agents`,
+  },
+  DELIVERY: {
+    ASSIGN: `${API_URL}/v1/delivery/admin/assign`,
+    CHANGE_AGENT: `${API_URL}/v1/delivery/admin/change-agent`,
+    UNASSIGN: `${API_URL}/v1/delivery/admin/unassign`,
+    CANCEL: (assignmentId: string) =>
+      `${API_URL}/v1/delivery/admin/cancel/${assignmentId}`,
+    ALL_ASSIGNMENTS: `${API_URL}/v1/delivery/admin/all`,
+    BY_ORDER: (orderId: string) =>
+      `${API_URL}/v1/delivery/admin/order/${orderId}`,
   },
   CATEGORIES: {
     BASE: `${API_URL}/v1/categories`,
@@ -55,6 +80,7 @@ export const API_ENDPOINTS = {
   REWARDS: {
     BASE: `${API_URL}/v1/rewards`,
     SYSTEM: `${API_URL}/v1/rewards/system`,
+    SYSTEMS: `${API_URL}/v1/rewards/systems`,
     SYSTEM_BY_ID: (id: number) => `${API_URL}/v1/rewards/system/${id}`,
     USER_POINTS: (userId: string) => `${API_URL}/v1/rewards/users/${userId}`,
     USER_CURRENT_POINTS: (userId: string) =>

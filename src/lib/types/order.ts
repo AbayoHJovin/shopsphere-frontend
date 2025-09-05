@@ -1,113 +1,116 @@
-// Response types for orders
-import { UUID } from "crypto";
+// Response types for admin orders matching AdminOrderDTO
 
 export enum OrderStatus {
-  PENDING = "Pending",
-  CONFIRMED = "Confirmed",
-  SHIPPED = "Shipped",
-  DELIVERED = "Delivered",
-  CANCELLED = "Cancelled",
-  FAILED = "Failed"
+  PENDING = "PENDING",
+  PROCESSING = "PROCESSING",
+  SHIPPED = "SHIPPED",
+  DELIVERED = "DELIVERED",
+  CANCELLED = "CANCELLED",
+  REFUNDED = "REFUNDED",
+  RETURNED = "RETURNED",
 }
 
 export enum OrderPaymentStatus {
-  PENDING = "Pending",
-  PAID = "Paid",
-  FAILED = "Failed",
-  REFUNDED = "Refunded"
+  PENDING = "PENDING",
+  COMPLETED = "COMPLETED",
+  CANCELLED = "CANCELLED",
 }
 
-export interface UserSummaryResponse {
-  userId: string;
-  username: string;
-  email: string;
-  role: string;
-  profilePictureUrl: string;
+export interface SimpleProductDTO {
+  id: string;
+  name: string;
+  description: string;
+  price: number;
+  images: string[];
 }
 
-export interface OrderItemResponse {
-  orderItemId: string;
+export interface ProductImageDTO {
+  id: string;
+  imageUrl: string;
+  altText?: string;
+  title?: string;
+  isPrimary?: boolean;
+  sortOrder?: number;
+}
+
+export interface VariantImageDTO {
+  id: string;
+  imageUrl: string;
+  altText?: string;
+  title?: string;
+  isPrimary?: boolean;
+  sortOrder?: number;
+}
+
+export interface AdminOrderItemDTO {
+  id: string;
   productId: string;
-  productName: string;
-  productImageUrl: string;
+  variantId: string;
+  product: SimpleProductDTO;
   quantity: number;
   price: number;
-  subtotal: number;
+  totalPrice: number;
+  availableStock: number;
 }
 
-export interface OrderTransactionResponse {
-  transactionId: string;
-  transactionReference: string;
-  transactionDate: string;
-  paymentMethod: string;
-  amount: number;
-}
-
-export interface OrderResponse {
-  orderId: string;
-  orderCode: string;
-  orderStatus: OrderStatus;
-  paymentStatus: OrderPaymentStatus;
-  orderDate: string;
-  updatedAt: string;
-  totalAmount: number;
-  shippingCost: number;
-  taxAmount: number;
-  discountAmount: number;
-  isQrScanned: boolean;
-  
-  // Customer information
-  user: UserSummaryResponse | null; // Null for guest orders
-  email: string;
-  firstName: string;
-  lastName: string;
-  phoneNumber: string;
-  
-  // Address information
-  streetAddress: string;
+export interface AdminOrderAddressDTO {
+  id: string;
+  street: string;
   city: string;
-  stateProvince: string;
-  postalCode: string;
+  state: string;
+  zipCode: string;
   country: string;
-  
-  notes: string | null;
-  
-  // Items
-  items: OrderItemResponse[];
-  
-  // Payment information
-  transaction: OrderTransactionResponse | null;
+  phone: string;
 }
 
-// Pagination response structure
-export interface Page<T> {
-  content: T[];
-  pageable: {
-    pageNumber: number;
-    pageSize: number;
-    sort: {
-      empty: boolean;
-      sorted: boolean;
-      unsorted: boolean;
-    },
-    offset: number;
-    paged: boolean;
-    unpaged: boolean;
-  };
-  last: boolean;
-  totalPages: number;
-  totalElements: number;
-  size: number;
-  number: number;
-  sort: {
-    empty: boolean;
-    sorted: boolean;
-    unsorted: boolean;
-  };
-  first: boolean;
-  numberOfElements: number;
-  empty: boolean;
+export interface AdminPaymentInfoDTO {
+  paymentMethod: string;
+  paymentStatus: string;
+  stripePaymentIntentId?: string;
+  stripeSessionId?: string;
+  transactionRef?: string;
+  paymentDate?: string;
+  receiptUrl?: string;
 }
 
-// Order pagination response
-export type OrderPaginationResponse = Page<OrderResponse>;
+export interface AdminOrderDTO {
+  id: string;
+  userId: string;
+  customerName?: string;
+  customerEmail?: string;
+  customerPhone?: string;
+  orderNumber: string;
+  status: string;
+  items: AdminOrderItemDTO[];
+  subtotal: number;
+  tax: number;
+  shipping: number;
+  discount: number;
+  total: number;
+  shippingAddress: AdminOrderAddressDTO;
+  billingAddress: AdminOrderAddressDTO;
+  paymentInfo: AdminPaymentInfoDTO;
+  notes?: string;
+  createdAt: string;
+  updatedAt: string;
+  estimatedDelivery?: string;
+  trackingNumber?: string;
+}
+
+// Keep backward compatibility
+export type OrderResponse = AdminOrderDTO;
+export type OrderItemDTO = AdminOrderItemDTO;
+export type OrderAddressDTO = AdminOrderAddressDTO;
+
+// API Response wrapper
+export interface ApiResponse<T> {
+  success: boolean;
+  message?: string;
+  data: T;
+  errorCode?: string;
+  details?: string;
+}
+
+// For simple list responses
+export type OrderListResponse = ApiResponse<AdminOrderDTO[]>;
+export type AdminOrderListResponse = ApiResponse<AdminOrderDTO[]>;

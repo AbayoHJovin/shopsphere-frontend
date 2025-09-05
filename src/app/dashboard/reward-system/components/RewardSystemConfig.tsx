@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import {
   Card,
   CardContent,
@@ -15,10 +15,9 @@ import { Switch } from "@/components/ui/switch";
 import { Textarea } from "@/components/ui/textarea";
 import { Separator } from "@/components/ui/separator";
 import { useToast } from "@/hooks/use-toast";
-import {
-  rewardSystemService,
-  RewardSystemDTO,
-} from "@/lib/services/reward-system-service";
+import { rewardSystemService } from "@/lib/services/reward-system-service";
+import { RewardSystemDTO } from "@/lib/types/reward-system";
+import { Save, Edit3 } from "lucide-react";
 
 interface RewardSystemConfigProps {
   rewardSystem: RewardSystemDTO;
@@ -97,7 +96,7 @@ export function RewardSystemConfig({
         description: `${field} ${value ? "enabled" : "disabled"} successfully`,
       });
     } catch (error: any) {
-      console.error(`Failed to toggle ${field}:`, error);
+      console.error(`Failed to toggle ${String(field)}:`, error);
       toast({
         title: "Error",
         description:

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import {
   Card,
   CardContent,
@@ -21,11 +21,8 @@ import {
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
-import {
-  rewardSystemService,
-  RewardSystemDTO,
-  RewardRangeDTO,
-} from "@/lib/services/reward-system-service";
+import { rewardSystemService } from "@/lib/services/reward-system-service";
+import { RewardSystemDTO, RewardRangeDTO } from "@/lib/types/reward-system";
 import { Plus, Trash2 } from "lucide-react";
 
 interface RewardRangesProps {

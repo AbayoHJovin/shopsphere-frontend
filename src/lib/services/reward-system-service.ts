@@ -13,6 +13,41 @@ class RewardSystemService {
     return response.data;
   }
 
+  async getAllRewardSystems(
+    page: number = 0,
+    size: number = 10,
+    sortBy: string = "id",
+    sortDir: string = "desc"
+  ): Promise<{
+    content: RewardSystemDTO[];
+    currentPage: number;
+    totalPages: number;
+    totalElements: number;
+    size: number;
+    first: boolean;
+    last: boolean;
+    empty: boolean;
+  }> {
+    const params = new URLSearchParams({
+      page: page.toString(),
+      size: size.toString(),
+      sortBy,
+      sortDir,
+    });
+
+    const response = await apiClient.get(
+      `${API_ENDPOINTS.REWARDS.SYSTEMS}?${params}`
+    );
+    return response.data;
+  }
+
+  async getRewardSystemById(id: number): Promise<RewardSystemDTO> {
+    const response = await apiClient.get(
+      `${API_ENDPOINTS.REWARDS.SYSTEM_BY_ID(id)}`
+    );
+    return response.data;
+  }
+
   async saveRewardSystem(
     rewardSystem: RewardSystemDTO
   ): Promise<RewardSystemDTO> {
@@ -25,7 +60,7 @@ class RewardSystemService {
 
   async activateRewardSystem(id: number): Promise<RewardSystemDTO> {
     const response = await apiClient.put(
-      API_ENDPOINTS.REWARDS.SYSTEM_BY_ID(id)
+      `${API_ENDPOINTS.REWARDS.SYSTEM_BY_ID(id)}/activate`
     );
     return response.data;
   }
