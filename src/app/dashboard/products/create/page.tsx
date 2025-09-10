@@ -44,6 +44,10 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { ColorPicker } from "@/components/ColorPicker";
+import {
+  WarehouseSelector,
+  WarehouseStock,
+} from "@/components/WarehouseSelector";
 import { ArrowLeft, Upload, X, Plus, Minus, AlertTriangle } from "lucide-react";
 import { productColorService } from "@/lib/services/product-color-service";
 import { productSizeService } from "@/lib/services/product-size-service";
@@ -86,15 +90,6 @@ const productSchema = z.object({
     .number()
     .min(0.01, "Cost price must be greater than 0")
     .optional(),
-  stockQuantity: z.coerce
-    .number()
-    .int()
-    .min(0, "Stock quantity must be at least 0"),
-  lowStockThreshold: z.coerce
-    .number()
-    .int()
-    .min(0, "Low stock threshold must be at least 0")
-    .optional(),
   categoryId: z.coerce.number().min(1, "Category is required"),
   brandId: z.string().uuid().optional(),
   model: z.string().max(100, "Model must not exceed 100 characters").optional(),
@@ -127,6 +122,7 @@ interface ProductVariant {
   isActive: boolean;
   attributes: Record<string, string>;
   images: File[];
+  warehouseStocks: WarehouseStock[];
 }
 
 // Define the product attribute type for the form
@@ -167,8 +163,6 @@ export default function CreateProductPage() {
       basePrice: 0,
       compareAtPrice: 0,
       costPrice: 0,
-      stockQuantity: 0,
-      lowStockThreshold: 5,
       categoryId: 0,
       brandId: "",
       model: "",
@@ -193,9 +187,6 @@ export default function CreateProductPage() {
   // State for form submission
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  // State for stock warning
-  const [stockWarning, setStockWarning] = useState<string | null>(null);
-
   // State for success modal
   const [showSuccessModal, setShowSuccessModal] = useState(false);
   const [dontShowAgain, setDontShowAgain] = useState(false);
@@ -210,6 +201,9 @@ export default function CreateProductPage() {
   // State for attributes and variants
   const [attributes, setAttributes] = useState<ProductAttribute[]>([]);
   const [variants, setVariants] = useState<ProductVariant[]>([]);
+
+  // State for warehouse stocks
+  const [warehouseStocks, setWarehouseStocks] = useState<WarehouseStock[]>([]);
 
   // State for colors
   const [colors, setColors] = useState<ProductColor[]>([]);
@@ -273,28 +267,6 @@ export default function CreateProductPage() {
       form.setValue("slug", generatedSlug);
     }
   }, [form.watch("name")]);
-
-  // Watch the stock field to validate against size quantities
-  const stockValue = form.watch("stockQuantity");
-  const categoryId = form.watch("categoryId");
-
-  // Validate total stock against size quantities
-  useEffect(() => {
-    const totalStock =
-      typeof stockValue === "number" ? stockValue : parseInt(stockValue) || 0;
-    const totalSizeStock = sizes.reduce(
-      (sum: number, size: ProductSize) => sum + size.stockForSize,
-      0
-    );
-
-    if (sizes.length > 0 && totalSizeStock > totalStock) {
-      setStockWarning(
-        `Size quantities (${totalSizeStock}) exceed total stock (${totalStock})`
-      );
-    } else {
-      setStockWarning(null);
-    }
-  }, [sizes, stockValue]);
 
   const handleMainImageUpload = (
     event: React.ChangeEvent<HTMLInputElement>
@@ -530,11 +502,12 @@ export default function CreateProductPage() {
         variantSku: "",
         price: form.getValues("basePrice"),
         stockQuantity: 0,
-        lowStockThreshold: form.getValues("lowStockThreshold") || 5,
+        lowStockThreshold: 5,
         sortOrder: index,
         isActive: true,
         attributes: combination,
         images: [],
+        warehouseStocks: [],
       })
     );
 
@@ -607,25 +580,6 @@ export default function CreateProductPage() {
     return sizes.reduce((sum, size) => sum + size.stockForSize, 0);
   };
 
-  useEffect(() => {
-    const totalStock = form.getValues("stockQuantity");
-    const parsedTotalStock =
-      typeof totalStock === "number" ? totalStock : parseInt(totalStock) || 0;
-    const totalSizeStock = calculateTotalSizeStock();
-
-    if (sizes.length > 0) {
-      if (parsedTotalStock !== totalSizeStock) {
-        setStockWarning(
-          `The sum of stock for all sizes (${totalSizeStock}) must equal the total stock (${parsedTotalStock}).`
-        );
-      } else {
-        setStockWarning(null);
-      }
-    } else {
-      setStockWarning(null);
-    }
-  }, [sizes, form]);
-
   // Check localStorage for user preference on showing success modal
   useEffect(() => {
     const preference = localStorage.getItem("productCreationPreference");
@@ -665,21 +619,7 @@ export default function CreateProductPage() {
         return;
       }
 
-      // Validate that size stock matches total stock if sizes are provided
-      const totalStock =
-        typeof data.stockQuantity === "number"
-          ? data.stockQuantity
-          : parseInt(data.stockQuantity) || 0;
-      const totalSizeStock = calculateTotalSizeStock();
-
-      if (sizes.length > 0 && totalSizeStock !== totalStock) {
-        toast({
-          title: "Stock Mismatch",
-          description: `Total stock (${totalStock}) must match the sum of size quantities (${totalSizeStock})`,
-          variant: "destructive",
-        });
-        return;
-      }
+      // Stock validation is now handled through warehouse assignments
 
       // Create FormData for multipart submission
       const formData = new FormData();
@@ -695,9 +635,6 @@ export default function CreateProductPage() {
         formData.append("compareAtPrice", data.compareAtPrice.toString());
       if (data.costPrice)
         formData.append("costPrice", data.costPrice.toString());
-      formData.append("stockQuantity", data.stockQuantity.toString());
-      if (data.lowStockThreshold)
-        formData.append("lowStockThreshold", data.lowStockThreshold.toString());
       formData.append("categoryId", data.categoryId.toString());
       if (data.brandId) formData.append("brandId", data.brandId);
       if (data.model) formData.append("model", data.model);
@@ -748,7 +685,25 @@ export default function CreateProductPage() {
           sortOrder: variant.sortOrder,
           isActive: variant.isActive,
           attributes: variant.attributes,
+          warehouseStock: variant.warehouseStocks.map((stock) => ({
+            warehouseId: stock.warehouseId,
+            stockQuantity: stock.stockQuantity,
+            lowStockThreshold: stock.lowStockThreshold,
+          })),
         }));
+
+        // Add warehouse stocks for products without variants
+        if (variants.length === 0 && warehouseStocks.length > 0) {
+          const warehouseStocksData = warehouseStocks.map((stock) => ({
+            warehouseId: stock.warehouseId,
+            stockQuantity: stock.stockQuantity,
+            lowStockThreshold: stock.lowStockThreshold,
+          }));
+          formData.append(
+            "warehouseStock",
+            JSON.stringify(warehouseStocksData)
+          );
+        }
 
         formData.append("variants", JSON.stringify(variantsData));
 
@@ -1018,35 +973,15 @@ export default function CreateProductPage() {
 
                   <FormField
                     control={form.control}
-                    name="stockQuantity"
+                    name="categoryId"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel>Base Stock Quantity</FormLabel>
+                        <FormLabel>Category</FormLabel>
                         <FormControl>
-                          <Input
-                            type="number"
-                            placeholder="0"
-                            {...field}
-                            className="border-primary/20 focus-visible:ring-primary"
-                          />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-
-                  <FormField
-                    control={form.control}
-                    name="lowStockThreshold"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Low Stock Threshold</FormLabel>
-                        <FormControl>
-                          <Input
-                            type="number"
-                            placeholder="5"
-                            {...field}
-                            className="border-primary/20 focus-visible:ring-primary"
+                          <CategoryDropdown
+                            value={field.value}
+                            onValueChange={field.onChange}
+                            placeholder="Select a category"
                           />
                         </FormControl>
                         <FormMessage />
@@ -1239,6 +1174,19 @@ export default function CreateProductPage() {
                 </div>
               </CardContent>
             </Card>
+
+            {/* Warehouse Stock Assignment */}
+            <WarehouseSelector
+              warehouseStocks={warehouseStocks}
+              onWarehouseStocksChange={setWarehouseStocks}
+              disabled={variants.length > 0}
+              title="Warehouse Stock Assignment"
+              description={
+                variants.length > 0
+                  ? "Stock will be managed at the variant level. Configure warehouse stocks for each variant below."
+                  : "Assign stock quantities to warehouses for this product. If you plan to add variants, stock will be managed at the variant level instead."
+              }
+            />
 
             {/* Product Images */}
             <Card className="border-border/40 shadow-sm">
@@ -1729,6 +1677,19 @@ export default function CreateProductPage() {
                           </label>
                         </div>
                       </div>
+
+                      {/* Warehouse Stock Assignment for Variant */}
+                      <WarehouseSelector
+                        warehouseStocks={variant.warehouseStocks}
+                        onWarehouseStocksChange={(stocks) =>
+                          updateVariant(index, "warehouseStocks", stocks)
+                        }
+                        disabled={false}
+                        title={`Warehouse Stock - ${
+                          variant.variantSku || `Variant ${index + 1}`
+                        }`}
+                        description="Assign stock quantities to warehouses for this variant"
+                      />
                     </div>
                   ))}
 

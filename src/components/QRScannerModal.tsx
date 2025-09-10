@@ -20,7 +20,6 @@ interface QRScannerModalProps {
   isValidating?: boolean; // Added to show loading state during backend validation
 }
 
-// Declare the Html5Qrcode type for TypeScript
 declare global {
   interface Window {
     Html5Qrcode: any;

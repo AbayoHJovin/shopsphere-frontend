@@ -18,6 +18,8 @@ import {
   TagIcon,
   MapPin,
   Gift,
+  Warehouse,
+  Truck,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -93,6 +95,13 @@ export function Sidebar({ className }: SidebarProps) {
             isActive={pathname.startsWith("/dashboard/orders")}
           />
           <SidebarItem
+            href="/dashboard/shipping-costs"
+            icon={Truck}
+            label="Shipping Costs"
+            collapsed={collapsed}
+            isActive={pathname.startsWith("/dashboard/shipping-costs")}
+          />
+          <SidebarItem
             href="/dashboard/invitations"
             icon={Mail}
             label="Invitations"
@@ -105,6 +114,13 @@ export function Sidebar({ className }: SidebarProps) {
             label="Categories"
             collapsed={collapsed}
             isActive={pathname.startsWith("/dashboard/categories")}
+          />
+          <SidebarItem
+            href="/dashboard/warehouses"
+            icon={Warehouse}
+            label="Warehouses"
+            collapsed={collapsed}
+            isActive={pathname.startsWith("/dashboard/warehouses")}
           />
           <SidebarItem
             href="/dashboard/delivery-areas"

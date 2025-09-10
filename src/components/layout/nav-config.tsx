@@ -8,6 +8,7 @@ import {
   Users,
   Tag,
   Settings,
+  Truck,
 } from "lucide-react";
 
 export interface NavItem {
@@ -46,6 +47,12 @@ export const sidebarItems: NavItem[] = [
     title: "Categories & Brands",
     href: "/dashboard/categories",
     icon: <Tag className="mr-2 h-4 w-4" />,
+    roles: [UserRole.ADMIN, UserRole.EMPLOYEE],
+  },
+  {
+    title: "Shipping Costs",
+    href: "/dashboard/shipping-costs",
+    icon: <Truck className="mr-2 h-4 w-4" />,
     roles: [UserRole.ADMIN, UserRole.EMPLOYEE],
   },
   {
