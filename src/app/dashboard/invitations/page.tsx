@@ -325,6 +325,7 @@ export default function InvitationsPage() {
                     <SelectContent>
                       <SelectItem value="ADMIN">Admin</SelectItem>
                       <SelectItem value="EMPLOYEE">Employee</SelectItem>
+                      <SelectItem value="DELIVERY_AGENT">Delivery Agent</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>

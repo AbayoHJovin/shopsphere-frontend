@@ -62,10 +62,7 @@ export interface AdminInvitationSearchDTO {
 
 export interface AcceptInvitationDTO {
   invitationToken: string;
-  username: string;
-  password: string;
-  firstName: string;
-  lastName: string;
+  password?: string;
   phoneNumber?: string;
 }
 
