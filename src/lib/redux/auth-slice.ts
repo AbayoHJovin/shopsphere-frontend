@@ -1,16 +1,16 @@
-import { createSlice, PayloadAction } from '@reduxjs/toolkit';
-import { AuthState, User } from '../types';
+import { createSlice, PayloadAction } from "@reduxjs/toolkit";
+import { AuthState, User } from "../types";
 
 const initialState: AuthState = {
   user: null,
   isAuthenticated: false,
   isLoading: false,
   error: null,
-  checkingAuth: true, // Add this new state
+  checkingAuth: false, // Start as false, will be set to true when auth check starts
 };
 
 export const authSlice = createSlice({
-  name: 'auth',
+  name: "auth",
   initialState,
   reducers: {
     loginStart: (state) => {
@@ -57,20 +57,20 @@ export const authSlice = createSlice({
       state.isAuthenticated = false;
       state.user = null;
       state.checkingAuth = false;
-    }
+    },
   },
 });
 
-export const { 
-  loginStart, 
-  loginSuccess, 
-  loginFailure, 
-  logout, 
-  clearError, 
+export const {
+  loginStart,
+  loginSuccess,
+  loginFailure,
+  logout,
+  clearError,
   updateUser,
   checkAuthStart,
   checkAuthSuccess,
-  checkAuthFailure
+  checkAuthFailure,
 } = authSlice.actions;
 
-export default authSlice.reducer; 
+export default authSlice.reducer;

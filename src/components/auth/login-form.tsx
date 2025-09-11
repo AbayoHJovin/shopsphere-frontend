@@ -52,10 +52,10 @@ export function LoginForm() {
 
   // Redirect if already authenticated
   useEffect(() => {
-    if (isAuthenticated) {
-      router.push(returnUrl);
+    if (isAuthenticated && !authLoading) {
+      router.replace(returnUrl);
     }
-  }, [isAuthenticated, router, returnUrl]);
+  }, [isAuthenticated, router, returnUrl, authLoading]);
 
   // Show auth error if any
   useEffect(() => {
@@ -77,10 +77,15 @@ export function LoginForm() {
     onSuccess: (data) => {
       dispatch(
         loginSuccess({
-          userId: data.userId,
-          username: data.userName,
-          email: data.userEmail,
+          id: data.userId,
+          firstName: data.userName.split(" ")[0] || "",
+          lastName: data.userName.split(" ").slice(1).join(" ") || "",
+          userEmail: data.userEmail,
+          phoneNumber: data.userPhone,
           role: data.role,
+          emailVerified: false,
+          phoneVerified: false,
+          enabled: true,
         })
       );
 
@@ -89,7 +94,7 @@ export function LoginForm() {
         description: data.message || "Logged in successfully",
       });
 
-      router.push(returnUrl);
+      router.replace(returnUrl);
     },
     onError: (error) => {
       const errorMessage = handleApiError(error);

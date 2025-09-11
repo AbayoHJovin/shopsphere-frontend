@@ -558,7 +558,6 @@ export default function CategoriesPage() {
     return category?.children ? category.children.length : 0;
   };
 
-  // Brand handler functions
   const openCreateBrandDialog = () => {
     resetBrandForm();
     setIsCreateBrandDialogOpen(true);
@@ -1557,406 +1556,6 @@ export default function CategoriesPage() {
               )}
             </DialogContent>
           </Dialog>
-
-          {/* Create Brand Dialog */}
-          <Dialog
-            open={isCreateBrandDialogOpen}
-            onOpenChange={(open) => {
-              setIsCreateBrandDialogOpen(open);
-              if (!open) resetBrandForm();
-            }}
-          >
-            <DialogContent className="sm:max-w-[600px]">
-              <DialogHeader>
-                <DialogTitle>Create Brand</DialogTitle>
-                <DialogDescription>
-                  Add a new brand to your product catalog
-                </DialogDescription>
-              </DialogHeader>
-              <div className="grid gap-4 py-4">
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="grid gap-2">
-                    <Label htmlFor="brandName">
-                      Brand Name <span className="text-destructive">*</span>
-                    </Label>
-                    <Input
-                      id="brandName"
-                      placeholder="Enter brand name"
-                      value={brandFormName}
-                      onChange={(e) => setBrandFormName(e.target.value)}
-                      className="border-primary/20 focus-visible:ring-primary"
-                    />
-                  </div>
-                  <div className="grid gap-2">
-                    <Label htmlFor="brandLogoUrl">Logo URL (optional)</Label>
-                    <Input
-                      id="brandLogoUrl"
-                      placeholder="https://example.com/logo.png"
-                      value={brandFormLogoUrl}
-                      onChange={(e) => setBrandFormLogoUrl(e.target.value)}
-                      className="border-primary/20 focus-visible:ring-primary"
-                    />
-                  </div>
-                </div>
-                <div className="grid gap-2">
-                  <Label htmlFor="brandDescription">
-                    Description (optional)
-                  </Label>
-                  <Textarea
-                    id="brandDescription"
-                    placeholder="Enter brand description"
-                    value={brandFormDescription}
-                    onChange={(e) => setBrandFormDescription(e.target.value)}
-                    className="border-primary/20 focus-visible:ring-primary"
-                  />
-                </div>
-                <div className="grid gap-2">
-                  <Label htmlFor="brandWebsiteUrl">
-                    Website URL (optional)
-                  </Label>
-                  <Input
-                    id="brandWebsiteUrl"
-                    placeholder="https://example.com"
-                    value={brandFormWebsiteUrl}
-                    onChange={(e) => setBrandFormWebsiteUrl(e.target.value)}
-                    className="border-primary/20 focus-visible:ring-primary"
-                  />
-                </div>
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="flex items-center space-x-2">
-                    <input
-                      type="checkbox"
-                      id="brandIsActive"
-                      checked={brandFormIsActive}
-                      onChange={(e) => setBrandFormIsActive(e.target.checked)}
-                      className="rounded border-primary/20"
-                    />
-                    <Label htmlFor="brandIsActive">Active</Label>
-                  </div>
-                  <div className="flex items-center space-x-2">
-                    <input
-                      type="checkbox"
-                      id="brandIsFeatured"
-                      checked={brandFormIsFeatured}
-                      onChange={(e) => setBrandFormIsFeatured(e.target.checked)}
-                      className="rounded border-primary/20"
-                    />
-                    <Label htmlFor="brandIsFeatured">Featured</Label>
-                  </div>
-                </div>
-              </div>
-              <DialogFooter>
-                <Button
-                  variant="outline"
-                  onClick={() => setIsCreateBrandDialogOpen(false)}
-                >
-                  Cancel
-                </Button>
-                <Button
-                  onClick={() => {
-                    if (!brandFormName.trim()) {
-                      toast.toast({
-                        title: "Error",
-                        description: "Brand name is required.",
-                        variant: "destructive",
-                      });
-                      return;
-                    }
-                    createBrandMutation.mutate({
-                      brandName: brandFormName.trim(),
-                      description: brandFormDescription.trim() || undefined,
-                      logoUrl: brandFormLogoUrl.trim() || undefined,
-                      websiteUrl: brandFormWebsiteUrl.trim() || undefined,
-                      isActive: brandFormIsActive,
-                      isFeatured: brandFormIsFeatured,
-                    });
-                  }}
-                  disabled={createBrandMutation.isPending}
-                >
-                  {createBrandMutation.isPending ? (
-                    <>
-                      <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                      Creating...
-                    </>
-                  ) : (
-                    "Create Brand"
-                  )}
-                </Button>
-              </DialogFooter>
-            </DialogContent>
-          </Dialog>
-
-          {/* Edit Brand Dialog */}
-          <Dialog
-            open={isEditBrandDialogOpen}
-            onOpenChange={(open) => {
-              setIsEditBrandDialogOpen(open);
-              if (!open) resetBrandForm();
-            }}
-          >
-            <DialogContent className="sm:max-w-[600px]">
-              <DialogHeader>
-                <DialogTitle>Edit Brand</DialogTitle>
-                <DialogDescription>Update brand information</DialogDescription>
-              </DialogHeader>
-              <div className="grid gap-4 py-4">
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="grid gap-2">
-                    <Label htmlFor="editBrandName">
-                      Brand Name <span className="text-destructive">*</span>
-                    </Label>
-                    <Input
-                      id="editBrandName"
-                      placeholder="Enter brand name"
-                      value={brandFormName}
-                      onChange={(e) => setBrandFormName(e.target.value)}
-                      className="border-primary/20 focus-visible:ring-primary"
-                    />
-                  </div>
-                  <div className="grid gap-2">
-                    <Label htmlFor="editBrandLogoUrl">
-                      Logo URL (optional)
-                    </Label>
-                    <Input
-                      id="editBrandLogoUrl"
-                      placeholder="https://example.com/logo.png"
-                      value={brandFormLogoUrl}
-                      onChange={(e) => setBrandFormLogoUrl(e.target.value)}
-                      className="border-primary/20 focus-visible:ring-primary"
-                    />
-                  </div>
-                </div>
-                <div className="grid gap-2">
-                  <Label htmlFor="editBrandDescription">
-                    Description (optional)
-                  </Label>
-                  <Textarea
-                    id="editBrandDescription"
-                    placeholder="Enter brand description"
-                    value={brandFormDescription}
-                    onChange={(e) => setBrandFormDescription(e.target.value)}
-                    className="border-primary/20 focus-visible:ring-primary"
-                  />
-                </div>
-                <div className="grid gap-2">
-                  <Label htmlFor="editBrandWebsiteUrl">
-                    Website URL (optional)
-                  </Label>
-                  <Input
-                    id="editBrandWebsiteUrl"
-                    placeholder="https://example.com"
-                    value={brandFormWebsiteUrl}
-                    onChange={(e) => setBrandFormWebsiteUrl(e.target.value)}
-                    className="border-primary/20 focus-visible:ring-primary"
-                  />
-                </div>
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="flex items-center space-x-2">
-                    <input
-                      type="checkbox"
-                      id="editBrandIsActive"
-                      checked={brandFormIsActive}
-                      onChange={(e) => setBrandFormIsActive(e.target.checked)}
-                      className="rounded border-primary/20"
-                    />
-                    <Label htmlFor="editBrandIsActive">Active</Label>
-                  </div>
-                  <div className="flex items-center space-x-2">
-                    <input
-                      type="checkbox"
-                      id="editBrandIsFeatured"
-                      checked={brandFormIsFeatured}
-                      onChange={(e) => setBrandFormIsFeatured(e.target.checked)}
-                      className="rounded border-primary/20"
-                    />
-                    <Label htmlFor="editBrandIsFeatured">Featured</Label>
-                  </div>
-                </div>
-              </div>
-              <DialogFooter>
-                <Button
-                  variant="outline"
-                  onClick={() => setIsEditBrandDialogOpen(false)}
-                >
-                  Cancel
-                </Button>
-                <Button
-                  onClick={() => {
-                    if (!brandFormName.trim()) {
-                      toast.toast({
-                        title: "Error",
-                        description: "Brand name is required.",
-                        variant: "destructive",
-                      });
-                      return;
-                    }
-                    updateBrandMutation.mutate({
-                      id: selectedBrand!.id,
-                      data: {
-                        brandName: brandFormName.trim(),
-                        description: brandFormDescription.trim() || undefined,
-                        logoUrl: brandFormLogoUrl.trim() || undefined,
-                        websiteUrl: brandFormWebsiteUrl.trim() || undefined,
-                        isActive: brandFormIsActive,
-                        isFeatured: brandFormIsFeatured,
-                      },
-                    });
-                  }}
-                  disabled={updateBrandMutation.isPending}
-                >
-                  {updateBrandMutation.isPending ? (
-                    <>
-                      <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                      Updating...
-                    </>
-                  ) : (
-                    "Update Brand"
-                  )}
-                </Button>
-              </DialogFooter>
-            </DialogContent>
-          </Dialog>
-
-          {/* Delete Brand Dialog */}
-          <AlertDialog
-            open={isDeleteBrandDialogOpen}
-            onOpenChange={setIsDeleteBrandDialogOpen}
-          >
-            <AlertDialogContent>
-              <AlertDialogHeader>
-                <AlertDialogTitle>Delete Brand</AlertDialogTitle>
-                <AlertDialogDescription>
-                  Are you sure you want to delete "{selectedBrand?.brandName}"?
-                  This action cannot be undone.
-                </AlertDialogDescription>
-              </AlertDialogHeader>
-              <AlertDialogFooter>
-                <AlertDialogCancel>Cancel</AlertDialogCancel>
-                <AlertDialogAction
-                  onClick={handleDeleteBrand}
-                  className="bg-destructive hover:bg-destructive/90"
-                >
-                  Delete
-                </AlertDialogAction>
-              </AlertDialogFooter>
-            </AlertDialogContent>
-          </AlertDialog>
-
-          {/* View Brand Dialog */}
-          <Dialog
-            open={isViewBrandDialogOpen}
-            onOpenChange={(open) => {
-              setIsViewBrandDialogOpen(open);
-              if (!open) setSelectedBrand(null);
-            }}
-          >
-            <DialogContent className="sm:max-w-[600px]">
-              <DialogHeader>
-                <DialogTitle>Brand Details</DialogTitle>
-                <DialogDescription>
-                  Detailed information about this brand
-                </DialogDescription>
-              </DialogHeader>
-              {selectedBrand && (
-                <div className="space-y-4">
-                  <div className="grid grid-cols-2 gap-4">
-                    <div className="space-y-1">
-                      <p className="text-sm font-medium leading-none">Name</p>
-                      <p className="text-sm text-muted-foreground">
-                        {selectedBrand.brandName}
-                      </p>
-                    </div>
-                    <div className="space-y-1">
-                      <p className="text-sm font-medium leading-none">Slug</p>
-                      <p className="text-sm text-muted-foreground">
-                        {selectedBrand.slug || "Auto-generated"}
-                      </p>
-                    </div>
-                  </div>
-                  <Separator />
-                  <div className="space-y-1">
-                    <p className="text-sm font-medium leading-none">
-                      Description
-                    </p>
-                    <p className="text-sm text-muted-foreground">
-                      {selectedBrand.description || "No description provided"}
-                    </p>
-                  </div>
-                  {selectedBrand.logoUrl && (
-                    <>
-                      <Separator />
-                      <div className="space-y-1">
-                        <p className="text-sm font-medium leading-none">
-                          Logo URL
-                        </p>
-                        <p className="text-sm text-muted-foreground break-all">
-                          {selectedBrand.logoUrl}
-                        </p>
-                      </div>
-                    </>
-                  )}
-                  {selectedBrand.websiteUrl && (
-                    <>
-                      <Separator />
-                      <div className="space-y-1">
-                        <p className="text-sm font-medium leading-none">
-                          Website URL
-                        </p>
-                        <p className="text-sm text-muted-foreground break-all">
-                          {selectedBrand.websiteUrl}
-                        </p>
-                      </div>
-                    </>
-                  )}
-                  <Separator />
-                  <div className="grid grid-cols-2 gap-4">
-                    <div className="space-y-1">
-                      <p className="text-sm font-medium leading-none">Status</p>
-                      <div className="flex gap-2">
-                        <Badge
-                          variant={
-                            selectedBrand.isActive ? "default" : "secondary"
-                          }
-                        >
-                          {selectedBrand.isActive ? "Active" : "Inactive"}
-                        </Badge>
-                        {selectedBrand.isFeatured && (
-                          <Badge
-                            variant="outline"
-                            className="text-amber-600 border-amber-600"
-                          >
-                            <Star className="w-3 h-3 mr-1" />
-                            Featured
-                          </Badge>
-                        )}
-                      </div>
-                    </div>
-                    <div className="space-y-1">
-                      <p className="text-sm font-medium leading-none">
-                        Created
-                      </p>
-                      <p className="text-sm text-muted-foreground">
-                        {new Date(selectedBrand.createdAt).toLocaleDateString()}
-                      </p>
-                    </div>
-                  </div>
-                  <div className="flex justify-end space-x-2 pt-4">
-                    <Button
-                      variant="outline"
-                      onClick={() => {
-                        setIsViewBrandDialogOpen(false);
-                        openEditBrandDialog(selectedBrand);
-                      }}
-                      className="border-primary/20 hover:bg-primary/5 hover:text-primary"
-                    >
-                      <Edit className="w-4 h-4 mr-2" />
-                      Edit
-                    </Button>
-                  </div>
-                </div>
-              )}
-            </DialogContent>
-          </Dialog>
         </TabsContent>
 
         <TabsContent value="brands" className="space-y-6">
@@ -2216,6 +1815,392 @@ export default function CategoriesPage() {
           </Card>
         </TabsContent>
       </Tabs>
+
+      {/* Create Brand Dialog - Outside of TabsContent so it can be accessed from both tabs */}
+      <Dialog
+        open={isCreateBrandDialogOpen}
+        onOpenChange={(open) => {
+          setIsCreateBrandDialogOpen(open);
+          if (!open) resetBrandForm();
+        }}
+      >
+        <DialogContent className="sm:max-w-[600px]">
+          <DialogHeader>
+            <DialogTitle>Create Brand</DialogTitle>
+            <DialogDescription>
+              Add a new brand to your product catalog
+            </DialogDescription>
+          </DialogHeader>
+          <div className="grid gap-4 py-4">
+            <div className="grid grid-cols-2 gap-4">
+              <div className="grid gap-2">
+                <Label htmlFor="brandName">
+                  Brand Name <span className="text-destructive">*</span>
+                </Label>
+                <Input
+                  id="brandName"
+                  placeholder="Enter brand name"
+                  value={brandFormName}
+                  onChange={(e) => setBrandFormName(e.target.value)}
+                  className="border-primary/20 focus-visible:ring-primary"
+                />
+              </div>
+              <div className="grid gap-2">
+                <Label htmlFor="brandLogoUrl">Logo URL (optional)</Label>
+                <Input
+                  id="brandLogoUrl"
+                  placeholder="https://example.com/logo.png"
+                  value={brandFormLogoUrl}
+                  onChange={(e) => setBrandFormLogoUrl(e.target.value)}
+                  className="border-primary/20 focus-visible:ring-primary"
+                />
+              </div>
+            </div>
+            <div className="grid gap-2">
+              <Label htmlFor="brandDescription">Description (optional)</Label>
+              <Textarea
+                id="brandDescription"
+                placeholder="Enter brand description"
+                value={brandFormDescription}
+                onChange={(e) => setBrandFormDescription(e.target.value)}
+                className="border-primary/20 focus-visible:ring-primary"
+              />
+            </div>
+            <div className="grid gap-2">
+              <Label htmlFor="brandWebsiteUrl">Website URL (optional)</Label>
+              <Input
+                id="brandWebsiteUrl"
+                placeholder="https://example.com"
+                value={brandFormWebsiteUrl}
+                onChange={(e) => setBrandFormWebsiteUrl(e.target.value)}
+                className="border-primary/20 focus-visible:ring-primary"
+              />
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div className="flex items-center space-x-2">
+                <input
+                  type="checkbox"
+                  id="brandIsActive"
+                  checked={brandFormIsActive}
+                  onChange={(e) => setBrandFormIsActive(e.target.checked)}
+                  className="rounded border-primary/20"
+                />
+                <Label htmlFor="brandIsActive">Active</Label>
+              </div>
+              <div className="flex items-center space-x-2">
+                <input
+                  type="checkbox"
+                  id="brandIsFeatured"
+                  checked={brandFormIsFeatured}
+                  onChange={(e) => setBrandFormIsFeatured(e.target.checked)}
+                  className="rounded border-primary/20"
+                />
+                <Label htmlFor="brandIsFeatured">Featured</Label>
+              </div>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => setIsCreateBrandDialogOpen(false)}
+            >
+              Cancel
+            </Button>
+            <Button
+              onClick={() => {
+                if (!brandFormName.trim()) {
+                  toast.toast({
+                    title: "Error",
+                    description: "Brand name is required.",
+                    variant: "destructive",
+                  });
+                  return;
+                }
+                createBrandMutation.mutate({
+                  brandName: brandFormName.trim(),
+                  description: brandFormDescription.trim() || undefined,
+                  logoUrl: brandFormLogoUrl.trim() || undefined,
+                  websiteUrl: brandFormWebsiteUrl.trim() || undefined,
+                  isActive: brandFormIsActive,
+                  isFeatured: brandFormIsFeatured,
+                });
+              }}
+              disabled={createBrandMutation.isPending}
+            >
+              {createBrandMutation.isPending ? (
+                <>
+                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                  Creating...
+                </>
+              ) : (
+                "Create Brand"
+              )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Edit Brand Dialog - Outside of TabsContent so it can be accessed from both tabs */}
+      <Dialog
+        open={isEditBrandDialogOpen}
+        onOpenChange={(open) => {
+          setIsEditBrandDialogOpen(open);
+          if (!open) resetBrandForm();
+        }}
+      >
+        <DialogContent className="sm:max-w-[600px]">
+          <DialogHeader>
+            <DialogTitle>Edit Brand</DialogTitle>
+            <DialogDescription>Update brand information</DialogDescription>
+          </DialogHeader>
+          <div className="grid gap-4 py-4">
+            <div className="grid grid-cols-2 gap-4">
+              <div className="grid gap-2">
+                <Label htmlFor="editBrandName">
+                  Brand Name <span className="text-destructive">*</span>
+                </Label>
+                <Input
+                  id="editBrandName"
+                  placeholder="Enter brand name"
+                  value={brandFormName}
+                  onChange={(e) => setBrandFormName(e.target.value)}
+                  className="border-primary/20 focus-visible:ring-primary"
+                />
+              </div>
+              <div className="grid gap-2">
+                <Label htmlFor="editBrandLogoUrl">Logo URL (optional)</Label>
+                <Input
+                  id="editBrandLogoUrl"
+                  placeholder="https://example.com/logo.png"
+                  value={brandFormLogoUrl}
+                  onChange={(e) => setBrandFormLogoUrl(e.target.value)}
+                  className="border-primary/20 focus-visible:ring-primary"
+                />
+              </div>
+            </div>
+            <div className="grid gap-2">
+              <Label htmlFor="editBrandDescription">
+                Description (optional)
+              </Label>
+              <Textarea
+                id="editBrandDescription"
+                placeholder="Enter brand description"
+                value={brandFormDescription}
+                onChange={(e) => setBrandFormDescription(e.target.value)}
+                className="border-primary/20 focus-visible:ring-primary"
+              />
+            </div>
+            <div className="grid gap-2">
+              <Label htmlFor="editBrandWebsiteUrl">
+                Website URL (optional)
+              </Label>
+              <Input
+                id="editBrandWebsiteUrl"
+                placeholder="https://example.com"
+                value={brandFormWebsiteUrl}
+                onChange={(e) => setBrandFormWebsiteUrl(e.target.value)}
+                className="border-primary/20 focus-visible:ring-primary"
+              />
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div className="flex items-center space-x-2">
+                <input
+                  type="checkbox"
+                  id="editBrandIsActive"
+                  checked={brandFormIsActive}
+                  onChange={(e) => setBrandFormIsActive(e.target.checked)}
+                  className="rounded border-primary/20"
+                />
+                <Label htmlFor="editBrandIsActive">Active</Label>
+              </div>
+              <div className="flex items-center space-x-2">
+                <input
+                  type="checkbox"
+                  id="editBrandIsFeatured"
+                  checked={brandFormIsFeatured}
+                  onChange={(e) => setBrandFormIsFeatured(e.target.checked)}
+                  className="rounded border-primary/20"
+                />
+                <Label htmlFor="editBrandIsFeatured">Featured</Label>
+              </div>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => setIsEditBrandDialogOpen(false)}
+            >
+              Cancel
+            </Button>
+            <Button
+              onClick={() => {
+                if (!brandFormName.trim()) {
+                  toast.toast({
+                    title: "Error",
+                    description: "Brand name is required.",
+                    variant: "destructive",
+                  });
+                  return;
+                }
+                updateBrandMutation.mutate({
+                  id: selectedBrand!.id,
+                  data: {
+                    brandName: brandFormName.trim(),
+                    description: brandFormDescription.trim() || undefined,
+                    logoUrl: brandFormLogoUrl.trim() || undefined,
+                    websiteUrl: brandFormWebsiteUrl.trim() || undefined,
+                    isActive: brandFormIsActive,
+                    isFeatured: brandFormIsFeatured,
+                  },
+                });
+              }}
+              disabled={updateBrandMutation.isPending}
+            >
+              {updateBrandMutation.isPending ? (
+                <>
+                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                  Updating...
+                </>
+              ) : (
+                "Update Brand"
+              )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Delete Brand Dialog - Outside of TabsContent so it can be accessed from both tabs */}
+      <AlertDialog
+        open={isDeleteBrandDialogOpen}
+        onOpenChange={setIsDeleteBrandDialogOpen}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete Brand</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to delete "{selectedBrand?.brandName}"? This
+              action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleDeleteBrand}
+              className="bg-destructive hover:bg-destructive/90"
+            >
+              Delete
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* View Brand Dialog - Outside of TabsContent so it can be accessed from both tabs */}
+      <Dialog
+        open={isViewBrandDialogOpen}
+        onOpenChange={(open) => {
+          setIsViewBrandDialogOpen(open);
+          if (!open) setSelectedBrand(null);
+        }}
+      >
+        <DialogContent className="sm:max-w-[600px]">
+          <DialogHeader>
+            <DialogTitle>Brand Details</DialogTitle>
+            <DialogDescription>
+              Detailed information about this brand
+            </DialogDescription>
+          </DialogHeader>
+          {selectedBrand && (
+            <div className="space-y-4">
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-1">
+                  <p className="text-sm font-medium leading-none">Name</p>
+                  <p className="text-sm text-muted-foreground">
+                    {selectedBrand.brandName}
+                  </p>
+                </div>
+                <div className="space-y-1">
+                  <p className="text-sm font-medium leading-none">Slug</p>
+                  <p className="text-sm text-muted-foreground">
+                    {selectedBrand.slug || "Auto-generated"}
+                  </p>
+                </div>
+              </div>
+              <Separator />
+              <div className="space-y-1">
+                <p className="text-sm font-medium leading-none">Description</p>
+                <p className="text-sm text-muted-foreground">
+                  {selectedBrand.description || "No description provided"}
+                </p>
+              </div>
+              {selectedBrand.logoUrl && (
+                <>
+                  <Separator />
+                  <div className="space-y-1">
+                    <p className="text-sm font-medium leading-none">Logo URL</p>
+                    <p className="text-sm text-muted-foreground break-all">
+                      {selectedBrand.logoUrl}
+                    </p>
+                  </div>
+                </>
+              )}
+              {selectedBrand.websiteUrl && (
+                <>
+                  <Separator />
+                  <div className="space-y-1">
+                    <p className="text-sm font-medium leading-none">
+                      Website URL
+                    </p>
+                    <p className="text-sm text-muted-foreground break-all">
+                      {selectedBrand.websiteUrl}
+                    </p>
+                  </div>
+                </>
+              )}
+              <Separator />
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-1">
+                  <p className="text-sm font-medium leading-none">Status</p>
+                  <div className="flex gap-2">
+                    <Badge
+                      variant={selectedBrand.isActive ? "default" : "secondary"}
+                    >
+                      {selectedBrand.isActive ? "Active" : "Inactive"}
+                    </Badge>
+                    {selectedBrand.isFeatured && (
+                      <Badge
+                        variant="outline"
+                        className="text-amber-600 border-amber-600"
+                      >
+                        <Star className="w-3 h-3 mr-1" />
+                        Featured
+                      </Badge>
+                    )}
+                  </div>
+                </div>
+                <div className="space-y-1">
+                  <p className="text-sm font-medium leading-none">Created</p>
+                  <p className="text-sm text-muted-foreground">
+                    {new Date(selectedBrand.createdAt).toLocaleDateString()}
+                  </p>
+                </div>
+              </div>
+              <div className="flex justify-end space-x-2 pt-4">
+                <Button
+                  variant="outline"
+                  onClick={() => {
+                    setIsViewBrandDialogOpen(false);
+                    openEditBrandDialog(selectedBrand);
+                  }}
+                  className="border-primary/20 hover:bg-primary/5 hover:text-primary"
+                >
+                  <Edit className="w-4 h-4 mr-2" />
+                  Edit
+                </Button>
+              </div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

@@ -2,18 +2,23 @@
 
 export enum OrderStatus {
   PENDING = "PENDING",
+  CONFIRMED = "CONFIRMED",
   PROCESSING = "PROCESSING",
   SHIPPED = "SHIPPED",
   DELIVERED = "DELIVERED",
   CANCELLED = "CANCELLED",
   REFUNDED = "REFUNDED",
   RETURNED = "RETURNED",
+  READY_FOR_DELIVERY = "READY_FOR_DELIVERY",
 }
 
 export enum OrderPaymentStatus {
   PENDING = "PENDING",
+  PAID = "PAID",
   COMPLETED = "COMPLETED",
+  FAILED = "FAILED",
   CANCELLED = "CANCELLED",
+  REFUNDED = "REFUNDED",
 }
 
 export interface SimpleProductDTO {
@@ -81,6 +86,7 @@ export interface AdminOrderDTO {
   customerPhone?: string;
   orderNumber: string;
   status: string;
+  paymentStatus: string;
   items: AdminOrderItemDTO[];
   subtotal: number;
   tax: number;

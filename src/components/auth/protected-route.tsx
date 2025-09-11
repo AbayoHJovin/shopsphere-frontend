@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useRef } from "react";
 import { useRouter, usePathname } from "next/navigation";
 import { useAppSelector } from "@/lib/redux/hooks";
 import { UserRole } from "@/lib/constants";
@@ -24,6 +24,7 @@ export default function ProtectedRoute({
   );
   const router = useRouter();
   const pathname = usePathname();
+  const hasRedirected = useRef(false);
 
   useEffect(() => {
     // Wait until auth check is complete
@@ -31,21 +32,39 @@ export default function ProtectedRoute({
       return;
     }
 
+    // Prevent multiple redirects
+    if (hasRedirected.current) {
+      return;
+    }
+
     // Check if user is authenticated
     if (!isAuthenticated) {
+      hasRedirected.current = true;
       router.push(`/auth?returnUrl=${encodeURIComponent(pathname)}`);
       return;
     }
 
     // Check if user has required role
     if (user && allowedRoles.length > 0 && !allowedRoles.includes(user.role)) {
-      router.push("/dashboard"); // Redirect to dashboard as fallback
+      hasRedirected.current = true;
+      // Redirect based on user role
+      if (user.role === UserRole.DELIVERY_AGENT) {
+        router.push("/delivery-agent/dashboard");
+      } else if (user.role === UserRole.CUSTOMER) {
+        router.push("/"); // Redirect to home page for customers
+      } else {
+        router.push("/dashboard"); // Default fallback for admin/employee
+      }
     }
   }, [isAuthenticated, user, allowedRoles, router, pathname, checkingAuth]);
 
   // Show loading during auth check
   if (checkingAuth) {
-    return null; // Or a loading spinner
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+      </div>
+    );
   }
 
   // Return children only if authenticated
@@ -56,6 +75,10 @@ export default function ProtectedRoute({
     }
   }
 
-  // Return null while redirecting
-  return null;
+  // Return loading while redirecting
+  return (
+    <div className="flex items-center justify-center min-h-screen">
+      <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+    </div>
+  );
 }

@@ -165,7 +165,7 @@ export default function OrderDetailsPage() {
 
     try {
       setAssigning(true);
-      await userService.assignDeliveryAgent(order.id, selectedAgent);
+      // await userService.assignDeliveryAgent(order.id, selectedAgent); // Old method - now using delivery groups
       setDeliveryModalOpen(false);
       setSelectedAgent("");
       setAgentSearchTerm("");

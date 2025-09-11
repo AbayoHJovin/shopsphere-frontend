@@ -89,8 +89,7 @@ export function WarehouseSelector({
     error,
   } = useQuery({
     queryKey: ["warehouses", currentPage, pageSize, searchTerm],
-    queryFn: () =>
-      warehouseService.getWarehouses(currentPage, pageSize, searchTerm),
+    queryFn: () => warehouseService.getWarehouses(currentPage, pageSize),
     enabled: isDialogOpen,
   });
 

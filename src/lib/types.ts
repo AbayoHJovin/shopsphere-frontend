@@ -1,4 +1,4 @@
-import { UserRole } from './constants';
+import { UserRole } from "./constants";
 
 // Auth-related types
 export interface LoginRequest {
@@ -17,10 +17,16 @@ export interface LoginResponse {
 }
 
 export interface User {
-  userId: string;
-  username: string;
-  email: string;
+  id: string;
+  firstName: string;
+  lastName: string;
+  userEmail: string;
+  phoneNumber?: string;
   role: UserRole;
+  emailVerified: boolean;
+  phoneVerified: boolean;
+  enabled: boolean;
+  lastLogin?: string;
   createdAt?: string;
   updatedAt?: string;
 }
@@ -32,4 +38,4 @@ export interface AuthState {
   isLoading: boolean;
   error: string | null;
   checkingAuth: boolean;
-} 
+}

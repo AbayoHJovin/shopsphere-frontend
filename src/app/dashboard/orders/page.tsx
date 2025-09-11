@@ -9,7 +9,7 @@ import {
   Download,
   X,
   Plus,
-  Truck,
+  Users,
 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import {
@@ -70,6 +70,12 @@ import {
 } from "@/lib/types/order";
 import { toast } from "sonner";
 import { TruncatedText } from "@/components/ui/truncated-text";
+import { DeliveryGroupDialog } from "@/components/delivery/DeliveryGroupDialog";
+import { OrderCheckbox } from "@/components/delivery/OrderCheckbox";
+import {
+  deliveryGroupService,
+  DeliveryGroupDto,
+} from "@/lib/services/delivery-group-service";
 
 export default function OrdersPage() {
   const router = useRouter();
@@ -89,15 +95,12 @@ export default function OrdersPage() {
   const [loading, setLoading] = useState(true);
   const [orders, setOrders] = useState<AdminOrderDTO[]>([]);
 
-  // Delivery assignment state
-  const [deliveryModalOpen, setDeliveryModalOpen] = useState(false);
-  const [selectedOrderId, setSelectedOrderId] = useState<string>("");
-  const [deliveryAgents, setDeliveryAgents] = useState<UserDTO[]>([]);
-  const [filteredAgents, setFilteredAgents] = useState<UserDTO[]>([]);
-  const [selectedAgent, setSelectedAgent] = useState<string>("");
-  const [loadingAgents, setLoadingAgents] = useState(false);
-  const [assigning, setAssigning] = useState(false);
-  const [agentSearchTerm, setAgentSearchTerm] = useState("");
+  // Delivery group workflow state
+  const [deliveryGroupDialogOpen, setDeliveryGroupDialogOpen] = useState(false);
+  const [selectedOrderIds, setSelectedOrderIds] = useState<number[]>([]);
+  const [orderGroups, setOrderGroups] = useState<Map<number, DeliveryGroupDto>>(
+    new Map()
+  );
 
   // Fetch orders from API
   useEffect(() => {
@@ -117,67 +120,82 @@ export default function OrdersPage() {
     fetchOrders();
   }, []);
 
-  // Filter delivery agents based on search term
+  // Check for existing groups for orders
   useEffect(() => {
-    if (!agentSearchTerm.trim()) {
-      setFilteredAgents(deliveryAgents);
-    } else {
-      const filtered = deliveryAgents.filter(
-        (agent) =>
-          agent.firstName
-            .toLowerCase()
-            .includes(agentSearchTerm.toLowerCase()) ||
-          agent.lastName
-            .toLowerCase()
-            .includes(agentSearchTerm.toLowerCase()) ||
-          agent.userEmail
-            .toLowerCase()
-            .includes(agentSearchTerm.toLowerCase()) ||
-          `${agent.firstName} ${agent.lastName}`
-            .toLowerCase()
-            .includes(agentSearchTerm.toLowerCase())
-      );
-      setFilteredAgents(filtered);
+    const checkOrderGroups = async () => {
+      const newOrderGroups = new Map<number, DeliveryGroupDto>();
+
+      for (const order of orders) {
+        try {
+          const group = await deliveryGroupService.findGroupByOrder(
+            parseInt(order.id)
+          );
+          if (group) {
+            newOrderGroups.set(parseInt(order.id), group);
+          }
+        } catch (error) {
+          console.error(`Error checking group for order ${order.id}:`, error);
+        }
+      }
+
+      setOrderGroups(newOrderGroups);
+    };
+
+    if (orders.length > 0) {
+      checkOrderGroups();
     }
-  }, [deliveryAgents, agentSearchTerm]);
+  }, [orders]);
 
-  // Delivery assignment functions
-  const openDeliveryModal = async (orderId: string) => {
-    setSelectedOrderId(orderId);
-    setSelectedAgent("");
-    setAgentSearchTerm("");
-    setDeliveryModalOpen(true);
-    setLoadingAgents(true);
+  // Delivery group workflow functions
+  const openDeliveryGroupDialog = (orderId?: number) => {
+    console.log("Opening delivery group dialog for order:", orderId);
+    if (orderId) {
+      setSelectedOrderIds([orderId]);
+    }
+    setDeliveryGroupDialogOpen(true);
+  };
 
-    try {
-      const response = await userService.getDeliveryAgents(0, 100);
-      setDeliveryAgents(response.content);
-      setFilteredAgents(response.content);
-    } catch (error) {
-      console.error("Error fetching delivery agents:", error);
-      toast.error("Failed to load delivery agents. Please try again.");
-    } finally {
-      setLoadingAgents(false);
+  const handleBulkAssign = () => {
+    if (selectedOrderIds.length === 0) {
+      toast.error("Please select at least one order");
+      return;
+    }
+    setDeliveryGroupDialogOpen(true);
+  };
+
+  const handleOrderSelection = (orderId: number, checked: boolean) => {
+    if (checked) {
+      setSelectedOrderIds((prev) => [...prev, orderId]);
+    } else {
+      setSelectedOrderIds((prev) => prev.filter((id) => id !== orderId));
     }
   };
 
-  const handleDeliveryAssignment = async () => {
-    if (!selectedAgent || !selectedOrderId) return;
-
-    try {
-      setAssigning(true);
-      await userService.assignDeliveryAgent(selectedOrderId, selectedAgent);
-      setDeliveryModalOpen(false);
-      setSelectedAgent("");
-      setSelectedOrderId("");
-      setAgentSearchTerm("");
-      toast.success("Delivery agent assigned successfully!");
-    } catch (error) {
-      console.error("Error assigning delivery agent:", error);
-      toast.error("Failed to assign delivery agent. Please try again.");
-    } finally {
-      setAssigning(false);
+  const handleSelectAll = (checked: boolean) => {
+    if (checked) {
+      setSelectedOrderIds(filteredOrders.map((order) => parseInt(order.id)));
+    } else {
+      setSelectedOrderIds([]);
     }
+  };
+
+  const fetchOrders = async () => {
+    try {
+      setLoading(true);
+      const response = await orderService.getAllOrders();
+      setOrders(response);
+    } catch (error) {
+      console.error("Error fetching orders:", error);
+      toast.error("Failed to load orders. Please try again.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleDeliveryGroupSuccess = () => {
+    // Refresh orders to get updated group information
+    fetchOrders();
+    setSelectedOrderIds([]);
   };
 
   const filteredOrders = useMemo(() => {
@@ -673,6 +691,18 @@ export default function OrdersPage() {
             <Table>
               <TableHeader>
                 <TableRow>
+                  <TableHead className="w-[50px]">
+                    <div className="flex items-center justify-center">
+                      <OrderCheckbox
+                        orderId={0}
+                        checked={
+                          selectedOrderIds.length === filteredOrders.length &&
+                          filteredOrders.length > 0
+                        }
+                        onCheckedChange={handleSelectAll}
+                      />
+                    </div>
+                  </TableHead>
                   <TableHead className="w-[120px]">Order Number</TableHead>
                   <TableHead>Customer</TableHead>
                   <TableHead className="hidden md:table-cell">Date</TableHead>
@@ -684,6 +714,9 @@ export default function OrdersPage() {
                   <TableHead className="hidden lg:table-cell">
                     Location
                   </TableHead>
+                  <TableHead className="hidden xl:table-cell">
+                    Delivery Group
+                  </TableHead>
                   <TableHead className="text-right">Actions</TableHead>
                 </TableRow>
               </TableHeader>
@@ -692,7 +725,7 @@ export default function OrdersPage() {
                   // Loading state
                   Array.from({ length: 5 }).map((_, index) => (
                     <TableRow key={index}>
-                      <TableCell colSpan={8} className="h-16 text-center">
+                      <TableCell colSpan={10} className="h-16 text-center">
                         {index === 2 && "Loading orders..."}
                       </TableCell>
                     </TableRow>
@@ -700,254 +733,182 @@ export default function OrdersPage() {
                 ) : paginatedOrders.length === 0 ? (
                   // Empty state
                   <TableRow>
-                    <TableCell colSpan={8} className="h-24 text-center">
+                    <TableCell colSpan={10} className="h-24 text-center">
                       No orders found
                     </TableCell>
                   </TableRow>
                 ) : (
                   // Orders data
-                  paginatedOrders.map((order) => (
-                    <TableRow key={order.id}>
-                      <TableCell className="font-medium">
-                        <TruncatedText
-                          text={order.orderNumber}
-                          maxLength={12}
-                          className="font-medium"
-                        />
-                      </TableCell>
-                      <TableCell>
-                        <div>
-                          {order.customerName ? (
-                            <p className="font-medium text-sm">
-                              {order.customerName}
-                            </p>
-                          ) : (
-                            <TruncatedText
-                              text={order.userId}
-                              maxLength={8}
-                              className="text-sm font-medium"
+                  paginatedOrders.map((order) => {
+                    const orderId = parseInt(order.id);
+                    const currentGroup = orderGroups.get(orderId);
+
+                    return (
+                      <TableRow key={order.id}>
+                        <TableCell>
+                          <div className="flex items-center justify-center">
+                            <OrderCheckbox
+                              orderId={orderId}
+                              checked={selectedOrderIds.includes(orderId)}
+                              onCheckedChange={(checked) =>
+                                handleOrderSelection(orderId, checked)
+                              }
                             />
-                          )}
-                          {order.customerEmail && (
-                            <p className="text-xs text-muted-foreground">
-                              {order.customerEmail}
-                            </p>
-                          )}
-                          {order.customerPhone && (
-                            <p className="text-xs text-muted-foreground">
-                              {order.customerPhone}
-                            </p>
-                          )}
-                        </div>
-                      </TableCell>
-                      <TableCell className="hidden md:table-cell">
-                        {format(new Date(order.createdAt), "MMM dd, yyyy")}
-                      </TableCell>
-                      <TableCell>
-                        <Badge
-                          variant={getStatusBadgeVariant(order.status)}
-                          className={
-                            order.status === OrderStatus.PROCESSING ||
-                            order.status === OrderStatus.DELIVERED
-                              ? "bg-primary hover:bg-primary/90"
-                              : ""
-                          }
-                        >
-                          {order.status}
-                        </Badge>
-                      </TableCell>
-                      <TableCell className="hidden sm:table-cell">
-                        <Badge
-                          variant={getPaymentStatusBadgeVariant(
-                            order.paymentInfo?.paymentStatus || "PENDING"
-                          )}
-                          className={
-                            order.paymentInfo?.paymentStatus ===
-                            OrderPaymentStatus.COMPLETED
-                              ? "bg-primary hover:bg-primary/90"
-                              : ""
-                          }
-                        >
-                          {order.paymentInfo?.paymentStatus || "PENDING"}
-                        </Badge>
-                      </TableCell>
-                      <TableCell className="font-medium">
-                        ${order.total?.toFixed(2) || "0.00"}
-                      </TableCell>
-                      <TableCell className="hidden lg:table-cell">
-                        <div className="text-sm">
-                          <p>{order.shippingAddress?.city || "N/A"}</p>
-                          <p className="text-muted-foreground">
-                            {order.shippingAddress?.country || "N/A"}
-                          </p>
-                        </div>
-                      </TableCell>
-                      <TableCell className="text-right">
-                        <div className="flex items-center justify-end gap-1">
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => openDeliveryModal(order.id)}
-                            className="h-8 w-8 p-0 text-blue-600 hover:text-blue-700 hover:bg-blue-50"
-                            title="Assign Delivery Agent"
-                          >
-                            <Plus className="h-4 w-4" />
-                          </Button>
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() =>
-                              router.push(`/dashboard/orders/${order.id}`)
+                          </div>
+                        </TableCell>
+                        <TableCell className="font-medium">
+                          <TruncatedText
+                            text={order.orderNumber}
+                            maxLength={12}
+                            className="font-medium"
+                          />
+                        </TableCell>
+                        <TableCell>
+                          <div>
+                            {order.customerName ? (
+                              <p className="font-medium text-sm">
+                                {order.customerName}
+                              </p>
+                            ) : (
+                              <TruncatedText
+                                text={order.userId}
+                                maxLength={8}
+                                className="text-sm font-medium"
+                              />
+                            )}
+                            {order.customerEmail && (
+                              <p className="text-xs text-muted-foreground">
+                                {order.customerEmail}
+                              </p>
+                            )}
+                            {order.customerPhone && (
+                              <p className="text-xs text-muted-foreground">
+                                {order.customerPhone}
+                              </p>
+                            )}
+                          </div>
+                        </TableCell>
+                        <TableCell className="hidden md:table-cell">
+                          {format(new Date(order.createdAt), "MMM dd, yyyy")}
+                        </TableCell>
+                        <TableCell>
+                          <Badge
+                            variant={getStatusBadgeVariant(order.status)}
+                            className={
+                              order.status === OrderStatus.PROCESSING ||
+                              order.status === OrderStatus.DELIVERED
+                                ? "bg-primary hover:bg-primary/90"
+                                : ""
                             }
-                            className="h-8 w-8 p-0 text-primary hover:text-primary hover:bg-primary/10"
-                            title="View Order Details"
                           >
-                            <Eye className="h-4 w-4" />
-                          </Button>
-                        </div>
-                      </TableCell>
-                    </TableRow>
-                  ))
+                            {order.status}
+                          </Badge>
+                        </TableCell>
+                        <TableCell className="hidden sm:table-cell">
+                          <Badge
+                            variant={getPaymentStatusBadgeVariant(
+                              order.paymentInfo?.paymentStatus || "PENDING"
+                            )}
+                            className={
+                              order.paymentInfo?.paymentStatus ===
+                              OrderPaymentStatus.COMPLETED
+                                ? "bg-primary hover:bg-primary/90"
+                                : ""
+                            }
+                          >
+                            {order.paymentInfo?.paymentStatus || "PENDING"}
+                          </Badge>
+                        </TableCell>
+                        <TableCell className="font-medium">
+                          ${order.total?.toFixed(2) || "0.00"}
+                        </TableCell>
+                        <TableCell className="hidden lg:table-cell">
+                          <div className="text-sm">
+                            <p>{order.shippingAddress?.city || "N/A"}</p>
+                            <p className="text-muted-foreground">
+                              {order.shippingAddress?.country || "N/A"}
+                            </p>
+                          </div>
+                        </TableCell>
+                        <TableCell className="hidden xl:table-cell">
+                          {currentGroup ? (
+                            <div className="text-sm">
+                              <Badge variant="outline" className="text-xs">
+                                {currentGroup.deliveryGroupName}
+                              </Badge>
+                              <div className="text-muted-foreground text-xs mt-1">
+                                {currentGroup.delivererName}
+                              </div>
+                            </div>
+                          ) : (
+                            <span className="text-muted-foreground text-sm">
+                              Not assigned
+                            </span>
+                          )}
+                        </TableCell>
+                        <TableCell className="text-right">
+                          <div className="flex items-center justify-end gap-1">
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => openDeliveryGroupDialog(orderId)}
+                              className="h-8 w-8 p-0 text-blue-600 hover:text-blue-700 hover:bg-blue-50"
+                              title={
+                                currentGroup
+                                  ? "Change Delivery Group"
+                                  : "Assign to Delivery Group"
+                              }
+                            >
+                              <Users className="h-4 w-4" />
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() =>
+                                router.push(`/dashboard/orders/${order.id}`)
+                              }
+                              className="h-8 w-8 p-0 text-primary hover:text-primary hover:bg-primary/10"
+                              title="View Order Details"
+                            >
+                              <Eye className="h-4 w-4" />
+                            </Button>
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                    );
+                  })
                 )}
               </TableBody>
             </Table>
           </div>
 
-          {/* Order count info */}
-          <div className="flex justify-center px-4 py-4 border-t">
+          {/* Order count info and bulk actions */}
+          <div className="flex justify-between items-center px-4 py-4 border-t">
             <p className="text-sm text-muted-foreground">
               Total: {filteredOrders.length} orders
+              {selectedOrderIds.length > 0 && (
+                <span className="ml-2 text-primary">
+                  ({selectedOrderIds.length} selected)
+                </span>
+              )}
             </p>
+            {selectedOrderIds.length > 0 && (
+              <Button onClick={handleBulkAssign} className="gap-2">
+                <Users className="h-4 w-4" />
+                Assign to Group ({selectedOrderIds.length})
+              </Button>
+            )}
           </div>
         </CardContent>
       </Card>
 
-      {/* Delivery Assignment Dialog */}
-      <Dialog open={deliveryModalOpen} onOpenChange={setDeliveryModalOpen}>
-        <DialogContent className="sm:max-w-[500px]">
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-2">
-              <Truck className="h-5 w-5" />
-              Assign Delivery Agent
-            </DialogTitle>
-            <DialogDescription>
-              Select a delivery agent to assign to this order. The agent will be
-              responsible for delivering the order.
-            </DialogDescription>
-          </DialogHeader>
-          <div className="grid gap-4 py-4">
-            {loadingAgents ? (
-              <div className="flex items-center justify-center py-8">
-                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
-                <span className="ml-2 text-sm text-muted-foreground">
-                  Loading delivery agents...
-                </span>
-              </div>
-            ) : (
-              <div className="space-y-4">
-                <div className="space-y-2">
-                  <label className="text-sm font-medium">
-                    Search Delivery Agents
-                  </label>
-                  <Input
-                    placeholder="Search by name or email..."
-                    value={agentSearchTerm}
-                    onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
-                      setAgentSearchTerm(e.target.value)
-                    }
-                    className="w-full"
-                  />
-                </div>
-
-                <div className="space-y-2">
-                  <label className="text-sm font-medium">
-                    Select Delivery Agent
-                  </label>
-                  <Select
-                    value={selectedAgent}
-                    onValueChange={setSelectedAgent}
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder="Choose a delivery agent" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {filteredAgents.length === 0 ? (
-                        <div className="p-2 text-sm text-muted-foreground text-center">
-                          {agentSearchTerm
-                            ? "No agents found matching your search"
-                            : "No delivery agents available"}
-                        </div>
-                      ) : (
-                        filteredAgents.map((agent) => (
-                          <SelectItem key={agent.id} value={agent.id}>
-                            <div className="flex items-center gap-2">
-                              <span>
-                                {agent.firstName} {agent.lastName}
-                              </span>
-                              <span className="text-muted-foreground">
-                                ({agent.userEmail})
-                              </span>
-                            </div>
-                          </SelectItem>
-                        ))
-                      )}
-                    </SelectContent>
-                  </Select>
-                </div>
-                {selectedAgent && (
-                  <div className="mt-3 p-3 bg-muted rounded-lg">
-                    <p className="text-sm font-medium">Selected Agent:</p>
-                    {(() => {
-                      const agent = deliveryAgents.find(
-                        (a) => a.id === selectedAgent
-                      );
-                      return agent ? (
-                        <div className="mt-1 text-sm text-muted-foreground">
-                          <p>
-                            <strong>
-                              {agent.firstName} {agent.lastName}
-                            </strong>
-                          </p>
-                          <p>{agent.userEmail}</p>
-                          {agent.phoneNumber && <p>{agent.phoneNumber}</p>}
-                        </div>
-                      ) : null;
-                    })()}
-                  </div>
-                )}
-              </div>
-            )}
-          </div>
-          <DialogFooter>
-            <Button
-              variant="outline"
-              onClick={() => {
-                setDeliveryModalOpen(false);
-                setSelectedAgent("");
-                setSelectedOrderId("");
-                setAgentSearchTerm("");
-              }}
-              disabled={assigning}
-            >
-              <X className="h-4 w-4 mr-2" />
-              Cancel
-            </Button>
-            <Button
-              onClick={handleDeliveryAssignment}
-              disabled={assigning || !selectedAgent || loadingAgents}
-            >
-              {assigning ? (
-                "Assigning..."
-              ) : (
-                <>
-                  <Truck className="h-4 w-4 mr-2" />
-                  Assign Agent
-                </>
-              )}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      {/* Delivery Group Dialog */}
+      <DeliveryGroupDialog
+        open={deliveryGroupDialogOpen}
+        onOpenChange={setDeliveryGroupDialogOpen}
+        selectedOrderIds={selectedOrderIds}
+        onSuccess={handleDeliveryGroupSuccess}
+      />
     </div>
   );
 }

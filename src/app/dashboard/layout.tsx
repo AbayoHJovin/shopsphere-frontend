@@ -6,6 +6,8 @@ import { Sidebar } from "@/components/dashboard/sidebar";
 import { Header } from "@/components/dashboard/header";
 import ProtectedRoute from "@/components/auth/protected-route";
 import { UserRole } from "@/lib/constants";
+import { useAppSelector } from "@/lib/redux/hooks";
+import { useRouter } from "next/navigation";
 
 export default function DashboardLayout({
   children,
@@ -14,8 +16,16 @@ export default function DashboardLayout({
 }) {
   const pathname = usePathname();
   const [title, setTitle] = useState("Dashboard");
+  const { user } = useAppSelector((state) => state.auth);
+  const router = useRouter();
 
   useEffect(() => {
+    // Redirect delivery agents to their portal
+    if (user && user.role === UserRole.DELIVERY_AGENT) {
+      router.replace("/delivery-agent/dashboard");
+      return;
+    }
+
     // Update title based on pathname
     if (pathname === "/dashboard") {
       setTitle("Dashboard");
@@ -32,7 +42,7 @@ export default function DashboardLayout({
     } else if (pathname === "/dashboard/settings") {
       setTitle("Settings");
     }
-  }, [pathname]);
+  }, [pathname, user, router]);
 
   return (
     <ProtectedRoute allowedRoles={[UserRole.ADMIN, UserRole.EMPLOYEE]}>

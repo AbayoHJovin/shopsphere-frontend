@@ -2,7 +2,7 @@
  * Authentication utility functions
  */
 
-import { authService } from '../services/auth-service';
+import { authService } from "../services/auth-service";
 
 /**
  * Ensures that the authentication token is properly set in headers
@@ -36,23 +36,21 @@ export const createAuthConfig = (config: any = {}) => {
 export const isAuthenticatedWithToken = (): boolean => {
   const token = authService.getToken();
   if (!token) return false;
-  
+
   // Basic token validation (you can add more validation here)
   try {
     // Check if token is not expired (basic check)
-    const payload = JSON.parse(atob(token.split('.')[1]));
+    const payload = JSON.parse(atob(token.split(".")[1]));
     const currentTime = Date.now() / 1000;
-    
+
     if (payload.exp && payload.exp < currentTime) {
-      // Token expired, clear it
-      authService.logout();
+      // Token expired, just return false - don't call logout here
       return false;
     }
-    
+
     return true;
   } catch (error) {
-    // Invalid token format, clear it
-    authService.logout();
+    // Invalid token format, just return false - don't call logout here
     return false;
   }
 };

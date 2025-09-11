@@ -6,30 +6,21 @@ import { usePathname } from "next/navigation";
 import { cn } from "@/lib/utils";
 import {
   Home,
-  Package,
-  ShoppingCart,
-  Users,
   Settings,
-  BarChart3,
   LogOut,
   ChevronLeft,
-  Layers,
-  Mail,
-  TagIcon,
-  MapPin,
-  Gift,
-  Warehouse,
   Truck,
+  Package,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Separator } from "@/components/ui/separator";
 
-interface SidebarProps {
+interface DeliveryAgentSidebarProps {
   className?: string;
 }
 
-export function Sidebar({ className }: SidebarProps) {
+export function DeliveryAgentSidebar({ className }: DeliveryAgentSidebarProps) {
   const [collapsed, setCollapsed] = useState(false);
   const pathname = usePathname();
 
@@ -47,16 +38,18 @@ export function Sidebar({ className }: SidebarProps) {
     >
       <div className="flex h-14 items-center px-3 border-b bg-primary/5">
         <Link
-          href="/dashboard"
+          href="/delivery-agent/dashboard"
           className={cn(
             "flex items-center gap-2 font-semibold",
             collapsed ? "justify-center" : "justify-start"
           )}
         >
           {!collapsed && (
-            <span className="text-xl font-bold text-primary">ShopSphere</span>
+            <span className="text-xl font-bold text-primary">
+              Delivery Portal
+            </span>
           )}
-          {collapsed && <Layers className="h-6 w-6 text-primary" />}
+          {collapsed && <Truck className="h-6 w-6 text-primary" />}
         </Link>
         <Button
           variant="ghost"
@@ -74,68 +67,19 @@ export function Sidebar({ className }: SidebarProps) {
       <ScrollArea className="flex-1 overflow-auto">
         <div className={cn("flex flex-col gap-1 p-2")}>
           <SidebarItem
-            href="/dashboard"
+            href="/delivery-agent/dashboard"
             icon={Home}
             label="Dashboard"
             collapsed={collapsed}
-            isActive={pathname === "/dashboard"}
-          />
-          <SidebarItem
-            href="/dashboard/products"
-            icon={Package}
-            label="Products"
-            collapsed={collapsed}
-            isActive={pathname.startsWith("/dashboard/products")}
-          />
-          <SidebarItem
-            href="/dashboard/orders"
-            icon={ShoppingCart}
-            label="Orders"
-            collapsed={collapsed}
-            isActive={pathname.startsWith("/dashboard/orders")}
-          />
-          <SidebarItem
-            href="/dashboard/shipping-costs"
-            icon={Truck}
-            label="Shipping Costs"
-            collapsed={collapsed}
-            isActive={pathname.startsWith("/dashboard/shipping-costs")}
-          />
-          <SidebarItem
-            href="/dashboard/invitations"
-            icon={Mail}
-            label="Invitations"
-            collapsed={collapsed}
-            isActive={pathname.startsWith("/dashboard/invitations")}
-          />
-          <SidebarItem
-            href="/dashboard/categories"
-            icon={TagIcon}
-            label="Categories"
-            collapsed={collapsed}
-            isActive={pathname.startsWith("/dashboard/categories")}
-          />
-          <SidebarItem
-            href="/dashboard/warehouses"
-            icon={Warehouse}
-            label="Warehouses"
-            collapsed={collapsed}
-            isActive={pathname.startsWith("/dashboard/warehouses")}
-          />
-          <SidebarItem
-            href="/dashboard/reward-system"
-            icon={Gift}
-            label="Reward System"
-            collapsed={collapsed}
-            isActive={pathname.startsWith("/dashboard/reward-system")}
+            isActive={pathname === "/delivery-agent/dashboard"}
           />
           <Separator className="my-2" />
           <SidebarItem
-            href="/dashboard/settings"
+            href="/delivery-agent/settings"
             icon={Settings}
             label="Settings"
             collapsed={collapsed}
-            isActive={pathname === "/dashboard/settings"}
+            isActive={pathname === "/delivery-agent/settings"}
           />
           <SidebarItem
             href="/auth"

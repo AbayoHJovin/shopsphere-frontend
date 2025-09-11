@@ -31,7 +31,7 @@ export function Header({ title }: HeaderProps) {
   const router = useRouter();
   const { toast } = useToast();
   const dispatch = useAppDispatch();
-  const { user } = useAppSelector(state => state.auth);
+  const { user } = useAppSelector((state) => state.auth);
 
   // Logout mutation
   const logoutMutation = useMutation({
@@ -60,13 +60,17 @@ export function Header({ title }: HeaderProps) {
 
   // Get user initials for avatar
   const getUserInitials = (): string => {
-    if (!user || !user.username) return "AD";
-    
-    const names = user.username.split(' ');
-    if (names.length === 1) {
-      return names[0].substring(0, 2).toUpperCase();
+    if (!user || (!user.firstName && !user.lastName)) return "AD";
+
+    const firstName = user.firstName || "";
+    const lastName = user.lastName || "";
+
+    if (firstName && lastName) {
+      return (firstName[0] + lastName[0]).toUpperCase();
+    } else if (firstName) {
+      return firstName.substring(0, 2).toUpperCase();
     } else {
-      return (names[0][0] + names[names.length - 1][0]).toUpperCase();
+      return "AD";
     }
   };
 
@@ -103,7 +107,11 @@ export function Header({ title }: HeaderProps) {
 
       <DropdownMenu>
         <DropdownMenuTrigger asChild>
-          <Button variant="ghost" size="icon" className="relative h-8 w-8 text-primary">
+          <Button
+            variant="ghost"
+            size="icon"
+            className="relative h-8 w-8 text-primary"
+          >
             <Bell className="h-4 w-4" />
             <span className="sr-only">Notifications</span>
             <span className="absolute right-1 top-1 flex h-2 w-2 rounded-full bg-primary"></span>
@@ -115,7 +123,9 @@ export function Header({ title }: HeaderProps) {
           <DropdownMenuItem className="cursor-pointer">
             <div className="flex flex-col gap-1">
               <span className="text-sm font-medium">New order received</span>
-              <span className="text-xs text-muted-foreground">2 minutes ago</span>
+              <span className="text-xs text-muted-foreground">
+                2 minutes ago
+              </span>
             </div>
           </DropdownMenuItem>
           <DropdownMenuItem className="cursor-pointer">
@@ -135,24 +145,37 @@ export function Header({ title }: HeaderProps) {
             className="relative h-8 w-8 rounded-full ring-2 ring-primary/10"
           >
             <Avatar className="h-8 w-8">
-              <AvatarImage src="" alt={user?.username || "Admin"} />
-              <AvatarFallback className="bg-primary/10 text-primary">{getUserInitials()}</AvatarFallback>
+              <AvatarImage
+                src=""
+                alt={user ? `${user.firstName} ${user.lastName}` : "Admin"}
+              />
+              <AvatarFallback className="bg-primary/10 text-primary">
+                {getUserInitials()}
+              </AvatarFallback>
             </Avatar>
           </Button>
         </DropdownMenuTrigger>
         <DropdownMenuContent align="end">
-          <DropdownMenuLabel>{user?.username || "Admin"}</DropdownMenuLabel>
+          <DropdownMenuLabel>
+            {user ? `${user.firstName} ${user.lastName}` : "Admin"}
+          </DropdownMenuLabel>
           <DropdownMenuSeparator />
-          <DropdownMenuItem className="cursor-pointer" onClick={() => router.push('/dashboard/settings')}>
+          <DropdownMenuItem
+            className="cursor-pointer"
+            onClick={() => router.push("/dashboard/settings")}
+          >
             <User className="mr-2 h-4 w-4" />
             Profile
           </DropdownMenuItem>
-          <DropdownMenuItem className="cursor-pointer" onClick={() => router.push('/dashboard/settings')}>
+          <DropdownMenuItem
+            className="cursor-pointer"
+            onClick={() => router.push("/dashboard/settings")}
+          >
             <Settings className="mr-2 h-4 w-4" />
             Settings
           </DropdownMenuItem>
           <DropdownMenuSeparator />
-          <DropdownMenuItem 
+          <DropdownMenuItem
             className="cursor-pointer text-destructive"
             onClick={handleLogout}
             disabled={logoutMutation.isPending}
@@ -164,4 +187,4 @@ export function Header({ title }: HeaderProps) {
       </DropdownMenu>
     </header>
   );
-} 
+}

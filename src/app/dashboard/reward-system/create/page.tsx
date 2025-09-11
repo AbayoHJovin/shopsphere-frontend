@@ -19,6 +19,8 @@ import { rewardSystemService } from "@/lib/services/reward-system-service";
 import { RewardSystemDTO, RewardRangeDTO } from "@/lib/types/reward-system";
 import { ArrowLeft, Plus, Trash2 } from "lucide-react";
 
+type TempRewardRange = Omit<RewardRangeDTO, "id"> & { tempId: string };
+
 export default function CreateRewardSystemPage() {
   const router = useRouter();
   const { toast } = useToast();
@@ -40,7 +42,7 @@ export default function CreateRewardSystemPage() {
     rewardRanges: [],
   });
 
-  const [ranges, setRanges] = useState<RewardRangeDTO[]>([]);
+  const [ranges, setRanges] = useState<TempRewardRange[]>([]);
 
   const handleInputChange = (field: keyof RewardSystemDTO, value: any) => {
     setConfig((prev) => ({ ...prev, [field]: value }));
@@ -51,30 +53,31 @@ export default function CreateRewardSystemPage() {
   };
 
   const addRange = (type: "QUANTITY" | "AMOUNT") => {
-    const newRange: RewardRangeDTO = {
+    const newRange: TempRewardRange = {
       rangeType: type,
       minValue: 0,
       maxValue: undefined,
       points: 0,
       description: "",
+      tempId: `temp_${Date.now()}_${Math.random()}`,
     };
     setRanges((prev) => [...prev, newRange]);
   };
 
   const updateRange = (
-    index: number,
+    tempId: string,
     field: keyof RewardRangeDTO,
     value: any
   ) => {
     setRanges((prev) =>
-      prev.map((range, i) =>
-        i === index ? { ...range, [field]: value } : range
+      prev.map((range) =>
+        range.tempId === tempId ? { ...range, [field]: value } : range
       )
     );
   };
 
-  const removeRange = (index: number) => {
-    setRanges((prev) => prev.filter((_, i) => i !== index));
+  const removeRange = (tempId: string) => {
+    setRanges((prev) => prev.filter((range) => range.tempId !== tempId));
   };
 
   const handleSubmit = async () => {
@@ -83,7 +86,7 @@ export default function CreateRewardSystemPage() {
 
       const systemToSave = {
         ...config,
-        rewardRanges: ranges,
+        rewardRanges: ranges.map(({ tempId, ...range }) => range),
       };
 
       const savedSystem = await rewardSystemService.saveRewardSystem(
@@ -408,9 +411,9 @@ export default function CreateRewardSystemPage() {
                     </div>
                     {ranges
                       .filter((range) => range.rangeType === "QUANTITY")
-                      .map((range, index) => (
+                      .map((range) => (
                         <div
-                          key={index}
+                          key={range.tempId}
                           className="flex items-center gap-2 p-3 border rounded-lg"
                         >
                           <Input
@@ -420,7 +423,7 @@ export default function CreateRewardSystemPage() {
                             value={range.minValue}
                             onChange={(e) =>
                               updateRange(
-                                index,
+                                range.tempId,
                                 "minValue",
                                 parseFloat(e.target.value) || 0
                               )
@@ -435,7 +438,7 @@ export default function CreateRewardSystemPage() {
                             value={range.maxValue || ""}
                             onChange={(e) =>
                               updateRange(
-                                index,
+                                range.tempId,
                                 "maxValue",
                                 e.target.value
                                   ? parseFloat(e.target.value)
@@ -446,12 +449,12 @@ export default function CreateRewardSystemPage() {
                           />
                           <Input
                             type="number"
-                            min="1"
+                            min="0"
                             placeholder="Points"
                             value={range.points}
                             onChange={(e) =>
                               updateRange(
-                                index,
+                                range.tempId,
                                 "points",
                                 parseInt(e.target.value) || 0
                               )
@@ -462,7 +465,7 @@ export default function CreateRewardSystemPage() {
                             type="button"
                             variant="ghost"
                             size="sm"
-                            onClick={() => removeRange(index)}
+                            onClick={() => removeRange(range.tempId)}
                             className="text-destructive hover:text-destructive"
                           >
                             <Trash2 className="h-4 w-4" />
@@ -489,9 +492,9 @@ export default function CreateRewardSystemPage() {
                     </div>
                     {ranges
                       .filter((range) => range.rangeType === "AMOUNT")
-                      .map((range, index) => (
+                      .map((range) => (
                         <div
-                          key={index}
+                          key={range.tempId}
                           className="flex items-center gap-2 p-3 border rounded-lg"
                         >
                           <Input
@@ -502,7 +505,7 @@ export default function CreateRewardSystemPage() {
                             value={range.minValue}
                             onChange={(e) =>
                               updateRange(
-                                index,
+                                range.tempId,
                                 "minValue",
                                 parseFloat(e.target.value) || 0
                               )
@@ -518,7 +521,7 @@ export default function CreateRewardSystemPage() {
                             value={range.maxValue || ""}
                             onChange={(e) =>
                               updateRange(
-                                index,
+                                range.tempId,
                                 "maxValue",
                                 e.target.value
                                   ? parseFloat(e.target.value)
@@ -529,12 +532,12 @@ export default function CreateRewardSystemPage() {
                           />
                           <Input
                             type="number"
-                            min="1"
+                            min="0"
                             placeholder="Points"
                             value={range.points}
                             onChange={(e) =>
                               updateRange(
-                                index,
+                                range.tempId,
                                 "points",
                                 parseInt(e.target.value) || 0
                               )
@@ -545,7 +548,7 @@ export default function CreateRewardSystemPage() {
                             type="button"
                             variant="ghost"
                             size="sm"
-                            onClick={() => removeRange(index)}
+                            onClick={() => removeRange(range.tempId)}
                             className="text-destructive hover:text-destructive"
                           >
                             <Trash2 className="h-4 w-4" />

@@ -692,19 +692,6 @@ export default function CreateProductPage() {
           })),
         }));
 
-        // Add warehouse stocks for products without variants
-        if (variants.length === 0 && warehouseStocks.length > 0) {
-          const warehouseStocksData = warehouseStocks.map((stock) => ({
-            warehouseId: stock.warehouseId,
-            stockQuantity: stock.stockQuantity,
-            lowStockThreshold: stock.lowStockThreshold,
-          }));
-          formData.append(
-            "warehouseStock",
-            JSON.stringify(warehouseStocksData)
-          );
-        }
-
         formData.append("variants", JSON.stringify(variantsData));
 
         const variantImageMapping: { [key: string]: number[] } = {};
@@ -728,6 +715,20 @@ export default function CreateProductPage() {
             JSON.stringify(variantImageMapping)
           );
           console.log("Variant image mapping:", variantImageMapping);
+        }
+      } else {
+        // Add warehouse stocks for products without variants
+        if (warehouseStocks.length > 0) {
+          const warehouseStocksData = warehouseStocks.map((stock) => ({
+            warehouseId: stock.warehouseId,
+            stockQuantity: stock.stockQuantity,
+            lowStockThreshold: stock.lowStockThreshold,
+          }));
+          formData.append(
+            "warehouseStock",
+            JSON.stringify(warehouseStocksData)
+          );
+          console.log("Product warehouse stocks:", warehouseStocksData);
         }
       }
 

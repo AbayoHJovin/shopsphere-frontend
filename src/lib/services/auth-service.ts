@@ -12,21 +12,33 @@ export const authService = {
    * @returns User data with auth details
    */
   async login(credentials: LoginRequest): Promise<LoginResponse> {
-    const response = await apiClient.post<LoginResponse>(
+    const response = await apiClient.post<any>(
       API_ENDPOINTS.AUTH.LOGIN,
       credentials
     );
 
-    // Store the token in localStorage and set headers
-    if (response.data.token) {
-      localStorage.setItem("authToken", response.data.token);
-      // Set the token in axios headers for future requests
-      apiClient.defaults.headers.common["Authorization"] = `Bearer ${response.data.token}`;
-      // Also set it in the current request headers
-      apiClient.defaults.headers.Authorization = `Bearer ${response.data.token}`;
+    // Handle the new response structure from backend
+    let loginData: LoginResponse;
+    if (response.data.success && response.data.data) {
+      // New structure: { success: true, data: { token, userName, ... }, message: "..." }
+      loginData = response.data.data;
+    } else {
+      // Old structure: { token, userName, ... }
+      loginData = response.data;
     }
 
-    return response.data;
+    // Store the token in localStorage and set headers
+    if (loginData.token) {
+      localStorage.setItem("authToken", loginData.token);
+      // Set the token in axios headers for future requests
+      apiClient.defaults.headers.common[
+        "Authorization"
+      ] = `Bearer ${loginData.token}`;
+      // Also set it in the current request headers
+      apiClient.defaults.headers.Authorization = `Bearer ${loginData.token}`;
+    }
+
+    return loginData;
   },
 
   /**
@@ -43,7 +55,7 @@ export const authService = {
       delete apiClient.defaults.headers.common["Authorization"];
       delete apiClient.defaults.headers.Authorization;
       // Clear any stored tokens in memory
-      if (typeof window !== 'undefined') {
+      if (typeof window !== "undefined") {
         localStorage.removeItem("authToken");
         sessionStorage.removeItem("authToken");
       }
@@ -55,8 +67,19 @@ export const authService = {
    * @returns User data
    */
   async getCurrentUser(): Promise<User> {
-    const response = await apiClient.get<User>(API_ENDPOINTS.AUTH.ME);
-    return response.data;
+    const response = await apiClient.get<any>(API_ENDPOINTS.AUTH.ME);
+
+    // Handle the new response structure from backend
+    let userData: User;
+    if (response.data.success && response.data.data) {
+      // New structure: { success: true, data: { ... }, message: "..." }
+      userData = response.data.data;
+    } else {
+      // Old structure: { ... }
+      userData = response.data;
+    }
+
+    return userData;
   },
 
   /**

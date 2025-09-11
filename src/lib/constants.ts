@@ -47,16 +47,6 @@ export const API_ENDPOINTS = {
     BY_ID: (id: string) => `${API_URL}/v1/users/${id}`,
     DELIVERY_AGENTS: `${API_URL}/v1/auth/users/delivery-agents`,
   },
-  DELIVERY: {
-    ASSIGN: `${API_URL}/v1/delivery/admin/assign`,
-    CHANGE_AGENT: `${API_URL}/v1/delivery/admin/change-agent`,
-    UNASSIGN: `${API_URL}/v1/delivery/admin/unassign`,
-    CANCEL: (assignmentId: string) =>
-      `${API_URL}/v1/delivery/admin/cancel/${assignmentId}`,
-    ALL_ASSIGNMENTS: `${API_URL}/v1/delivery/admin/all`,
-    BY_ORDER: (orderId: string) =>
-      `${API_URL}/v1/delivery/admin/order/${orderId}`,
-  },
   CATEGORIES: {
     BASE: `${API_URL}/v1/categories`,
     BY_ID: (id: string) => `${API_URL}/v1/categories/${id}`,

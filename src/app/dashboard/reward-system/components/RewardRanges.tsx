@@ -38,7 +38,8 @@ export function RewardRanges({ rewardSystem, onUpdate }: RewardRangesProps) {
   const [showForm, setShowForm] = useState(false);
   const { toast } = useToast();
 
-  const [newRange, setNewRange] = useState<Partial<RewardRangeDTO>>({
+  // Separate state for each range type
+  const [quantityRange, setQuantityRange] = useState<Partial<RewardRangeDTO>>({
     rangeType: "QUANTITY",
     minValue: 0,
     maxValue: undefined,
@@ -46,11 +47,39 @@ export function RewardRanges({ rewardSystem, onUpdate }: RewardRangesProps) {
     description: "",
   });
 
+  const [amountRange, setAmountRange] = useState<Partial<RewardRangeDTO>>({
+    rangeType: "AMOUNT",
+    minValue: 0,
+    maxValue: undefined,
+    points: 0,
+    description: "",
+  });
+
+  const [currentRangeType, setCurrentRangeType] = useState<
+    "QUANTITY" | "AMOUNT"
+  >("QUANTITY");
+
+  // Get current range based on selected type
+  const getCurrentRange = () => {
+    return currentRangeType === "QUANTITY" ? quantityRange : amountRange;
+  };
+
+  // Set current range based on selected type
+  const setCurrentRange = (updates: Partial<RewardRangeDTO>) => {
+    if (currentRangeType === "QUANTITY") {
+      setQuantityRange((prev) => ({ ...prev, ...updates }));
+    } else {
+      setAmountRange((prev) => ({ ...prev, ...updates }));
+    }
+  };
+
   const handleAddRange = async () => {
+    const currentRange = getCurrentRange();
+
     if (
-      !newRange.rangeType ||
-      newRange.minValue === undefined ||
-      newRange.points === undefined
+      !currentRange.rangeType ||
+      currentRange.minValue === undefined ||
+      currentRange.points === undefined
     ) {
       toast({
         title: "Error",
@@ -63,7 +92,7 @@ export function RewardRanges({ rewardSystem, onUpdate }: RewardRangesProps) {
     try {
       setLoading(true);
       const rangeToAdd: RewardRangeDTO = {
-        ...(newRange as RewardRangeDTO),
+        ...(currentRange as RewardRangeDTO),
         rewardSystemId: rewardSystem.id,
       };
 
@@ -74,13 +103,26 @@ export function RewardRanges({ rewardSystem, onUpdate }: RewardRangesProps) {
 
       setRanges(updatedSystem.rewardRanges || []);
       onUpdate(updatedSystem);
-      setNewRange({
-        rangeType: "QUANTITY",
-        minValue: 0,
-        maxValue: undefined,
-        points: 0,
-        description: "",
-      });
+
+      // Reset the current range type's form
+      if (currentRangeType === "QUANTITY") {
+        setQuantityRange({
+          rangeType: "QUANTITY",
+          minValue: 0,
+          maxValue: undefined,
+          points: 0,
+          description: "",
+        });
+      } else {
+        setAmountRange({
+          rangeType: "AMOUNT",
+          minValue: 0,
+          maxValue: undefined,
+          points: 0,
+          description: "",
+        });
+      }
+
       setShowForm(false);
       toast({
         title: "Success",
@@ -163,13 +205,10 @@ export function RewardRanges({ rewardSystem, onUpdate }: RewardRangesProps) {
                   <div className="space-y-2">
                     <Label htmlFor="rangeType">Range Type</Label>
                     <Select
-                      value={newRange.rangeType}
-                      onValueChange={(value) =>
-                        setNewRange({
-                          ...newRange,
-                          rangeType: value as "QUANTITY" | "AMOUNT",
-                        })
-                      }
+                      value={currentRangeType}
+                      onValueChange={(value) => {
+                        setCurrentRangeType(value as "QUANTITY" | "AMOUNT");
+                      }}
                     >
                       <SelectTrigger>
                         <SelectValue placeholder="Select range type" />
@@ -183,16 +222,46 @@ export function RewardRanges({ rewardSystem, onUpdate }: RewardRangesProps) {
                     </Select>
                   </div>
 
+                  {/* Visual indicator for current range type */}
+                  <div className="col-span-2">
+                    <div
+                      className={`p-3 rounded-md border-2 ${
+                        currentRangeType === "QUANTITY"
+                          ? "border-blue-200 bg-blue-50"
+                          : "border-green-200 bg-green-50"
+                      }`}
+                    >
+                      <div className="flex items-center gap-2">
+                        <div
+                          className={`w-3 h-3 rounded-full ${
+                            currentRangeType === "QUANTITY"
+                              ? "bg-blue-500"
+                              : "bg-green-500"
+                          }`}
+                        ></div>
+                        <span className="text-sm font-medium">
+                          Currently editing:{" "}
+                          {currentRangeType === "QUANTITY"
+                            ? "Product Quantity"
+                            : "Order Amount"}{" "}
+                          ranges
+                        </span>
+                      </div>
+                      <p className="text-xs text-muted-foreground mt-1">
+                        Each range type maintains separate form values
+                      </p>
+                    </div>
+                  </div>
+
                   <div className="space-y-2">
                     <Label htmlFor="minValue">Minimum Value</Label>
                     <Input
                       id="minValue"
                       type="number"
                       min="0"
-                      value={newRange.minValue || ""}
+                      value={getCurrentRange().minValue || ""}
                       onChange={(e) =>
-                        setNewRange({
-                          ...newRange,
+                        setCurrentRange({
                           minValue: parseFloat(e.target.value) || 0,
                         })
                       }
@@ -206,10 +275,9 @@ export function RewardRanges({ rewardSystem, onUpdate }: RewardRangesProps) {
                       id="maxValue"
                       type="number"
                       min="0"
-                      value={newRange.maxValue || ""}
+                      value={getCurrentRange().maxValue || ""}
                       onChange={(e) =>
-                        setNewRange({
-                          ...newRange,
+                        setCurrentRange({
                           maxValue: e.target.value
                             ? parseFloat(e.target.value)
                             : undefined,
@@ -224,11 +292,10 @@ export function RewardRanges({ rewardSystem, onUpdate }: RewardRangesProps) {
                     <Input
                       id="points"
                       type="number"
-                      min="1"
-                      value={newRange.points || ""}
+                      min="0"
+                      value={getCurrentRange().points || ""}
                       onChange={(e) =>
-                        setNewRange({
-                          ...newRange,
+                        setCurrentRange({
                           points: parseInt(e.target.value) || 0,
                         })
                       }
@@ -241,9 +308,9 @@ export function RewardRanges({ rewardSystem, onUpdate }: RewardRangesProps) {
                   <Label htmlFor="description">Description (Optional)</Label>
                   <Textarea
                     id="description"
-                    value={newRange.description || ""}
+                    value={getCurrentRange().description || ""}
                     onChange={(e) =>
-                      setNewRange({ ...newRange, description: e.target.value })
+                      setCurrentRange({ description: e.target.value })
                     }
                     placeholder="e.g., Bonus points for large orders"
                   />
