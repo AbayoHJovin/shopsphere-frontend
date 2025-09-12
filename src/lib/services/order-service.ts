@@ -146,6 +146,22 @@ class OrderService {
       throw error;
     }
   }
+
+  /**
+   * Verify delivery by pickup token (delivery agent only)
+   */
+  async verifyDelivery(pickupToken: string): Promise<any> {
+    try {
+      const response = await apiClient.post<ApiResponse<any>>(
+        `/api/v1/orders/delivery/verify/${pickupToken}`,
+        {}
+      );
+      return response.data;
+    } catch (error) {
+      console.error("Error verifying delivery:", error);
+      throw error;
+    }
+  }
 }
 
 export const orderService = new OrderService();

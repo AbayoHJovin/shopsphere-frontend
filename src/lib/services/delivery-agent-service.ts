@@ -44,21 +44,26 @@ export interface OrderDTO {
 }
 
 export interface OrderItemDTO {
-  id: number;
-  productName: string;
-  productImage?: string;
+  id: string;
+  productId: string;
+  product?: {
+    productId: string;
+    name: string;
+    description?: string;
+    price?: number;
+    images: string[];
+  };
   quantity: number;
   price: number;
   totalPrice: number;
 }
 
 export interface AddressDTO {
-  street: string;
+  streetAddress: string;
   city: string;
   state: string;
-  zipCode: string;
+  postalCode: string;
   country: string;
-  phone: string;
 }
 
 class DeliveryAgentService {
@@ -88,10 +93,10 @@ class DeliveryAgentService {
     }
   }
 
-  async startDelivery(groupId: number): Promise<DeliveryGroupDto> {
+  async startDelivery(groupId: number): Promise<any> {
     try {
-      const response = await apiClient.put<DeliveryGroupDto>(
-        `${this.baseUrl}/groups/${groupId}/start-delivery`
+      const response = await apiClient.post<any>(
+        `/api/v1/delivery-groups/${groupId}/start-delivery`
       );
       return response.data;
     } catch (error) {
@@ -100,10 +105,10 @@ class DeliveryAgentService {
     }
   }
 
-  async finishDelivery(groupId: number): Promise<DeliveryGroupDto> {
+  async finishDelivery(groupId: number): Promise<any> {
     try {
-      const response = await apiClient.put<DeliveryGroupDto>(
-        `${this.baseUrl}/groups/${groupId}/finish-delivery`
+      const response = await apiClient.post<any>(
+        `/api/v1/delivery-groups/${groupId}/finish-delivery`
       );
       return response.data;
     } catch (error) {

@@ -47,7 +47,6 @@ const QRScannerModal = ({
     const loadQRLibrary = async () => {
       if (typeof window !== "undefined" && !window.Html5Qrcode) {
         try {
-          // Load the library from CDN
           const script = document.createElement("script");
           script.src =
             "https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js";
@@ -72,7 +71,6 @@ const QRScannerModal = ({
     loadQRLibrary();
   }, []);
 
-  // Handle modal open/close and scanner initialization
   useEffect(() => {
     if (isOpen && libraryLoaded) {
       // Reset state when opening
@@ -81,7 +79,6 @@ const QRScannerModal = ({
       setScanning(false);
       setHasPermission(null);
 
-      // Small delay to ensure DOM is ready
       const timer = setTimeout(() => {
         initScanner();
       }, 500);
@@ -90,12 +87,10 @@ const QRScannerModal = ({
         clearTimeout(timer);
       };
     } else if (!isOpen) {
-      // Clean up when closing
       stopScanner();
     }
   }, [isOpen, libraryLoaded]);
 
-  // Cleanup on unmount
   useEffect(() => {
     return () => {
       stopScanner();

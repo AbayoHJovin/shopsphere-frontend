@@ -21,18 +21,33 @@ import {
   ChevronDown,
   ChevronUp,
   Loader2,
+  Play,
+  Square,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { deliveryAgentService, DeliveryGroupDto, OrderDTO } from "@/lib/services/delivery-agent-service";
-import  {DeliveryAgentDashboard}  from "@/lib/services/delivery-agent-service";
+import {
+  deliveryAgentService,
+  DeliveryGroupDto,
+  OrderDTO,
+} from "@/lib/services/delivery-agent-service";
+import { DeliveryAgentDashboard } from "@/lib/services/delivery-agent-service";
 
 export default function DeliveryAgentDashboard() {
-  const [dashboardData, setDashboardData] = useState<DeliveryAgentDashboard | null>(null);
+  const [dashboardData, setDashboardData] =
+    useState<DeliveryAgentDashboard | null>(null);
   const [expandedGroupId, setExpandedGroupId] = useState<number | null>(null);
-  const [groupOrders, setGroupOrders] = useState<Record<number, OrderDTO[]>>({});
+  const [groupOrders, setGroupOrders] = useState<Record<number, OrderDTO[]>>(
+    {}
+  );
   const [loading, setLoading] = useState(true);
   const [loadingOrders, setLoadingOrders] = useState<number | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [actionLoading, setActionLoading] = useState<number | null>(null);
+  const [actionResult, setActionResult] = useState<{
+    success: boolean;
+    message: string;
+    groupId: number;
+  } | null>(null);
 
   useEffect(() => {
     fetchDashboardData();
@@ -56,9 +71,9 @@ export default function DeliveryAgentDashboard() {
     try {
       setLoadingOrders(groupId);
       const orders = await deliveryAgentService.getOrdersForGroup(groupId);
-      setGroupOrders(prev => ({
+      setGroupOrders((prev) => ({
         ...prev,
-        [groupId]: orders
+        [groupId]: orders,
       }));
     } catch (err) {
       console.error("Error fetching orders for group:", err);
@@ -75,6 +90,58 @@ export default function DeliveryAgentDashboard() {
       if (!groupOrders[groupId]) {
         fetchOrdersForGroup(groupId);
       }
+    }
+  };
+
+  const startDelivery = async (groupId: number) => {
+    try {
+      setActionLoading(groupId);
+      setActionResult(null);
+
+      const result = await deliveryAgentService.startDelivery(groupId);
+
+      setActionResult({
+        success: true,
+        message: result.message || "Delivery started successfully!",
+        groupId: groupId,
+      });
+
+      // Refresh dashboard data to show updated status
+      await fetchDashboardData();
+    } catch (error: any) {
+      setActionResult({
+        success: false,
+        message: error.message || "Failed to start delivery",
+        groupId: groupId,
+      });
+    } finally {
+      setActionLoading(null);
+    }
+  };
+
+  const finishDelivery = async (groupId: number) => {
+    try {
+      setActionLoading(groupId);
+      setActionResult(null);
+
+      const result = await deliveryAgentService.finishDelivery(groupId);
+
+      setActionResult({
+        success: true,
+        message: result.message || "Delivery finished successfully!",
+        groupId: groupId,
+      });
+
+      // Refresh dashboard data to show updated status
+      await fetchDashboardData();
+    } catch (error: any) {
+      setActionResult({
+        success: false,
+        message: error.message || "Failed to finish delivery",
+        groupId: groupId,
+      });
+    } finally {
+      setActionLoading(null);
     }
   };
 
@@ -151,7 +218,9 @@ export default function DeliveryAgentDashboard() {
             <Package className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{dashboardData.stats.totalGroups}</div>
+            <div className="text-2xl font-bold">
+              {dashboardData.stats.totalGroups}
+            </div>
             <p className="text-xs text-muted-foreground">All time deliveries</p>
           </CardContent>
         </Card>
@@ -162,7 +231,9 @@ export default function DeliveryAgentDashboard() {
             <CheckCircle className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{dashboardData.stats.completedGroups}</div>
+            <div className="text-2xl font-bold">
+              {dashboardData.stats.completedGroups}
+            </div>
             <p className="text-xs text-muted-foreground">
               Successfully delivered
             </p>
@@ -175,11 +246,33 @@ export default function DeliveryAgentDashboard() {
             <Truck className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{dashboardData.stats.totalOrders}</div>
+            <div className="text-2xl font-bold">
+              {dashboardData.stats.totalOrders}
+            </div>
             <p className="text-xs text-muted-foreground">Orders delivered</p>
           </CardContent>
         </Card>
       </div>
+
+      {/* Action Result */}
+      {actionResult && (
+        <div
+          className={`p-4 rounded-lg border ${
+            actionResult.success
+              ? "bg-green-50 border-green-200 text-green-800"
+              : "bg-red-50 border-red-200 text-red-800"
+          }`}
+        >
+          <div className="flex items-center gap-2">
+            {actionResult.success ? (
+              <CheckCircle className="h-5 w-5" />
+            ) : (
+              <Square className="h-5 w-5" />
+            )}
+            <p className="font-medium">{actionResult.message}</p>
+          </div>
+        </div>
+      )}
 
       {/* Current Delivery Groups */}
       {dashboardData.currentGroups.length > 0 && (
@@ -198,9 +291,45 @@ export default function DeliveryAgentDashboard() {
                       {group.deliveryGroupDescription}
                     </CardDescription>
                   </div>
-                  <Badge variant="default" className="bg-green-100 text-green-800">
-                    {group.hasDeliveryStarted ? "In Progress" : "Active"}
-                  </Badge>
+                  <div className="flex items-center gap-2">
+                    <Badge
+                      variant="default"
+                      className="bg-green-100 text-green-800"
+                    >
+                      {group.hasDeliveryStarted ? "In Progress" : "Active"}
+                    </Badge>
+                    {!group.hasDeliveryStarted && (
+                      <Button
+                        size="sm"
+                        onClick={() => startDelivery(group.deliveryGroupId)}
+                        disabled={actionLoading === group.deliveryGroupId}
+                        className="flex items-center gap-1"
+                      >
+                        {actionLoading === group.deliveryGroupId ? (
+                          <Loader2 className="h-4 w-4 animate-spin" />
+                        ) : (
+                          <Play className="h-4 w-4" />
+                        )}
+                        Start Delivery
+                      </Button>
+                    )}
+                    {group.hasDeliveryStarted && !group.hasDeliveryFinished && (
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() => finishDelivery(group.deliveryGroupId)}
+                        disabled={actionLoading === group.deliveryGroupId}
+                        className="flex items-center gap-1"
+                      >
+                        {actionLoading === group.deliveryGroupId ? (
+                          <Loader2 className="h-4 w-4 animate-spin" />
+                        ) : (
+                          <Square className="h-4 w-4" />
+                        )}
+                        Finish Delivery
+                      </Button>
+                    )}
+                  </div>
                 </div>
               </CardHeader>
               <CardContent>
@@ -219,7 +348,9 @@ export default function DeliveryAgentDashboard() {
                     <Button
                       variant="ghost"
                       size="sm"
-                      onClick={() => toggleGroupExpansion(group.deliveryGroupId)}
+                      onClick={() =>
+                        toggleGroupExpansion(group.deliveryGroupId)
+                      }
                       className="flex items-center gap-1"
                       disabled={loadingOrders === group.deliveryGroupId}
                     >
@@ -278,7 +409,8 @@ export default function DeliveryAgentDashboard() {
                               </div>
                               <div className="flex items-center gap-1">
                                 <MapPin className="h-3 w-3" />
-                                {order.shippingAddress.street}, {order.shippingAddress.city}
+                                {order.shippingAddress.street},{" "}
+                                {order.shippingAddress.city}
                               </div>
                             </div>
                           </div>
@@ -315,7 +447,9 @@ export default function DeliveryAgentDashboard() {
                   <div className="flex items-center gap-3">
                     <CheckCircle className="h-4 w-4 text-green-600" />
                     <div>
-                      <div className="font-medium">{group.deliveryGroupName}</div>
+                      <div className="font-medium">
+                        {group.deliveryGroupName}
+                      </div>
                       <div className="text-sm text-muted-foreground">
                         {group.deliveryGroupDescription}
                       </div>
