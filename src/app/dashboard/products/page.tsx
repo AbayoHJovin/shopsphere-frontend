@@ -38,7 +38,7 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
-import { DiscountModal } from "@/components/DiscountModal";
+import { ProductDiscountModal } from "@/components/ProductDiscountModal";
 import { FilterDialog } from "@/components/products/FilterDialog";
 import { FilterButton } from "@/components/products/FilterButton";
 import { productService } from "@/lib/services/product-service";
@@ -664,7 +664,7 @@ export default function ProductsPage() {
       />
 
       {/* Discount Modal */}
-      <DiscountModal
+      <ProductDiscountModal
         open={discountModalOpen}
         onOpenChange={setDiscountModalOpen}
         selectedProductId={selectedProductId}

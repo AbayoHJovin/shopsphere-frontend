@@ -160,6 +160,61 @@ class ProductService {
       throw handleApiError(error);
     }
   }
+
+  /**
+   * Assign discount to products and/or variants
+   */
+  async assignDiscount(
+    discountId: string,
+    productIds?: string[],
+    variantIds?: string[]
+  ) {
+    try {
+      const response = await apiClient.post(`/v1/products/discount/assign`, {
+        discountId,
+        productIds,
+        variantIds,
+      });
+      return response.data;
+    } catch (error) {
+      throw handleApiError(error);
+    }
+  }
+
+  /**
+   * Remove discount from products and/or variants
+   */
+  async removeDiscount(productIds?: string[], variantIds?: string[]) {
+    try {
+      const response = await apiClient.delete(`/v1/products/discount/remove`, {
+        data: { productIds, variantIds },
+      });
+      return response.data;
+    } catch (error) {
+      throw handleApiError(error);
+    }
+  }
+
+  /**
+   * Get products with a specific discount
+   */
+  async getProductsByDiscount(
+    discountId: string,
+    page: number = 0,
+    size: number = 10
+  ) {
+    try {
+      const response = await apiClient.get(
+        `/v1/products/discount/${discountId}`,
+        {
+          params: { page, size },
+        }
+      );
+      return response.data;
+    } catch (error) {
+      throw handleApiError(error);
+    }
+  }
 }
 
 export const productService = new ProductService();

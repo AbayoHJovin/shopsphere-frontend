@@ -20,6 +20,7 @@ import {
   Gift,
   Warehouse,
   Truck,
+  Percent,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -114,6 +115,13 @@ export function Sidebar({ className }: SidebarProps) {
             label="Categories"
             collapsed={collapsed}
             isActive={pathname.startsWith("/dashboard/categories")}
+          />
+          <SidebarItem
+            href="/dashboard/discounts"
+            icon={Percent}
+            label="Discounts"
+            collapsed={collapsed}
+            isActive={pathname.startsWith("/dashboard/discounts")}
           />
           <SidebarItem
             href="/dashboard/warehouses"
