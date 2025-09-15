@@ -276,6 +276,11 @@ export interface ProductDTO {
   // Product variants
   variants?: ProductVariantDTO[];
 
+  // Warehouse stock information
+  warehouseStock?: WarehouseStockDTO[];
+  totalWarehouseStock?: number;
+  totalWarehouses?: number;
+
   // Product details
   fullDescription?: string;
   metaTitle?: string;
@@ -347,6 +352,29 @@ export interface VariantAttributeDTO {
   attributeValue: string;
   attributeTypeId: number;
   attributeType: string;
+}
+
+export interface WarehouseStockDTO {
+  stockId: number;
+  warehouseId: number;
+  warehouseName: string;
+  warehouseAddress: string;
+  warehouseCity: string;
+  warehouseState: string;
+  warehouseCountry: string;
+  warehouseContactNumber?: string;
+  warehouseEmail?: string;
+  quantity: number;
+  lowStockThreshold: number;
+  isInStock: boolean;
+  isLowStock: boolean;
+  isOutOfStock: boolean;
+  createdAt: string;
+  updatedAt: string;
+  variantId?: number;
+  variantSku?: string;
+  variantName?: string;
+  isVariantBased: boolean;
 }
 
 // Keep VariantImageDetailDTO and VariantAttributeDetailDTO for backward compatibility

@@ -4,9 +4,8 @@
 
 /* Custom global styles */
 body {
-  font-family: 'Inter', sans-serif;
+  font-family: poppins, sans-serif;
 }
-
 @layer base {
   :root {
     --background: 210 40% 98%;

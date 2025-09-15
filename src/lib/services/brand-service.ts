@@ -10,6 +10,17 @@ import {
 } from "../types/brand";
 
 class BrandService {
+  async getAllBrandsForDropdown(): Promise<BrandResponse[]> {
+    try {
+      const response = await apiClient.get(
+        `${API_ENDPOINTS.BRANDS.BASE}/dropdown`
+      );
+      return response.data;
+    } catch (error) {
+      throw handleApiError(error);
+    }
+  }
+
   async getAllBrands(
     page: number = 0,
     size: number = 10,

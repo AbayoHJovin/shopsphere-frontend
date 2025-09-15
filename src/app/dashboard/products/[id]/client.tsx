@@ -37,9 +37,17 @@ import {
   Sparkles,
   Award,
   Zap,
+  Warehouse,
+  MapPin,
+  Phone,
+  Mail,
+  AlertTriangle,
+  CheckCircle,
+  XCircle,
 } from "lucide-react";
 
 import { ProductDTO } from "@/lib/types/product";
+import WarehouseStockTable from "@/components/WarehouseStockTable";
 
 interface ProductClientProps {
   product: ProductDTO;
@@ -172,10 +180,11 @@ export default function ProductClient({ product, id }: ProductClientProps) {
       </div>
 
       <Tabs defaultValue="overview" className="space-y-6">
-        <TabsList className="grid w-full grid-cols-4">
+        <TabsList className="grid w-full grid-cols-5">
           <TabsTrigger value="overview">Overview</TabsTrigger>
           <TabsTrigger value="media">Media</TabsTrigger>
           <TabsTrigger value="variants">Variants</TabsTrigger>
+          <TabsTrigger value="warehouse">Warehouse</TabsTrigger>
           <TabsTrigger value="details">Details</TabsTrigger>
         </TabsList>
 
@@ -765,6 +774,224 @@ export default function ProductClient({ product, id }: ProductClientProps) {
               )}
             </CardContent>
           </Card>
+        </TabsContent>
+
+        {/* Warehouse Stock Tab */}
+        <TabsContent value="warehouse" className="space-y-6">
+          <div className="space-y-6">
+            {/* Warehouse Stock Summary */}
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Warehouse className="h-5 w-5" />
+                  Warehouse Stock Summary
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="grid gap-4 md:grid-cols-3">
+                  <div className="text-center p-4 bg-primary/5 rounded-lg">
+                    <div className="text-2xl font-bold text-primary">
+                      {product.totalWarehouseStock || 0}
+                    </div>
+                    <div className="text-sm text-muted-foreground">
+                      Total Stock Units
+                    </div>
+                  </div>
+                  <div className="text-center p-4 bg-blue-50 rounded-lg">
+                    <div className="text-2xl font-bold text-blue-600">
+                      {product.totalWarehouses || 0}
+                    </div>
+                    <div className="text-sm text-muted-foreground">
+                      Total Warehouses
+                    </div>
+                  </div>
+                  <div className="text-center p-4 bg-green-50 rounded-lg">
+                    <div className="text-2xl font-bold text-green-600">
+                      {product.warehouseStock?.filter(
+                        (stock) => stock.isInStock
+                      ).length || 0}
+                    </div>
+                    <div className="text-sm text-muted-foreground">
+                      Active Locations
+                    </div>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Current Warehouse Stock Display */}
+            {product.warehouseStock && product.warehouseStock.length > 0 ? (
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <Package className="h-5 w-5" />
+                    Current Warehouse Stock ({
+                      product.warehouseStock.length
+                    }{" "}
+                    entries)
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-4">
+                    {product.warehouseStock.map((stock) => (
+                      <div
+                        key={stock.stockId}
+                        className="border rounded-lg p-4"
+                      >
+                        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+                          {/* Warehouse Info */}
+                          <div className="space-y-2">
+                            <div className="flex items-center gap-2">
+                              <MapPin className="h-4 w-4 text-primary" />
+                              <span className="font-semibold">
+                                {stock.warehouseName}
+                              </span>
+                            </div>
+                            <div className="text-sm text-muted-foreground">
+                              {stock.warehouseAddress}, {stock.warehouseCity}
+                            </div>
+                            <div className="text-xs text-muted-foreground">
+                              {stock.warehouseState}, {stock.warehouseCountry}
+                            </div>
+                            {stock.warehouseContactNumber && (
+                              <div className="flex items-center gap-1 text-sm">
+                                <Phone className="h-3 w-3" />
+                                {stock.warehouseContactNumber}
+                              </div>
+                            )}
+                            {stock.warehouseEmail && (
+                              <div className="flex items-center gap-1 text-sm">
+                                <Mail className="h-3 w-3" />
+                                {stock.warehouseEmail}
+                              </div>
+                            )}
+                          </div>
+
+                          {/* Stock Info */}
+                          <div className="space-y-2">
+                            <div className="flex items-center gap-2">
+                              <Package className="h-4 w-4 text-blue-600" />
+                              <span className="font-semibold">
+                                {stock.quantity} units
+                              </span>
+                            </div>
+                            <div className="text-sm text-muted-foreground">
+                              Threshold: {stock.lowStockThreshold}
+                            </div>
+                            <div className="flex items-center gap-2">
+                              {stock.isOutOfStock ? (
+                                <Badge
+                                  variant="destructive"
+                                  className="flex items-center gap-1"
+                                >
+                                  <XCircle className="h-3 w-3" />
+                                  Out of Stock
+                                </Badge>
+                              ) : stock.isLowStock ? (
+                                <Badge
+                                  variant="secondary"
+                                  className="flex items-center gap-1 bg-yellow-100 text-yellow-800"
+                                >
+                                  <AlertTriangle className="h-3 w-3" />
+                                  Low Stock
+                                </Badge>
+                              ) : (
+                                <Badge
+                                  variant="default"
+                                  className="flex items-center gap-1 bg-green-100 text-green-800"
+                                >
+                                  <CheckCircle className="h-3 w-3" />
+                                  In Stock
+                                </Badge>
+                              )}
+                            </div>
+                          </div>
+
+                          {/* Variant Info */}
+                          {stock.isVariantBased && (
+                            <div className="space-y-2">
+                              <div className="flex items-center gap-2">
+                                <Layers className="h-4 w-4 text-purple-600" />
+                                <span className="font-semibold">
+                                  {stock.variantName}
+                                </span>
+                              </div>
+                              <div className="text-sm font-mono text-muted-foreground">
+                                SKU: {stock.variantSku}
+                              </div>
+                              <Badge variant="outline" className="text-xs">
+                                Variant Stock
+                              </Badge>
+                            </div>
+                          )}
+
+                          {/* Timestamps */}
+                          <div className="space-y-2">
+                            <div className="text-xs text-muted-foreground">
+                              Last Updated
+                            </div>
+                            <div className="text-sm">
+                              {formatDate(stock.updatedAt)}
+                            </div>
+                            <div className="text-xs text-muted-foreground">
+                              Stock ID: {stock.stockId}
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </CardContent>
+              </Card>
+            ) : (
+              <Card>
+                <CardContent className="text-center py-8">
+                  <Warehouse className="h-12 w-12 mx-auto mb-2 text-muted-foreground" />
+                  <p className="text-muted-foreground">
+                    No warehouse stock information available
+                  </p>
+                </CardContent>
+              </Card>
+            )}
+
+            {/* Detailed Warehouse Stock Table */}
+            <WarehouseStockTable
+              productId={id}
+              title="Detailed Warehouse Stock (Live Data)"
+            />
+
+            {/* Variant Level Warehouse Stock */}
+            {product.variants && product.variants.length > 0 && (
+              <div className="space-y-4">
+                <div className="border-b border-border/40 pb-2">
+                  <h3 className="text-lg font-semibold">
+                    Variant Warehouse Stock Details
+                  </h3>
+                  <p className="text-sm text-muted-foreground">
+                    Individual warehouse stock for each product variant
+                  </p>
+                </div>
+
+                {product.variants.map((variant) => (
+                  <div key={variant.variantId} className="space-y-2">
+                    <div className="flex items-center gap-2 mb-2">
+                      <Badge variant="outline" className="font-mono">
+                        {variant.variantSku}
+                      </Badge>
+                      <span className="text-sm font-medium">
+                        {variant.variantName}
+                      </span>
+                    </div>
+                    <WarehouseStockTable
+                      productId={id}
+                      variantId={variant.variantId}
+                      title={`${variant.variantName} - Warehouse Stock`}
+                    />
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
         </TabsContent>
 
         {/* Details Tab */}

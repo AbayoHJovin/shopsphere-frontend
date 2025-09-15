@@ -153,7 +153,7 @@ class OrderService {
   async verifyDelivery(pickupToken: string): Promise<any> {
     try {
       const response = await apiClient.post<ApiResponse<any>>(
-        `/api/v1/orders/delivery/verify/${pickupToken}`,
+        `/v1/orders/delivery/verify/${pickupToken}`,
         {}
       );
       return response.data;

@@ -96,7 +96,7 @@ class DeliveryAgentService {
   async startDelivery(groupId: number): Promise<any> {
     try {
       const response = await apiClient.post<any>(
-        `/api/v1/delivery-groups/${groupId}/start-delivery`
+        `/v1/delivery-groups/${groupId}/start-delivery`
       );
       return response.data;
     } catch (error) {
@@ -108,7 +108,7 @@ class DeliveryAgentService {
   async finishDelivery(groupId: number): Promise<any> {
     try {
       const response = await apiClient.post<any>(
-        `/api/v1/delivery-groups/${groupId}/finish-delivery`
+        `/v1/delivery-groups/${groupId}/finish-delivery`
       );
       return response.data;
     } catch (error) {
