@@ -74,9 +74,51 @@ export function BrandDropdown({
     searchQuery.length > 0
       ? searchData?.totalPages || 0
       : brandsData?.totalPages || 0;
-  console.log("Value", value);
-  // Get selected brand name
-  const selectedBrand = brands.find((brand) => brand.id === value);
+
+  // Get selected brand name - we need to fetch it separately if not in current page
+  const [selectedBrand, setSelectedBrand] = useState<BrandResponse | null>(
+    null
+  );
+
+  // Fetch selected brand details when value changes
+  useEffect(() => {
+    console.log("BrandDropdown: Value changed", {
+      value,
+      brandsCount: brands.length,
+    });
+    if (value) {
+      // First check if it's in current brands
+      const brandInCurrentPage = brands.find(
+        (brand) => brand.brandId === value
+      );
+      if (brandInCurrentPage) {
+        console.log(
+          "BrandDropdown: Found brand in current page",
+          brandInCurrentPage
+        );
+        setSelectedBrand(brandInCurrentPage);
+      } else {
+        console.log(
+          "BrandDropdown: Brand not in current page, fetching by ID",
+          value
+        );
+        // If not in current page, fetch it separately
+        brandService
+          .getBrandById(value)
+          .then((brand) => {
+            console.log("BrandDropdown: Fetched brand by ID", brand);
+            setSelectedBrand(brand);
+          })
+          .catch((error) => {
+            console.error("BrandDropdown: Error fetching brand by ID", error);
+            setSelectedBrand(null);
+          });
+      }
+    } else {
+      console.log("BrandDropdown: No value, clearing selected brand");
+      setSelectedBrand(null);
+    }
+  }, [value, brands]);
 
   // Handle search
   useEffect(() => {
@@ -95,6 +137,7 @@ export function BrandDropdown({
   };
 
   const handleBrandSelect = (brandId: string) => {
+    console.log("BrandDropdown: Brand selected", { brandId });
     onValueChange(brandId);
     setIsOpen(false);
     setSearchQuery("");
@@ -102,6 +145,7 @@ export function BrandDropdown({
   };
 
   const handleClearSelection = () => {
+    console.log("BrandDropdown: Brand selection cleared");
     onValueChange("");
     setSearchQuery("");
     setCurrentPage(0);
@@ -159,6 +203,14 @@ export function BrandDropdown({
     );
   };
 
+  // Debug log for render
+  console.log("BrandDropdown: Rendering", {
+    value,
+    selectedBrand: selectedBrand?.brandName,
+    selectedBrandId: selectedBrand?.brandId,
+    brandsCount: brands.length,
+  });
+
   return (
     <div className="space-y-2">
       <Label className="text-sm font-medium">
@@ -212,9 +264,9 @@ export function BrandDropdown({
                 <div className="p-2">
                   {brands.map((brand) => (
                     <div
-                      key={brand.id}
+                      key={brand.brandId}
                       className="flex items-center justify-between p-2 hover:bg-accent rounded-md cursor-pointer"
-                      onClick={() => handleBrandSelect(brand.id)}
+                      onClick={() => handleBrandSelect(brand.brandId)}
                     >
                       <div className="flex flex-col">
                         <span className="font-medium">{brand.brandName}</span>
@@ -224,7 +276,7 @@ export function BrandDropdown({
                           </span>
                         )}
                       </div>
-                      {brand.id === value && (
+                      {brand.brandId === value && (
                         <Badge variant="secondary" className="text-xs">
                           Selected
                         </Badge>
@@ -248,7 +300,6 @@ export function BrandDropdown({
             className="pl-2 pr-1 py-1 flex items-center gap-1"
           >
             {selectedBrand.brandName}
-            <h1>waht</h1>
             <Button
               type="button"
               variant="ghost"

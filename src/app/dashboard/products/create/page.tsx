@@ -636,6 +636,10 @@ export default function CreateProductPage() {
       if (data.costPrice)
         formData.append("costPrice", data.costPrice.toString());
       formData.append("categoryId", data.categoryId.toString());
+      console.log("CreateProduct: Form submission - brand data", {
+        brandId: data.brandId,
+        hasBrandId: !!data.brandId,
+      });
       if (data.brandId) formData.append("brandId", data.brandId);
       if (data.model) formData.append("model", data.model);
       if (data.slug) formData.append("slug", data.slug);
@@ -974,24 +978,6 @@ export default function CreateProductPage() {
 
                   <FormField
                     control={form.control}
-                    name="categoryId"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Category</FormLabel>
-                        <FormControl>
-                          <CategoryDropdown
-                            value={field.value}
-                            onValueChange={field.onChange}
-                            placeholder="Select a category"
-                          />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-
-                  <FormField
-                    control={form.control}
                     name="model"
                     render={({ field }) => (
                       <FormItem>
@@ -1156,21 +1142,32 @@ export default function CreateProductPage() {
                   <FormField
                     control={form.control}
                     name="brandId"
-                    render={({ field, fieldState }) => (
-                      <FormItem>
-                        <FormControl>
+                    render={({ field, fieldState }) => {
+                      console.log("CreateProduct: Brand field", {
+                        value: field.value,
+                        hasError: !!fieldState.error?.message,
+                        error: fieldState.error?.message,
+                      });
+                      return (
+                        <FormItem>
                           <BrandDropdown
                             value={field.value}
-                            onValueChange={field.onChange}
+                            onValueChange={(value) => {
+                              console.log(
+                                "CreateProduct: Brand value changed",
+                                { oldValue: field.value, newValue: value }
+                              );
+                              field.onChange(value);
+                            }}
                             placeholder="Select Brand"
                             label="Brand"
                             required={false}
                             error={fieldState.error?.message}
                           />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
+                          <FormMessage />
+                        </FormItem>
+                      );
+                    }}
                   />
                 </div>
               </CardContent>

@@ -96,10 +96,17 @@ import {
   UpdateBrandRequest,
 } from "@/lib/types/brand";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { useDashboard } from "@/components/dashboard/dashboard-context";
 
 export default function CategoriesPage() {
   const toast = useToast();
   const queryClient = useQueryClient();
+  const {
+    isCreateCategoryDialogOpen,
+    setIsCreateCategoryDialogOpen,
+    isCreateBrandDialogOpen,
+    setIsCreateBrandDialogOpen,
+  } = useDashboard();
 
   // States for category management
   const [currentParentId, setCurrentParentId] = useState<number | null>(null);
@@ -109,7 +116,6 @@ export default function CategoriesPage() {
   const [searchQuery, setSearchQuery] = useState("");
 
   // Dialog states
-  const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [isViewDialogOpen, setIsViewDialogOpen] = useState(false);
@@ -117,7 +123,6 @@ export default function CategoriesPage() {
     useState<CategoryResponse | null>(null);
 
   // Brand dialog states
-  const [isCreateBrandDialogOpen, setIsCreateBrandDialogOpen] = useState(false);
   const [isEditBrandDialogOpen, setIsEditBrandDialogOpen] = useState(false);
   const [isDeleteBrandDialogOpen, setIsDeleteBrandDialogOpen] = useState(false);
   const [isViewBrandDialogOpen, setIsViewBrandDialogOpen] = useState(false);
@@ -210,7 +215,7 @@ export default function CategoriesPage() {
       queryFn: () =>
         adminCategoryService.getAllCategories(0, 1000, "name", "asc"),
       // Only fetch when needed for selection
-      enabled: isCreateDialogOpen || isEditDialogOpen,
+      enabled: isCreateCategoryDialogOpen || isEditDialogOpen,
     });
 
   const allCategories = allCategoriesData?.content || [];
@@ -228,7 +233,7 @@ export default function CategoriesPage() {
         variant: "success",
       });
       resetForm();
-      setIsCreateDialogOpen(false);
+      setIsCreateCategoryDialogOpen(false);
     },
     onError: (error: any) => {
       toast.toast({
@@ -488,7 +493,7 @@ export default function CategoriesPage() {
   const openCreateDialog = () => {
     resetForm();
     setFormParentId(currentParentId);
-    setIsCreateDialogOpen(true);
+    setIsCreateCategoryDialogOpen(true);
   };
 
   // Open edit dialog
@@ -834,7 +839,7 @@ export default function CategoriesPage() {
                                         onClick={() => {
                                           setSelectedCategory(category);
                                           setFormParentId(category.id);
-                                          setIsCreateDialogOpen(true);
+                                          setIsCreateCategoryDialogOpen(true);
                                         }}
                                       >
                                         <FolderPlus className="w-4 h-4 mr-2" />
@@ -969,9 +974,9 @@ export default function CategoriesPage() {
 
           {/* Create Category Dialog */}
           <Dialog
-            open={isCreateDialogOpen}
+            open={isCreateCategoryDialogOpen}
             onOpenChange={(open) => {
-              setIsCreateDialogOpen(open);
+              setIsCreateCategoryDialogOpen(open);
               if (!open) resetForm();
             }}
           >
@@ -1125,7 +1130,7 @@ export default function CategoriesPage() {
                   variant="outline"
                   onClick={() => {
                     resetForm();
-                    setIsCreateDialogOpen(false);
+                    setIsCreateCategoryDialogOpen(false);
                   }}
                   className="border-primary/20 hover:bg-primary/5 hover:text-primary"
                   disabled={createCategoryMutation.isPending}

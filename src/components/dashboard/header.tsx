@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Bell, Search, Menu, LogOut, Settings, User } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useMutation } from "@tanstack/react-query";
@@ -18,6 +18,8 @@ import {
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import { Sidebar } from "@/components/dashboard/sidebar";
+import { SearchModal } from "@/components/dashboard/search-modal";
+import { useDashboard } from "@/components/dashboard/dashboard-context";
 import { useAppDispatch, useAppSelector } from "@/lib/redux/hooks";
 import { authService } from "@/lib/services/auth-service";
 import { logout } from "@/lib/redux/auth-slice";
@@ -32,6 +34,9 @@ export function Header({ title }: HeaderProps) {
   const { toast } = useToast();
   const dispatch = useAppDispatch();
   const { user } = useAppSelector((state) => state.auth);
+  const [isSearchModalOpen, setIsSearchModalOpen] = useState(false);
+  const { setIsCreateCategoryDialogOpen, setIsCreateBrandDialogOpen } =
+    useDashboard();
 
   // Logout mutation
   const logoutMutation = useMutation({
@@ -57,6 +62,19 @@ export function Header({ title }: HeaderProps) {
   const handleLogout = () => {
     logoutMutation.mutate();
   };
+
+  // Handle keyboard shortcuts
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if ((e.ctrlKey || e.metaKey) && e.key === "k") {
+        e.preventDefault();
+        setIsSearchModalOpen(true);
+      }
+    };
+
+    document.addEventListener("keydown", handleKeyDown);
+    return () => document.removeEventListener("keydown", handleKeyDown);
+  }, []);
 
   // Get user initials for avatar
   const getUserInitials = (): string => {
@@ -99,8 +117,10 @@ export function Header({ title }: HeaderProps) {
           <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
           <Input
             type="search"
-            placeholder="Search..."
-            className="w-full rounded-md pl-8 border-primary/20 focus-visible:ring-primary"
+            placeholder="Click here or CTRL + K to search"
+            className="w-full rounded-md pl-8 border-primary/20 focus-visible:ring-primary cursor-pointer"
+            onClick={() => setIsSearchModalOpen(true)}
+            readOnly
           />
         </div>
       </div>
@@ -185,6 +205,13 @@ export function Header({ title }: HeaderProps) {
           </DropdownMenuItem>
         </DropdownMenuContent>
       </DropdownMenu>
+
+      <SearchModal
+        isOpen={isSearchModalOpen}
+        onOpenChange={setIsSearchModalOpen}
+        onCreateCategory={() => setIsCreateCategoryDialogOpen(true)}
+        onCreateBrand={() => setIsCreateBrandDialogOpen(true)}
+      />
     </header>
   );
 }

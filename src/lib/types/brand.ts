@@ -1,12 +1,12 @@
 export interface Brand {
-  id: string;
+  brandId: string;
   brandName: string;
   description?: string;
   logoUrl?: string;
   websiteUrl?: string;
   slug: string;
-  isActive: boolean;
-  isFeatured: boolean;
+  active: boolean;
+  featured: boolean;
   createdAt: string;
   updatedAt: string;
 }
@@ -51,14 +51,14 @@ export interface BrandPageResponse {
 }
 
 export interface BrandResponse {
-  id: string;
+  brandId: string;
   brandName: string;
   description?: string;
   logoUrl?: string;
   websiteUrl?: string;
   slug: string;
-  isActive: boolean;
-  isFeatured: boolean;
+  active: boolean;
+  featured: boolean;
   createdAt: string;
   updatedAt: string;
 }

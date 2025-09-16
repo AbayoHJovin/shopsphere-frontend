@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import { usePathname } from "next/navigation";
 import { Sidebar } from "@/components/dashboard/sidebar";
 import { Header } from "@/components/dashboard/header";
+import { DashboardProvider } from "@/components/dashboard/dashboard-context";
 import ProtectedRoute from "@/components/auth/protected-route";
 import { UserRole } from "@/lib/constants";
 import { useAppSelector } from "@/lib/redux/hooks";
@@ -46,15 +47,19 @@ export default function DashboardLayout({
 
   return (
     <ProtectedRoute allowedRoles={[UserRole.ADMIN, UserRole.EMPLOYEE]}>
-      <div className="flex h-screen overflow-hidden">
-        <div className="hidden md:block">
-          <Sidebar />
+      <DashboardProvider>
+        <div className="flex h-screen overflow-hidden">
+          <div className="hidden md:block">
+            <Sidebar />
+          </div>
+          <div className="flex flex-col flex-1 overflow-hidden">
+            <Header title={title} />
+            <main className="flex-1 overflow-y-auto p-4 md:p-6">
+              {children}
+            </main>
+          </div>
         </div>
-        <div className="flex flex-col flex-1 overflow-hidden">
-          <Header title={title} />
-          <main className="flex-1 overflow-y-auto p-4 md:p-6">{children}</main>
-        </div>
-      </div>
+      </DashboardProvider>
     </ProtectedRoute>
   );
 }
