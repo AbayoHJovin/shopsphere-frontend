@@ -1,7 +1,7 @@
 // API Base URL
 export const API_URL =
-  process.env.NEXT_PUBLIC_API_URL || "http://localhost:8080/api";
-// process.env.NEXT_PUBLIC_API_URL || "http://18.234.225.110:8081/api";
+  // process.env.NEXT_PUBLIC_API_URL || "http://localhost:8080/api";
+process.env.NEXT_PUBLIC_API_URL || "http://44.201.73.159:8081/api";
 
 // API Endpoints
 export const API_ENDPOINTS = {
