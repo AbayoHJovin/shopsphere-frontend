@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useEffect, useRef } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { useForm, useFieldArray } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -26,6 +26,13 @@ import {
 } from "@/components/ui/select";
 import { useToast } from "@/components/ui/use-toast";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import {
+  productService,
+  ProductBasicInfo,
+  ProductBasicInfoUpdate,
+} from "@/lib/services/product-service";
+import { CategoryDropdown } from "@/components/products/CategoryDropdown";
+import { BrandDropdown } from "@/components/products/BrandDropdown";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import {
@@ -78,6 +85,7 @@ import {
   XCircle,
   ExternalLink,
   AlertTriangle,
+  Loader2,
 } from "lucide-react";
 
 // Mock warehouse data
@@ -89,7 +97,7 @@ const mockWarehouses = [
     address: "123 Commerce St, New York, NY 10001",
     capacity: 10000,
     currentStock: 7500,
-    isActive: true,
+    active: true,
     manager: "John Smith",
     phone: "+1 (555) 123-4567",
     email: "john.smith@warehouse.com",
@@ -101,7 +109,7 @@ const mockWarehouses = [
     address: "456 Industrial Blvd, Los Angeles, CA 90210",
     capacity: 8000,
     currentStock: 6200,
-    isActive: true,
+    active: true,
     manager: "Sarah Johnson",
     phone: "+1 (555) 987-6543",
     email: "sarah.johnson@warehouse.com",
@@ -113,7 +121,7 @@ const mockWarehouses = [
     address: "789 Storage Ave, Chicago, IL 60601",
     capacity: 6000,
     currentStock: 4800,
-    isActive: true,
+    active: true,
     manager: "Mike Davis",
     phone: "+1 (555) 456-7890",
     email: "mike.davis@warehouse.com",
@@ -125,7 +133,7 @@ const mockWarehouses = [
     address: "321 Depot Rd, Atlanta, GA 30309",
     capacity: 5000,
     currentStock: 3200,
-    isActive: true,
+    active: true,
     manager: "Lisa Wilson",
     phone: "+1 (555) 321-0987",
     email: "lisa.wilson@warehouse.com",
@@ -212,11 +220,11 @@ const mockProduct = {
   stockQuantity: 150,
   categoryId: 1,
   brandId: 1,
-  isActive: true,
-  isFeatured: true,
-  isBestseller: true,
-  isNewArrival: true,
-  isOnSale: false,
+  active: true,
+  featured: true,
+  bestseller: true,
+  newArrival: true,
+  onSale: false,
   metaTitle: "iPhone 17 Pro - Latest Apple Smartphone",
   metaDescription:
     "Buy the new iPhone 17 Pro with advanced features and cutting-edge technology",
@@ -260,7 +268,7 @@ const mockProduct = {
       price: 1099.99,
       salePrice: 999.99,
       stockQuantity: 50,
-      isActive: true,
+      active: true,
       attributes: [
         { attributeValue: "128GB", attributeType: "Storage" },
         { attributeValue: "Black", attributeType: "Color" },
@@ -282,7 +290,7 @@ const mockProduct = {
       location: "New York, NY",
       stockQuantity: 100,
       lowStockThreshold: 10,
-      isActive: true,
+      active: true,
     },
   ],
 };
@@ -325,12 +333,13 @@ const productUpdateSchema = z.object({
     .number()
     .min(0, "Stock quantity must be 0 or greater"),
   categoryId: z.coerce.number().min(1, "Category is required"),
-  brandId: z.coerce.number().optional(),
-  isActive: z.boolean().default(true),
-  isFeatured: z.boolean().default(false),
-  isBestseller: z.boolean().default(false),
-  isNewArrival: z.boolean().default(false),
-  isOnSale: z.boolean().default(false),
+  brandId: z.string().optional(),
+  active: z.boolean().default(true),
+  featured: z.boolean().default(false),
+  bestseller: z.boolean().default(false),
+  newArrival: z.boolean().default(false),
+  onSale: z.boolean().default(false),
+  salePercentage: z.coerce.number().min(0).max(100).optional(),
   metaTitle: z.string().optional(),
   metaDescription: z.string().optional(),
   metaKeywords: z.string().optional(),
@@ -353,21 +362,21 @@ export default function ProductUpdate({ params }: ProductUpdateProps) {
       setProductId(resolvedParams.id);
     });
   }, [params]);
+
   const router = useRouter();
+  const searchParams = useSearchParams();
   const { toast } = useToast();
 
   // State management
-  const [product] = useState<any>(mockProduct);
+  const [product, setProduct] = useState<ProductBasicInfo | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [activeTab, setActiveTab] = useState("basic");
-  const [existingImages, setExistingImages] = useState<any[]>(
-    mockProduct.images
-  );
-  const [existingVideos, setExistingVideos] = useState<any[]>(
-    mockProduct.videos
-  );
-  const [categories] = useState<any[]>(mockCategories);
-  const [brands] = useState<any[]>(mockBrands);
+  const [isLoading, setIsLoading] = useState(true);
+  const [activeTab, setActiveTab] = useState(() => {
+    const tab = searchParams.get("tab");
+    return tab || "basic";
+  });
+  const [existingImages, setExistingImages] = useState<any[]>([]);
+  const [existingVideos, setExistingVideos] = useState<any[]>([]);
   const [isImageUploading, setIsImageUploading] = useState(false);
   const [isVideoUploading, setIsVideoUploading] = useState(false);
   const [variants, setVariants] = useState<any[]>(mockProduct.variants);
@@ -399,35 +408,91 @@ export default function ProductUpdate({ params }: ProductUpdateProps) {
   const form = useForm<ProductUpdateForm>({
     resolver: zodResolver(productUpdateSchema) as any,
     defaultValues: {
-      name: mockProduct.productName,
-      description: mockProduct.description,
-      shortDescription: mockProduct.shortDescription,
-      sku: mockProduct.sku,
-      barcode: mockProduct.barcode,
-      model: mockProduct.model,
-      slug: mockProduct.slug,
-      price: mockProduct.price,
-      compareAtPrice: mockProduct.compareAtPrice,
-      costPrice: mockProduct.costPrice,
-      stockQuantity: mockProduct.stockQuantity,
-      categoryId: mockProduct.categoryId,
-      brandId: mockProduct.brandId,
-      isActive: mockProduct.isActive,
-      isFeatured: mockProduct.isFeatured,
-      isBestseller: mockProduct.isBestseller,
-      isNewArrival: mockProduct.isNewArrival,
-      isOnSale: mockProduct.isOnSale,
-      metaTitle: mockProduct.metaTitle,
-      metaDescription: mockProduct.metaDescription,
-      metaKeywords: mockProduct.metaKeywords,
-      searchKeywords: mockProduct.searchKeywords || "",
-      dimensionsCm: mockProduct.dimensionsCm,
-      weightKg: mockProduct.weightKg,
-      material: mockProduct.material,
-      warranty: mockProduct.warranty,
-      careInstructions: mockProduct.careInstructions,
+      name: "",
+      description: "",
+      shortDescription: "",
+      sku: "",
+      barcode: "",
+      model: "",
+      slug: "",
+      price: 0,
+      compareAtPrice: 0,
+      costPrice: 0,
+      stockQuantity: 0,
+      categoryId: undefined,
+      brandId: "",
+      active: true,
+      featured: false,
+      bestseller: false,
+      newArrival: false,
+      onSale: false,
+      salePercentage: 0,
+      metaTitle: "",
+      metaDescription: "",
+      metaKeywords: "",
+      searchKeywords: "",
+      dimensionsCm: "",
+      weightKg: 0,
+      material: "",
+      warranty: "",
+      careInstructions: "",
     },
   });
+
+  // Fetch product data when productId changes
+  useEffect(() => {
+    const fetchProductData = async () => {
+      if (!productId) return;
+
+      try {
+        setIsLoading(true);
+        const productData = await productService.getProductBasicInfo(productId);
+        setProduct(productData);
+
+        const [images, videos] = await Promise.all([
+          productService.getProductImages(productId),
+          productService.getProductVideos(productId),
+        ]);
+        setExistingImages(images);
+        setExistingVideos(videos);
+
+        form.reset({
+          name: productData.productName,
+          description: productData.description || "",
+          shortDescription: productData.shortDescription || "",
+          sku: productData.sku,
+          barcode: productData.barcode || "",
+          model: productData.model || "",
+          slug: productData.slug,
+          price: productData.price,
+          compareAtPrice: productData.compareAtPrice || 0,
+          costPrice: productData.costPrice || 0,
+          categoryId: productData.categoryId,
+          brandId: productData.brandId || "",
+          active: productData.active,
+          featured: productData.featured,
+          bestseller: productData.bestseller,
+          newArrival: productData.newArrival,
+          onSale: productData.onSale,
+          salePercentage: productData.salePercentage || 0,
+          material: productData.material || "",
+          warranty: productData.warrantyInfo || "",
+          careInstructions: productData.careInstructions || "",
+        });
+      } catch (error) {
+        console.error("Error fetching product data:", error);
+        toast({
+          title: "Error",
+          description: "Failed to load product data",
+          variant: "destructive",
+        });
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    fetchProductData();
+  }, [productId, form, toast]);
 
   // Change detection and unsaved changes handling
   useEffect(() => {
@@ -442,7 +507,6 @@ export default function ProductUpdate({ params }: ProductUpdateProps) {
       };
 
       initialFormData.current = initialData;
-
     }
   }, []);
 
@@ -451,8 +515,6 @@ export default function ProductUpdate({ params }: ProductUpdateProps) {
     if (!initialFormData.current) {
       return;
     }
-
-
 
     // Check for changes in form data
     const currentFormData = form.getValues();
@@ -526,7 +588,6 @@ export default function ProductUpdate({ params }: ProductUpdateProps) {
   }, [hasUnsavedChanges]);
 
   const handleSaveChanges = async () => {
-
     try {
       await form.handleSubmit(onSubmit)();
 
@@ -548,6 +609,129 @@ export default function ProductUpdate({ params }: ProductUpdateProps) {
       }
     } catch (error) {
       console.error("Error saving changes:", error);
+      toast({
+        title: "Save Failed",
+        description: "Failed to save changes. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const handleSaveBasicInfo = async () => {
+    try {
+      setIsSubmitting(true);
+
+      const currentFormData = form.getValues();
+      const initialData = initialFormData.current.formData;
+
+      // Detect changed fields
+      const changedFields: Partial<ProductBasicInfoUpdate> = {};
+
+      if (currentFormData.name !== initialData.name) {
+        changedFields.productName = currentFormData.name;
+      }
+      if (currentFormData.shortDescription !== initialData.shortDescription) {
+        changedFields.shortDescription = currentFormData.shortDescription;
+      }
+      if (currentFormData.description !== initialData.description) {
+        changedFields.description = currentFormData.description;
+      }
+      if (currentFormData.sku !== initialData.sku) {
+        changedFields.sku = currentFormData.sku;
+      }
+      if (currentFormData.barcode !== initialData.barcode) {
+        changedFields.barcode = currentFormData.barcode;
+      }
+      if (currentFormData.model !== initialData.model) {
+        changedFields.model = currentFormData.model;
+      }
+      if (currentFormData.slug !== initialData.slug) {
+        changedFields.slug = currentFormData.slug;
+      }
+      if (currentFormData.material !== initialData.material) {
+        changedFields.material = currentFormData.material;
+      }
+      if (currentFormData.warranty !== initialData.warranty) {
+        changedFields.warrantyInfo = currentFormData.warranty;
+      }
+      if (currentFormData.careInstructions !== initialData.careInstructions) {
+        changedFields.careInstructions = currentFormData.careInstructions;
+      }
+      if (currentFormData.price !== initialData.price) {
+        changedFields.price = currentFormData.price;
+      }
+      if (currentFormData.compareAtPrice !== initialData.compareAtPrice) {
+        changedFields.compareAtPrice = currentFormData.compareAtPrice;
+      }
+      if (currentFormData.costPrice !== initialData.costPrice) {
+        changedFields.costPrice = currentFormData.costPrice;
+      }
+      if (currentFormData.categoryId !== initialData.categoryId) {
+        changedFields.categoryId = currentFormData.categoryId;
+      }
+      if (currentFormData.brandId !== initialData.brandId) {
+        changedFields.brandId = currentFormData.brandId;
+      }
+      if (currentFormData.active !== initialData.active) {
+        changedFields.active = currentFormData.active;
+      }
+      if (currentFormData.featured !== initialData.featured) {
+        changedFields.featured = currentFormData.featured;
+      }
+      if (currentFormData.bestseller !== initialData.bestseller) {
+        changedFields.bestseller = currentFormData.bestseller;
+      }
+      if (currentFormData.newArrival !== initialData.newArrival) {
+        changedFields.newArrival = currentFormData.newArrival;
+      }
+      if (currentFormData.onSale !== initialData.onSale) {
+        changedFields.onSale = currentFormData.onSale;
+      }
+      if (currentFormData.salePercentage !== initialData.salePercentage) {
+        changedFields.salePercentage = currentFormData.salePercentage;
+      }
+
+      // Only send request if there are changes
+      if (Object.keys(changedFields).length === 0) {
+        toast({
+          title: "No Changes",
+          description: "No changes detected to save",
+          variant: "default",
+        });
+        return;
+      }
+
+      // Send update request
+      const updatedProduct = await productService.updateProductBasicInfo(
+        productId,
+        changedFields as ProductBasicInfoUpdate
+      );
+
+      // Update the product state with the response
+      setProduct(updatedProduct);
+
+      // Update the initial form data to reflect the saved state
+      initialFormData.current = {
+        ...initialFormData.current,
+        formData: currentFormData,
+      };
+      setHasUnsavedChanges(false);
+
+      toast({
+        title: "Basic Info Updated",
+        description: "Basic information has been updated successfully",
+      });
+    } catch (error: any) {
+      console.error("Error updating basic info:", error);
+      toast({
+        title: "Update Failed",
+        description: error.message || "Failed to update basic information",
+        variant: "destructive",
+      });
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -563,7 +747,6 @@ export default function ProductUpdate({ params }: ProductUpdateProps) {
     setHasUnsavedChanges(false);
     setIsUnsavedChangesModalOpen(false);
 
-
     if (pendingAction) {
       pendingAction();
       setPendingAction(null);
@@ -571,26 +754,69 @@ export default function ProductUpdate({ params }: ProductUpdateProps) {
   };
 
   const handleCancelAction = () => {
-
-
     setIsUnsavedChangesModalOpen(false);
     setPendingAction(null);
   };
 
   // Tab switching protection
-  const handleTabChange = (newTab: string) => {
-    
-
+  const handleTabChange = async (newTab: string) => {
     if (hasUnsavedChanges) {
       setIsUnsavedChangesModalOpen(true);
       setPendingAction(() => () => {
         setActiveTab(newTab);
+        updateUrlTab(newTab);
       });
       return;
     }
 
+    // Load pricing data when switching to pricing tab
+    if (newTab === "pricing") {
+      try {
+        const pricingData = await productService.getProductPricing(productId);
+        // Update form with current pricing data
+        form.setValue("price", pricingData.price);
+        form.setValue("compareAtPrice", pricingData.compareAtPrice || 0);
+        form.setValue("costPrice", pricingData.costPrice || 0);
+
+        // Update initial form data to reflect current pricing state
+        const currentFormData = form.getValues();
+        initialFormData.current = {
+          ...initialFormData.current,
+          formData: currentFormData,
+        };
+        setHasUnsavedChanges(false);
+      } catch (error) {
+        console.error("Error loading pricing data:", error);
+        toast({
+          title: "Error",
+          description: "Failed to load pricing information",
+          variant: "destructive",
+        });
+      }
+    }
+
+    if (newTab === "media") {
+      // Media data is already loaded when component initializes
+      // No need to reload here
+    }
+
     setActiveTab(newTab);
+    updateUrlTab(newTab);
   };
+
+  const updateUrlTab = (tab: string) => {
+    const url = new URL(window.location.href);
+    url.searchParams.set("tab", tab);
+    router.replace(url.pathname + url.search, { scroll: false });
+  };
+
+  // Listen for URL changes and update active tab
+  useEffect(() => {
+    const tab = searchParams.get("tab");
+    if (tab && tab !== activeTab) {
+      setActiveTab(tab);
+    }
+  }, [searchParams, activeTab]);
 
   // Helper functions for dynamic content
   const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -604,12 +830,12 @@ export default function ProductUpdate({ params }: ProductUpdateProps) {
         const reader = new FileReader();
         reader.onload = (event) => {
           const newImage = {
-            imageId: Date.now() + Math.random(),
+            imageId: Math.floor(Date.now() + Math.random() * 1000),
             url: event.target?.result as string,
             altText: file.name,
             isPrimary: false,
             sortOrder: existingImages.length,
-            file: file, // Store the actual file for potential upload
+            file: file,
           };
           setExistingImages((prev) => [...prev, newImage]);
         };
@@ -626,35 +852,67 @@ export default function ProductUpdate({ params }: ProductUpdateProps) {
     }, 1000);
   };
 
-  const removeImageById = (imageId: number) => {
-    setExistingImages((prev) => prev.filter((img) => img.imageId !== imageId));
-    toast({
-      title: "Image Removed",
-      description: "Image has been removed from the product",
-    });
+  const removeImageById = async (imageId: number) => {
+    try {
+      await productService.deleteProductImage(productId, imageId);
+      setExistingImages((prev) =>
+        prev.filter((img) => img.imageId !== imageId)
+      );
+      toast({
+        title: "Image Removed",
+        description: "Image has been removed from the product",
+      });
+    } catch (error) {
+      console.error("Error removing image:", error);
+      toast({
+        title: "Error",
+        description: "Failed to remove image",
+        variant: "destructive",
+      });
+    }
   };
 
-  const removeVideoById = (videoId: number) => {
-    setExistingVideos((prev) =>
-      prev.filter((video) => video.videoId !== videoId)
-    );
-    toast({
-      title: "Video Removed",
-      description: "Video has been removed from the product",
-    });
+  const removeVideoById = async (videoId: number) => {
+    try {
+      await productService.deleteProductVideo(productId, videoId);
+      setExistingVideos((prev) =>
+        prev.filter((video) => video.videoId !== videoId)
+      );
+      toast({
+        title: "Video Removed",
+        description: "Video has been removed from the product",
+      });
+    } catch (error) {
+      console.error("Error removing video:", error);
+      toast({
+        title: "Error",
+        description: "Failed to remove video",
+        variant: "destructive",
+      });
+    }
   };
 
-  const setPrimaryImage = (imageId: number) => {
-    setExistingImages((prev) =>
-      prev.map((img) => ({
-        ...img,
-        isPrimary: img.imageId === imageId,
-      }))
-    );
-    toast({
-      title: "Primary Image Set",
-      description: "Main image has been updated",
-    });
+  const setPrimaryImage = async (imageId: number) => {
+    try {
+      await productService.setPrimaryImage(productId, imageId);
+      setExistingImages((prev) =>
+        prev.map((img) => ({
+          ...img,
+          isPrimary: img.imageId === imageId,
+        }))
+      );
+      toast({
+        title: "Primary Image Set",
+        description: "Main image has been updated",
+      });
+    } catch (error) {
+      console.error("Error setting primary image:", error);
+      toast({
+        title: "Error",
+        description: "Failed to set primary image",
+        variant: "destructive",
+      });
+    }
   };
 
   const handleVideoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -668,11 +926,11 @@ export default function ProductUpdate({ params }: ProductUpdateProps) {
         const reader = new FileReader();
         reader.onload = (event) => {
           const newVideo = {
-            videoId: Date.now() + Math.random(),
+            videoId: Math.floor(Date.now() + Math.random() * 1000),
             url: event.target?.result as string,
             altText: file.name,
             sortOrder: existingVideos.length,
-            file: file, // Store the actual file for potential upload
+            file: file,
           };
           setExistingVideos((prev) => [...prev, newVideo]);
         };
@@ -698,7 +956,7 @@ export default function ProductUpdate({ params }: ProductUpdateProps) {
       price: 0,
       salePrice: null,
       stockQuantity: 0,
-      isActive: true,
+      active: true,
       attributes: [],
       images: [],
     };
@@ -1063,6 +1321,17 @@ export default function ProductUpdate({ params }: ProductUpdateProps) {
     }
   };
 
+  if (isLoading || !product) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-primary mx-auto"></div>
+          <p className="mt-4 text-muted-foreground">Loading product data...</p>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-6 pb-20">
       {/* Header */}
@@ -1251,6 +1520,28 @@ export default function ProductUpdate({ params }: ProductUpdateProps) {
                       rows={4}
                     />
                   </div>
+
+                  <div className="col-span-full">
+                    <Label htmlFor="warranty">Warranty Information</Label>
+                    <Textarea
+                      id="warranty"
+                      placeholder="Enter warranty details and terms"
+                      {...form.register("warranty")}
+                      className="min-h-[80px] border-primary/20 focus-visible:ring-primary mt-2"
+                      rows={3}
+                    />
+                  </div>
+
+                  <div className="col-span-full">
+                    <Label htmlFor="careInstructions">Care Instructions</Label>
+                    <Textarea
+                      id="careInstructions"
+                      placeholder="Enter care and maintenance instructions"
+                      {...form.register("careInstructions")}
+                      className="min-h-[80px] border-primary/20 focus-visible:ring-primary mt-2"
+                      rows={3}
+                    />
+                  </div>
                 </div>
               </CardContent>
             </Card>
@@ -1269,58 +1560,27 @@ export default function ProductUpdate({ params }: ProductUpdateProps) {
               <CardContent className="pt-6 grid gap-6">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   <div>
-                    <Label htmlFor="categoryId">Category *</Label>
-                    <Select
+                    <CategoryDropdown
+                      value={form.watch("categoryId")}
                       onValueChange={(value) =>
-                        form.setValue("categoryId", parseInt(value))
+                        form.setValue("categoryId", value)
                       }
-                      value={form.watch("categoryId")?.toString() || ""}
-                    >
-                      <SelectTrigger className="border-primary/20 focus-visible:ring-primary mt-2">
-                        <SelectValue placeholder="Select category" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {categories.map((category) => (
-                          <SelectItem
-                            key={category.id}
-                            value={category.id.toString()}
-                          >
-                            {category.name}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
+                      placeholder="Select Category"
+                      label="Category *"
+                      required={true}
+                      error={form.formState.errors.categoryId?.message}
+                    />
                   </div>
 
                   <div>
-                    <Label htmlFor="brandId">Brand</Label>
-                    <Select
-                      onValueChange={(value) =>
-                        form.setValue("brandId", parseInt(value))
-                      }
-                      value={form.watch("brandId")?.toString() || ""}
-                    >
-                      <SelectTrigger className="border-primary/20 focus-visible:ring-primary mt-2">
-                        <SelectValue placeholder="Select brand" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {brands.map((brand) => (
-                          <SelectItem
-                            key={brand.id}
-                            value={brand.id.toString()}
-                          >
-                            <div className="flex items-center gap-2">
-                              <img
-                                src={brand.logoUrl}
-                                alt={brand.name}
-                                className="w-4 h-4 rounded"
-                              />
-                              {brand.name}
-                            </div>
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
+                    <BrandDropdown
+                      value={form.watch("brandId")}
+                      onValueChange={(value) => form.setValue("brandId", value)}
+                      placeholder="Select Brand"
+                      label="Brand"
+                      required={false}
+                      error={form.formState.errors.brandId?.message}
+                    />
                   </div>
                 </div>
               </CardContent>
@@ -1341,30 +1601,29 @@ export default function ProductUpdate({ params }: ProductUpdateProps) {
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                   <div className="flex items-center space-x-2">
                     <Switch
-                      id="isActive"
-                      checked={form.watch("isActive")}
+                      id="active"
+                      {...form.register("active")}
+                      checked={form.watch("active")}
                       onCheckedChange={(checked) =>
-                        form.setValue("isActive", checked)
+                        form.setValue("active", checked)
                       }
                     />
-                    <Label
-                      htmlFor="isActive"
-                      className="text-sm cursor-pointer"
-                    >
+                    <Label htmlFor="active" className="text-sm cursor-pointer">
                       Active Product
                     </Label>
                   </div>
 
                   <div className="flex items-center space-x-2">
                     <Switch
-                      id="isFeatured"
-                      checked={form.watch("isFeatured")}
+                      id="featured"
+                      {...form.register("featured")}
+                      checked={form.watch("featured")}
                       onCheckedChange={(checked) =>
-                        form.setValue("isFeatured", checked)
+                        form.setValue("featured", checked)
                       }
                     />
                     <Label
-                      htmlFor="isFeatured"
+                      htmlFor="featured"
                       className="text-sm cursor-pointer"
                     >
                       Featured Product
@@ -1373,14 +1632,15 @@ export default function ProductUpdate({ params }: ProductUpdateProps) {
 
                   <div className="flex items-center space-x-2">
                     <Switch
-                      id="isBestseller"
-                      checked={form.watch("isBestseller")}
+                      id="bestseller"
+                      {...form.register("bestseller")}
+                      checked={form.watch("bestseller")}
                       onCheckedChange={(checked) =>
-                        form.setValue("isBestseller", checked)
+                        form.setValue("bestseller", checked)
                       }
                     />
                     <Label
-                      htmlFor="isBestseller"
+                      htmlFor="bestseller"
                       className="text-sm cursor-pointer"
                     >
                       Bestseller
@@ -1389,14 +1649,15 @@ export default function ProductUpdate({ params }: ProductUpdateProps) {
 
                   <div className="flex items-center space-x-2">
                     <Switch
-                      id="isNewArrival"
-                      checked={form.watch("isNewArrival")}
+                      id="newArrival"
+                      {...form.register("newArrival")}
+                      checked={form.watch("newArrival")}
                       onCheckedChange={(checked) =>
-                        form.setValue("isNewArrival", checked)
+                        form.setValue("newArrival", checked)
                       }
                     />
                     <Label
-                      htmlFor="isNewArrival"
+                      htmlFor="newArrival"
                       className="text-sm cursor-pointer"
                     >
                       New Arrival
@@ -1405,16 +1666,14 @@ export default function ProductUpdate({ params }: ProductUpdateProps) {
 
                   <div className="flex items-center space-x-2">
                     <Switch
-                      id="isOnSale"
-                      checked={form.watch("isOnSale")}
+                      id="onSale"
+                      {...form.register("onSale")}
+                      checked={form.watch("onSale")}
                       onCheckedChange={(checked) =>
-                        form.setValue("isOnSale", checked)
+                        form.setValue("onSale", checked)
                       }
                     />
-                    <Label
-                      htmlFor="isOnSale"
-                      className="text-sm cursor-pointer"
-                    >
+                    <Label htmlFor="onSale" className="text-sm cursor-pointer">
                       On Sale
                     </Label>
                   </div>
@@ -1426,27 +1685,21 @@ export default function ProductUpdate({ params }: ProductUpdateProps) {
             <div className="flex justify-end">
               <Button
                 type="button"
-                onClick={() => {
-                  // Save basic info changes
-                  const currentFormData = form.getValues();
-
-                  initialFormData.current = {
-                    ...initialFormData.current,
-                    formData: currentFormData,
-                  };
-                  setHasUnsavedChanges(false);
-
-                  toast({
-                    title: "Basic Info Saved",
-                    description:
-                      "Basic information has been saved successfully",
-                  });
-                }}
-                disabled={!hasUnsavedChanges}
+                onClick={handleSaveBasicInfo}
+                disabled={!hasUnsavedChanges || isSubmitting}
                 className="bg-primary hover:bg-primary/90"
               >
-                <Save className="mr-2 h-4 w-4" />
-                Save Basic Info
+                {isSubmitting ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Saving...
+                  </>
+                ) : (
+                  <>
+                    <Save className="mr-2 h-4 w-4" />
+                    Save Basic Info
+                  </>
+                )}
               </Button>
             </div>
           </TabsContent>
@@ -1508,25 +1761,79 @@ export default function ProductUpdate({ params }: ProductUpdateProps) {
             <div className="flex justify-end">
               <Button
                 type="button"
-                onClick={() => {
-                  // Save pricing changes
-                  const currentFormData = form.getValues();
-                  initialFormData.current = {
-                    ...initialFormData.current,
-                    formData: currentFormData,
-                  };
-                  setHasUnsavedChanges(false);
-                  toast({
-                    title: "Pricing Saved",
-                    description:
-                      "Pricing information has been saved successfully",
-                  });
+                onClick={async () => {
+                  try {
+                    setIsSubmitting(true);
+                    const currentFormData = form.getValues();
+
+                    // Prepare pricing update data
+                    const pricingUpdateData: any = {};
+
+                    // Only include fields that have values
+                    if (
+                      currentFormData.price !== undefined &&
+                      currentFormData.price !== null
+                    ) {
+                      pricingUpdateData.price = currentFormData.price;
+                    }
+                    if (
+                      currentFormData.compareAtPrice !== undefined &&
+                      currentFormData.compareAtPrice !== null
+                    ) {
+                      pricingUpdateData.compareAtPrice =
+                        currentFormData.compareAtPrice;
+                    }
+                    if (
+                      currentFormData.costPrice !== undefined &&
+                      currentFormData.costPrice !== null
+                    ) {
+                      pricingUpdateData.costPrice = currentFormData.costPrice;
+                    }
+
+                    // Call the API to update pricing
+                    await productService.updateProductPricing(
+                      productId,
+                      pricingUpdateData
+                    );
+
+                    // Update the initial form data to reflect the saved state
+                    initialFormData.current = {
+                      ...initialFormData.current,
+                      formData: currentFormData,
+                    };
+                    setHasUnsavedChanges(false);
+
+                    toast({
+                      title: "Pricing Saved",
+                      description:
+                        "Pricing information has been saved successfully",
+                    });
+                  } catch (error) {
+                    console.error("Error saving pricing:", error);
+                    toast({
+                      title: "Error",
+                      description:
+                        "Failed to save pricing information. Please try again.",
+                      variant: "destructive",
+                    });
+                  } finally {
+                    setIsSubmitting(false);
+                  }
                 }}
-                disabled={!hasUnsavedChanges}
+                disabled={!hasUnsavedChanges || isSubmitting}
                 className="bg-primary hover:bg-primary/90"
               >
-                <Save className="mr-2 h-4 w-4" />
-                Save Pricing
+                {isSubmitting ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Saving...
+                  </>
+                ) : (
+                  <>
+                    <Save className="mr-2 h-4 w-4" />
+                    Save Pricing
+                  </>
+                )}
               </Button>
             </div>
           </TabsContent>
@@ -1604,7 +1911,7 @@ export default function ProductUpdate({ params }: ProductUpdateProps) {
                               ? `${(image.file.size / 1024 / 1024).toFixed(
                                   1
                                 )}MB`
-                              : "Mock"}
+                              : ""}
                           </div>
                         </div>
                       ))}
@@ -1729,20 +2036,68 @@ export default function ProductUpdate({ params }: ProductUpdateProps) {
             <div className="flex justify-end">
               <Button
                 type="button"
-                onClick={() => {
-                  // Save media changes
-                  initialFormData.current = {
-                    ...initialFormData.current,
-                    existingImages: [...existingImages],
-                    existingVideos: [...existingVideos],
-                  };
-                  setHasUnsavedChanges(false);
-                  toast({
-                    title: "Media Saved",
-                    description: "Media files have been saved successfully",
-                  });
+                onClick={async () => {
+                  try {
+                    setIsSubmitting(true);
+
+                    const newImages = existingImages.filter((img) => img.file);
+                    const newVideos = existingVideos.filter(
+                      (video) => video.file
+                    );
+
+                    if (newImages.length > 0) {
+                      const imageFiles = newImages.map((img) => img.file!);
+                      const uploadedImages =
+                        await productService.uploadProductImages(
+                          productId,
+                          imageFiles
+                        );
+
+                      setExistingImages((prev) => [
+                        ...prev.filter((img) => !img.file),
+                        ...uploadedImages,
+                      ]);
+                    }
+
+                    if (newVideos.length > 0) {
+                      const videoFiles = newVideos.map((video) => video.file!);
+                      const uploadedVideos =
+                        await productService.uploadProductVideos(
+                          productId,
+                          videoFiles
+                        );
+
+                      setExistingVideos((prev) => [
+                        ...prev.filter((video) => !video.file),
+                        ...uploadedVideos,
+                      ]);
+                    }
+
+                    initialFormData.current = {
+                      ...initialFormData.current,
+                      existingImages: [...existingImages],
+                      existingVideos: [...existingVideos],
+                    };
+                    setHasUnsavedChanges(false);
+
+                    toast({
+                      title: "Media Saved",
+                      description:
+                        "Media files have been uploaded and saved successfully",
+                    });
+                  } catch (error) {
+                    console.error("Error saving media:", error);
+                    toast({
+                      title: "Error",
+                      description:
+                        "Failed to save media files. Please try again.",
+                      variant: "destructive",
+                    });
+                  } finally {
+                    setIsSubmitting(false);
+                  }
                 }}
-                disabled={!hasUnsavedChanges}
+                disabled={!hasUnsavedChanges || isSubmitting}
                 className="bg-primary hover:bg-primary/90"
               >
                 <Save className="mr-2 h-4 w-4" />
@@ -2112,7 +2467,7 @@ export default function ProductUpdate({ params }: ProductUpdateProps) {
                                         1024 /
                                         1024
                                       ).toFixed(1)}MB`
-                                    : "Mock"}
+                                    : ""}
                                 </div>
                               </div>
                             ))}

@@ -5,6 +5,99 @@ import {
   ManyProductsPaginationResponse,
   ProductSearchDTO,
 } from "../types/product";
+
+export interface ProductPricing {
+  productId: string;
+  productName: string;
+  sku: string;
+  price: number;
+  compareAtPrice?: number;
+  costPrice?: number;
+  profitMargin?: number;
+  profitPercentage?: number;
+  currency: string;
+}
+
+export interface ProductPricingUpdate {
+  price?: number;
+  compareAtPrice?: number;
+  costPrice?: number;
+}
+
+export interface ProductMedia {
+  imageId: number;
+  url: string;
+  altText?: string;
+  isPrimary: boolean;
+  sortOrder?: number;
+  fileName?: string;
+  fileSize?: number;
+  mimeType?: string;
+}
+
+export interface ProductVideo {
+  videoId: number;
+  url: string;
+  title?: string;
+  description?: string;
+  sortOrder?: number;
+  fileName?: string;
+  fileSize?: number;
+  mimeType?: string;
+  duration?: number;
+}
+
+export interface ProductBasicInfoUpdate {
+  productName?: string;
+  shortDescription?: string;
+  description?: string;
+  sku?: string;
+  barcode?: string;
+  model?: string;
+  slug?: string;
+  material?: string;
+  warrantyInfo?: string;
+  careInstructions?: string;
+  price?: number;
+  compareAtPrice?: number;
+  costPrice?: number;
+  categoryId?: number;
+  brandId?: string;
+  active?: boolean;
+  featured?: boolean;
+  bestseller?: boolean;
+  newArrival?: boolean;
+  onSale?: boolean;
+  salePercentage?: number;
+}
+
+export interface ProductBasicInfo {
+  productId: string;
+  productName: string;
+  shortDescription?: string;
+  description?: string;
+  sku: string;
+  barcode?: string;
+  model?: string;
+  slug: string;
+  material?: string;
+  warrantyInfo?: string;
+  careInstructions?: string;
+  price: number;
+  compareAtPrice?: number;
+  costPrice?: number;
+  categoryId?: number;
+  categoryName?: string;
+  brandId?: string;
+  brandName?: string;
+  brandLogoUrl?: string;
+  active: boolean;
+  featured: boolean;
+  bestseller: boolean;
+  newArrival: boolean;
+  onSale: boolean;
+  salePercentage?: number;
+}
 import { handleApiError } from "../utils/error-handler";
 
 class ProductService {
@@ -42,6 +135,38 @@ class ProductService {
         {
           params: { page, size },
         }
+      );
+      return response.data;
+    } catch (error) {
+      throw handleApiError(error);
+    }
+  }
+
+  /**
+   * Get product basic info for update form
+   */
+  async getProductBasicInfo(productId: string): Promise<ProductBasicInfo> {
+    try {
+      const response = await apiClient.get(
+        `/v1/products/${productId}/basic-info`
+      );
+      return response.data;
+    } catch (error) {
+      throw handleApiError(error);
+    }
+  }
+
+  /**
+   * Update product basic info
+   */
+  async updateProductBasicInfo(
+    productId: string,
+    updateData: ProductBasicInfoUpdate
+  ): Promise<ProductBasicInfo> {
+    try {
+      const response = await apiClient.put(
+        `/v1/products/${productId}/basic-info`,
+        updateData
       );
       return response.data;
     } catch (error) {
@@ -208,6 +333,138 @@ class ProductService {
         `/v1/products/discount/${discountId}`,
         {
           params: { page, size },
+        }
+      );
+      return response.data;
+    } catch (error) {
+      throw handleApiError(error);
+    }
+  }
+
+  /**
+   * Get product pricing information
+   */
+  async getProductPricing(productId: string): Promise<ProductPricing> {
+    try {
+      const response = await apiClient.get(`/v1/products/${productId}/pricing`);
+      return response.data;
+    } catch (error) {
+      throw handleApiError(error);
+    }
+  }
+
+  /**
+   * Update product pricing information
+   */
+  async updateProductPricing(
+    productId: string,
+    updateData: ProductPricingUpdate
+  ): Promise<ProductPricing> {
+    try {
+      const response = await apiClient.put(
+        `/v1/products/${productId}/pricing`,
+        updateData
+      );
+      return response.data;
+    } catch (error) {
+      throw handleApiError(error);
+    }
+  }
+
+  async getProductImages(productId: string): Promise<ProductMedia[]> {
+    try {
+      const response = await apiClient.get(
+        `/v1/products/${productId}/media/images`
+      );
+      return response.data;
+    } catch (error) {
+      throw handleApiError(error);
+    }
+  }
+
+  async getProductVideos(productId: string): Promise<ProductVideo[]> {
+    try {
+      const response = await apiClient.get(
+        `/v1/products/${productId}/media/videos`
+      );
+      return response.data;
+    } catch (error) {
+      throw handleApiError(error);
+    }
+  }
+
+  async deleteProductImage(productId: string, imageId: number): Promise<void> {
+    try {
+      await apiClient.delete(
+        `/v1/products/${productId}/media/images/${imageId}`
+      );
+    } catch (error) {
+      throw handleApiError(error);
+    }
+  }
+
+  async deleteProductVideo(productId: string, videoId: number): Promise<void> {
+    try {
+      await apiClient.delete(
+        `/v1/products/${productId}/media/videos/${videoId}`
+      );
+    } catch (error) {
+      throw handleApiError(error);
+    }
+  }
+
+  async setPrimaryImage(productId: string, imageId: number): Promise<void> {
+    try {
+      await apiClient.put(
+        `/v1/products/${productId}/media/images/${imageId}/primary`
+      );
+    } catch (error) {
+      throw handleApiError(error);
+    }
+  }
+
+  async uploadProductImages(
+    productId: string,
+    images: File[]
+  ): Promise<ProductMedia[]> {
+    try {
+      const formData = new FormData();
+      images.forEach((image) => {
+        formData.append("images", image);
+      });
+
+      const response = await apiClient.post(
+        `/v1/products/${productId}/media/images`,
+        formData,
+        {
+          headers: {
+            "Content-Type": "multipart/form-data",
+          },
+        }
+      );
+      return response.data;
+    } catch (error) {
+      throw handleApiError(error);
+    }
+  }
+
+  async uploadProductVideos(
+    productId: string,
+    videos: File[]
+  ): Promise<ProductVideo[]> {
+    try {
+      const formData = new FormData();
+      videos.forEach((video) => {
+        formData.append("videos", video);
+      });
+
+      const response = await apiClient.post(
+        `/v1/products/${productId}/media/videos`,
+        formData,
+        {
+          headers: {
+            "Content-Type": "multipart/form-data",
+          },
         }
       );
       return response.data;

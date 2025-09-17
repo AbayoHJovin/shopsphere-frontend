@@ -80,8 +80,43 @@ export function CategoryDropdown({
       ? searchData?.totalPages || 0
       : categoriesData?.totalPages || 0;
 
-  // Get selected category name
-  const selectedCategory = categories.find((cat) => cat.id === value);
+  // Get selected category name - we need to fetch it separately if not in current page
+  const [selectedCategory, setSelectedCategory] =
+    useState<CategoryResponse | null>(null);
+
+  // Fetch selected category details when value changes
+  useEffect(() => {
+    if (value) {
+      // First check if it's in current categories
+      const categoryInCurrentPage = categories.find((cat) => cat.id === value);
+      if (categoryInCurrentPage) {
+        setSelectedCategory(categoryInCurrentPage);
+      } else {
+        // If not in current page, fetch it separately
+        categoryService
+          .getCategoryById(value)
+          .then((category) => {
+            setSelectedCategory(category);
+          })
+          .catch((error) => {
+            console.error("Error fetching category by ID", error);
+            setSelectedCategory(null);
+          });
+      }
+    } else {
+      setSelectedCategory(null);
+    }
+  }, [value]);
+
+  // Handle when categories are loaded and we need to find the selected category
+  useEffect(() => {
+    if (value && categories.length > 0 && !selectedCategory) {
+      const categoryInCurrentPage = categories.find((cat) => cat.id === value);
+      if (categoryInCurrentPage) {
+        setSelectedCategory(categoryInCurrentPage);
+      }
+    }
+  }, [categories, value, selectedCategory]);
 
   // Handle search
   useEffect(() => {

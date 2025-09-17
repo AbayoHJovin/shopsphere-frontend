@@ -118,7 +118,23 @@ export function BrandDropdown({
       console.log("BrandDropdown: No value, clearing selected brand");
       setSelectedBrand(null);
     }
-  }, [value, brands]);
+  }, [value]); // Remove brands dependency to prevent infinite loop
+
+  // Handle when brands are loaded and we need to find the selected brand
+  useEffect(() => {
+    if (value && brands.length > 0 && !selectedBrand) {
+      const brandInCurrentPage = brands.find(
+        (brand) => brand.brandId === value
+      );
+      if (brandInCurrentPage) {
+        console.log(
+          "BrandDropdown: Found brand in loaded brands",
+          brandInCurrentPage
+        );
+        setSelectedBrand(brandInCurrentPage);
+      }
+    }
+  }, [brands, value, selectedBrand]);
 
   // Handle search
   useEffect(() => {
