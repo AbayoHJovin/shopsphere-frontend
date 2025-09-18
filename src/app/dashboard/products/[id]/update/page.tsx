@@ -1701,6 +1701,12 @@ export default function ProductUpdate({ params }: ProductUpdateProps) {
       ) {
         updateData.maximumDaysForReturn = productDetails.maximumDaysForReturn;
       }
+      if (
+        productDetails.displayToCustomers !==
+        initialProductDetails.displayToCustomers
+      ) {
+        updateData.displayToCustomers = productDetails.displayToCustomers;
+      }
 
       const updatedDetails = await productService.updateProductDetails(
         productId,
@@ -3821,6 +3827,32 @@ export default function ProductUpdate({ params }: ProductUpdateProps) {
                       <p className="text-sm text-muted-foreground mt-1">
                         Number of days after delivery when the product can be
                         returned
+                      </p>
+                    </div>
+                    <div>
+                      <Label htmlFor="displayToCustomers">
+                        Display to Customers
+                      </Label>
+                      <div className="flex items-center space-x-2 mt-2">
+                        <input
+                          type="checkbox"
+                          id="displayToCustomers"
+                          checked={productDetails.displayToCustomers || false}
+                          onChange={(e) =>
+                            setProductDetails((prev) => ({
+                              ...prev,
+                              displayToCustomers: e.target.checked,
+                            }))
+                          }
+                          className="rounded border-primary/20 focus:ring-primary"
+                        />
+                        <Label htmlFor="displayToCustomers" className="text-sm">
+                          Make this product visible to customers
+                        </Label>
+                      </div>
+                      <p className="text-sm text-muted-foreground mt-1">
+                        When enabled, this product will be visible to customers
+                        in the store
                       </p>
                     </div>
                   </div>

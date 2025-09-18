@@ -167,6 +167,20 @@ export default function ProductsPage() {
     setDeleteModalOpen(false);
   };
 
+  const handleCreateEmptyProduct = async () => {
+    try {
+      const response = await productService.createEmptyProduct("New Product");
+      router.push(`/dashboard/products/${response.productId}/update`);
+    } catch (error) {
+      console.error("Error creating empty product:", error);
+      toast({
+        title: "Error",
+        description: "Failed to create new product",
+        variant: "destructive",
+      });
+    }
+  };
+
   // Handle pagination
   const handlePageChange = (newPage: number) => {
     if (
@@ -267,7 +281,7 @@ export default function ProductsPage() {
 
           <Button
             className="bg-primary hover:bg-primary/90"
-            onClick={() => router.push("/dashboard/products/create")}
+            onClick={handleCreateEmptyProduct}
           >
             <Plus className="w-4 h-4 mr-2" />
             Add Product
@@ -343,9 +357,7 @@ export default function ProductsPage() {
                   <FilterIcon className="w-4 h-4 mr-2" />
                   Adjust Filters
                 </Button>
-                <Button
-                  onClick={() => router.push("/dashboard/products/create")}
-                >
+                <Button onClick={handleCreateEmptyProduct}>
                   <Plus className="w-4 h-4 mr-2" />
                   Add Product
                 </Button>

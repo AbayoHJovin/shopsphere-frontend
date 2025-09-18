@@ -126,6 +126,7 @@ export interface ProductDetails {
   shippingInfo?: string;
   returnPolicy?: string;
   maximumDaysForReturn?: number;
+  displayToCustomers?: boolean;
 }
 
 export interface ProductDetailsUpdate {
@@ -142,6 +143,7 @@ export interface ProductDetailsUpdate {
   shippingInfo?: string;
   returnPolicy?: string;
   maximumDaysForReturn?: number;
+  displayToCustomers?: boolean;
 }
 
 export interface ProductBasicInfoUpdate {
@@ -293,6 +295,24 @@ class ProductService {
           "Content-Type": "multipart/form-data",
         },
       });
+      return response.data;
+    } catch (error) {
+      throw handleApiError(error);
+    }
+  }
+
+  async createEmptyProduct(
+    name: string
+  ): Promise<{
+    productId: string;
+    status: string;
+    completionPercentage: number;
+    displayToCustomers: boolean;
+  }> {
+    try {
+      const response = await apiClient.post(
+        `/v1/products/create-empty?name=${encodeURIComponent(name)}`
+      );
       return response.data;
     } catch (error) {
       throw handleApiError(error);
