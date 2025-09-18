@@ -30,15 +30,17 @@ import {
   productService,
   ProductBasicInfo,
   ProductBasicInfoUpdate,
+  ProductVariant,
+  ProductVariantsResponse,
+  ProductDetails,
+  ProductDetailsUpdate,
 } from "@/lib/services/product-service";
 import { CategoryDropdown } from "@/components/products/CategoryDropdown";
 import { BrandDropdown } from "@/components/products/BrandDropdown";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
-import {
-  WarehouseSelector,
-  WarehouseStock,
-} from "@/components/WarehouseSelector";
+import { WarehouseStock } from "@/components/WarehouseSelector";
+import { WarehouseSelector } from "@/components/WarehouseSelector";
 import {
   Dialog,
   DialogContent,
@@ -58,6 +60,12 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 import {
   ArrowLeft,
   Save,
@@ -86,7 +94,11 @@ import {
   ExternalLink,
   AlertTriangle,
   Loader2,
+  HelpCircle,
+  ChevronDown,
+  ChevronRight,
 } from "lucide-react";
+import FetchAttributesDialog from "@/components/products/FetchAttributesDialog";
 
 // Mock warehouse data
 const mockWarehouses = [
@@ -267,7 +279,6 @@ const mockProduct = {
       variantName: "128GB Black",
       price: 1099.99,
       salePrice: 999.99,
-      stockQuantity: 50,
       active: true,
       attributes: [
         { attributeValue: "128GB", attributeType: "Storage" },
@@ -329,9 +340,6 @@ const productUpdateSchema = z.object({
   price: z.coerce.number().min(0.01, "Price must be greater than 0"),
   compareAtPrice: z.coerce.number().min(0.01).optional(),
   costPrice: z.coerce.number().min(0.01).optional(),
-  stockQuantity: z.coerce
-    .number()
-    .min(0, "Stock quantity must be 0 or greater"),
   categoryId: z.coerce.number().min(1, "Category is required"),
   brandId: z.string().optional(),
   active: z.boolean().default(true),
@@ -372,18 +380,39 @@ export default function ProductUpdate({ params }: ProductUpdateProps) {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [activeTab, setActiveTab] = useState(() => {
-    const tab = searchParams.get("tab");
-    return tab || "basic";
+    if (typeof window !== "undefined") {
+      const urlParams = new URLSearchParams(window.location.search);
+      const tab = urlParams.get("tab");
+      if (
+        tab &&
+        [
+          "basic",
+          "pricing",
+          "media",
+          "variants",
+          "inventory",
+          "details",
+        ].includes(tab)
+      ) {
+        return tab;
+      }
+    }
+    return "basic";
   });
   const [existingImages, setExistingImages] = useState<any[]>([]);
   const [existingVideos, setExistingVideos] = useState<any[]>([]);
   const [isImageUploading, setIsImageUploading] = useState(false);
   const [isVideoUploading, setIsVideoUploading] = useState(false);
-  const [variants, setVariants] = useState<any[]>(mockProduct.variants);
+  const [variants, setVariants] = useState<any[]>([]);
+  const [productVariants, setProductVariants] = useState<ProductVariant[]>([]);
+  const [variantsResponse, setVariantsResponse] =
+    useState<ProductVariantsResponse | null>(null);
+  const [variantsLoading, setVariantsLoading] = useState(false);
+  const [variantsPage, setVariantsPage] = useState(0);
+  const [variantsSize] = useState(10);
   const [availableAttributeTypes, setAvailableAttributeTypes] = useState<
     string[]
   >(["Color", "Size", "Material", "Style", "Pattern", "Weight", "Dimensions"]);
-  const [isAttributeModalOpen, setIsAttributeModalOpen] = useState(false);
   const [newAttributeType, setNewAttributeType] = useState("");
   const [newAttributeValues, setNewAttributeValues] = useState<string[]>([]);
   const [currentAttributeValue, setCurrentAttributeValue] = useState("");
@@ -398,10 +427,55 @@ export default function ProductUpdate({ params }: ProductUpdateProps) {
   const [isWarehouseSelectorOpen, setIsWarehouseSelectorOpen] = useState(false);
   const [selectedVariantForWarehouse, setSelectedVariantForWarehouse] =
     useState<number | null>(null);
+  const [isWarehouseModalOpen, setIsWarehouseModalOpen] = useState(false);
+  const [variantWarehouseStocks, setVariantWarehouseStocks] = useState<
+    WarehouseStock[]
+  >([]);
+  const [editingVariants, setEditingVariants] = useState<
+    Record<number, Partial<ProductVariant>>
+  >({});
+  const [isAttributeModalOpen, setIsAttributeModalOpen] = useState(false);
+  const [selectedVariantForAttributes, setSelectedVariantForAttributes] =
+    useState<number | null>(null);
+  const [isImageUploadModalOpen, setIsImageUploadModalOpen] = useState(false);
+  const [selectedVariantForImageUpload, setSelectedVariantForImageUpload] =
+    useState<number | null>(null);
+  const [imageFiles, setImageFiles] = useState<File[]>([]);
+  const [isAddVariantDialogOpen, setIsAddVariantDialogOpen] = useState(false);
+  const [expandedVariants, setExpandedVariants] = useState<Set<number>>(
+    new Set()
+  );
+  const [variantImages, setVariantImages] = useState<Record<number, any[]>>({});
+  const [newVariant, setNewVariant] = useState({
+    variantName: "",
+    variantSku: "",
+    variantBarcode: "",
+    price: 0,
+    salePrice: null as number | null,
+    costPrice: null as number | null,
+    isActive: true,
+    sortOrder: 0,
+    discountId: null as string | null,
+    attributes: [] as Array<{
+      attributeTypeId: string;
+      attributeValue: string;
+    }>,
+    images: [] as File[],
+  });
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
+  const [attributeTypeName, setAttributeTypeName] = useState("");
+  const [attributeValue, setAttributeValue] = useState("");
   const [isUnsavedChangesModalOpen, setIsUnsavedChangesModalOpen] =
     useState(false);
   const [pendingAction, setPendingAction] = useState<(() => void) | null>(null);
+  const [isDeleteVariantModalOpen, setIsDeleteVariantModalOpen] =
+    useState(false);
+  const [variantToDelete, setVariantToDelete] = useState<number | null>(null);
+  const [productDetails, setProductDetails] = useState<ProductDetails>({});
+  const [initialProductDetails, setInitialProductDetails] =
+    useState<ProductDetails>({});
+  const [hasProductDetailsChanges, setHasProductDetailsChanges] =
+    useState(false);
   const initialFormData = useRef<any>(null);
 
   // Form setup
@@ -418,7 +492,6 @@ export default function ProductUpdate({ params }: ProductUpdateProps) {
       price: 0,
       compareAtPrice: 0,
       costPrice: 0,
-      stockQuantity: 0,
       categoryId: undefined,
       brandId: "",
       active: true,
@@ -479,6 +552,15 @@ export default function ProductUpdate({ params }: ProductUpdateProps) {
           warranty: productData.warrantyInfo || "",
           careInstructions: productData.careInstructions || "",
         });
+
+        // Set initial form data after loading product data
+        initialFormData.current = {
+          formData: form.getValues(),
+          variants: [...variants],
+          existingImages: [...images],
+          existingVideos: [...videos],
+          variantWarehouseStock: { ...variantWarehouseStock },
+        };
       } catch (error) {
         console.error("Error fetching product data:", error);
         toast({
@@ -494,20 +576,47 @@ export default function ProductUpdate({ params }: ProductUpdateProps) {
     fetchProductData();
   }, [productId, form, toast]);
 
+  // Fetch product variants
+  const fetchProductVariants = async (page: number = 0) => {
+    if (!productId) return;
+
+    try {
+      setVariantsLoading(true);
+      const response = await productService.getProductVariants(
+        productId,
+        page,
+        variantsSize,
+        "id",
+        "asc"
+      );
+      setVariantsResponse(response);
+      setProductVariants(response.content);
+      setVariants(response.content); // Update variants state for inventory tab logic
+      setVariantsPage(page);
+
+      // Update initial form data to reflect the loaded variants
+      if (initialFormData.current) {
+        initialFormData.current = {
+          ...initialFormData.current,
+          variants: [...response.content],
+        };
+      }
+    } catch (error) {
+      console.error("Error fetching product variants:", error);
+      toast({
+        title: "Error",
+        description: "Failed to load product variants",
+        variant: "destructive",
+      });
+    } finally {
+      setVariantsLoading(false);
+    }
+  };
+
   // Change detection and unsaved changes handling
   useEffect(() => {
-    // Store initial form data only once when component mounts
-    if (!initialFormData.current) {
-      const initialData = {
-        formData: form.getValues(),
-        variants: [...variants],
-        existingImages: [...existingImages],
-        existingVideos: [...existingVideos],
-        variantWarehouseStock: { ...variantWarehouseStock },
-      };
-
-      initialFormData.current = initialData;
-    }
+    // Initial form data is now set after product data is loaded
+    // No need to set it here anymore
   }, []);
 
   useEffect(() => {
@@ -556,6 +665,7 @@ export default function ProductUpdate({ params }: ProductUpdateProps) {
     existingImages,
     existingVideos,
     variantWarehouseStock,
+    initialFormData.current,
   ]);
 
   // Navigation protection
@@ -800,6 +910,11 @@ export default function ProductUpdate({ params }: ProductUpdateProps) {
       // No need to reload here
     }
 
+    // Load variants data when switching to variants tab
+    if (newTab === "variants") {
+      await fetchProductVariants();
+    }
+
     setActiveTab(newTab);
     updateUrlTab(newTab);
   };
@@ -807,50 +922,43 @@ export default function ProductUpdate({ params }: ProductUpdateProps) {
   const updateUrlTab = (tab: string) => {
     const url = new URL(window.location.href);
     url.searchParams.set("tab", tab);
-    router.replace(url.pathname + url.search, { scroll: false });
+    router.push(url.pathname + url.search, { scroll: false });
   };
 
-  // Listen for URL changes and update active tab
+  // Handle URL tab parameter changes
   useEffect(() => {
     const tab = searchParams.get("tab");
-    if (tab && tab !== activeTab) {
-      setActiveTab(tab);
+    if (
+      tab &&
+      [
+        "basic",
+        "pricing",
+        "media",
+        "variants",
+        "inventory",
+        "details",
+      ].includes(tab)
+    ) {
+      if (activeTab !== tab) {
+        setActiveTab(tab);
+      }
+    } else if (!tab && activeTab !== "basic") {
+      // If no tab in URL but we're not on basic, update URL to reflect current tab
+      updateUrlTab(activeTab);
     }
   }, [searchParams, activeTab]);
 
-  // Helper functions for dynamic content
-  const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const files = Array.from(e.target.files || []);
-    if (files.length === 0) return;
+  useEffect(() => {
+    const hasChanges =
+      JSON.stringify(productDetails) !== JSON.stringify(initialProductDetails);
+    setHasProductDetailsChanges(hasChanges);
+  }, [productDetails, initialProductDetails]);
 
-    setIsImageUploading(true);
-
-    files.forEach((file) => {
-      if (file.type.startsWith("image/")) {
-        const reader = new FileReader();
-        reader.onload = (event) => {
-          const newImage = {
-            imageId: Math.floor(Date.now() + Math.random() * 1000),
-            url: event.target?.result as string,
-            altText: file.name,
-            isPrimary: false,
-            sortOrder: existingImages.length,
-            file: file,
-          };
-          setExistingImages((prev) => [...prev, newImage]);
-        };
-        reader.readAsDataURL(file);
-      }
-    });
-
-    setTimeout(() => {
-      setIsImageUploading(false);
-      toast({
-        title: "Images Added",
-        description: `${files.length} image(s) have been added to the product`,
-      });
-    }, 1000);
-  };
+  useEffect(() => {
+    if (productId && activeTab === "details") {
+      fetchProductDetails();
+    }
+  }, [productId, activeTab]);
 
   const removeImageById = async (imageId: number) => {
     try {
@@ -955,7 +1063,6 @@ export default function ProductUpdate({ params }: ProductUpdateProps) {
       variantName: "New Variant",
       price: 0,
       salePrice: null,
-      stockQuantity: 0,
       active: true,
       attributes: [],
       images: [],
@@ -1098,45 +1205,6 @@ export default function ProductUpdate({ params }: ProductUpdateProps) {
     return valueMap[type] || [];
   };
 
-  const handleVariantImageUpload = (
-    variantId: number,
-    e: React.ChangeEvent<HTMLInputElement>
-  ) => {
-    const files = Array.from(e.target.files || []);
-    if (files.length === 0) return;
-
-    files.forEach((file) => {
-      if (file.type.startsWith("image/")) {
-        const reader = new FileReader();
-        reader.onload = (event) => {
-          const newImage = {
-            imageId: Date.now() + Math.random(),
-            url: event.target?.result as string,
-            altText: file.name,
-            file: file,
-          };
-          setVariants((prev) =>
-            prev.map((variant) => {
-              if (variant.variantId === variantId) {
-                return {
-                  ...variant,
-                  images: [...variant.images, newImage],
-                };
-              }
-              return variant;
-            })
-          );
-        };
-        reader.readAsDataURL(file);
-      }
-    });
-
-    toast({
-      title: "Images Added",
-      description: `${files.length} image(s) have been added to the variant`,
-    });
-  };
-
   const removeVariantImage = (variantId: number, imageId: number) => {
     setVariants((prev) =>
       prev.map((variant) => {
@@ -1256,6 +1324,572 @@ export default function ProductUpdate({ params }: ProductUpdateProps) {
     // Close modal and reset state
     setIsWarehouseSelectorOpen(false);
     setSelectedVariantForWarehouse(null);
+  };
+
+  // Helper functions for variant editing
+  const updateVariantField = (
+    variantId: number,
+    field: keyof ProductVariant,
+    value: any
+  ) => {
+    setEditingVariants((prev) => ({
+      ...prev,
+      [variantId]: {
+        ...prev[variantId],
+        [field]: value,
+      },
+    }));
+  };
+
+  const getVariantFieldValue = (
+    variant: ProductVariant,
+    field: keyof ProductVariant
+  ) => {
+    const editing = editingVariants[variant.variantId];
+    return editing && editing[field] !== undefined
+      ? editing[field]
+      : variant[field];
+  };
+
+  const toggleVariantStatus = (variantId: number, isActive: boolean) => {
+    updateVariantField(variantId, "isActive", isActive);
+    // TODO: Implement backend update
+    console.log("Toggle variant status:", variantId, isActive);
+  };
+
+  const handleVariantImageUpload = (variantId: number) => {
+    setSelectedVariantForImageUpload(variantId);
+    setIsImageUploadModalOpen(true);
+  };
+
+  const handleProductImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = Array.from(e.target.files || []);
+    if (files.length === 0) return;
+
+    setIsImageUploading(true);
+
+    files.forEach((file) => {
+      if (file.type.startsWith("image/")) {
+        const reader = new FileReader();
+        reader.onload = (event) => {
+          const newImage = {
+            imageId: Math.floor(Date.now() + Math.random() * 1000),
+            url: event.target?.result as string,
+            altText: file.name,
+            isPrimary: false,
+            sortOrder: existingImages.length,
+            file: file,
+          };
+          setExistingImages((prev) => [...prev, newImage]);
+        };
+        reader.readAsDataURL(file);
+      }
+    });
+
+    setTimeout(() => {
+      setIsImageUploading(false);
+      toast({
+        title: "Images Added",
+        description: `${files.length} image(s) have been added to the product`,
+      });
+    }, 1000);
+  };
+
+  const handleFileSelect = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const files = Array.from(event.target.files || []);
+    setImageFiles(files);
+  };
+
+  const uploadImages = async () => {
+    if (!selectedVariantForImageUpload || imageFiles.length === 0) return;
+
+    try {
+      setIsImageUploading(true);
+
+      const uploadedImages = await productService.uploadVariantImages(
+        productId,
+        selectedVariantForImageUpload,
+        imageFiles
+      );
+
+      setProductVariants((prev) =>
+        prev.map((variant) =>
+          variant.variantId === selectedVariantForImageUpload
+            ? {
+                ...variant,
+                images: [...variant.images, ...uploadedImages],
+              }
+            : variant
+        )
+      );
+      setVariants((prev) =>
+        prev.map((variant) =>
+          variant.variantId === selectedVariantForImageUpload
+            ? {
+                ...variant,
+                images: [...variant.images, ...uploadedImages],
+              }
+            : variant
+        )
+      );
+
+      toast({
+        title: "Images Uploaded",
+        description: `Successfully uploaded ${imageFiles.length} image${
+          imageFiles.length !== 1 ? "s" : ""
+        } for this variant`,
+      });
+    } catch (error) {
+      console.error("Error uploading images:", error);
+      toast({
+        title: "Upload Failed",
+        description: "Failed to upload images. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsImageUploading(false);
+      setIsImageUploadModalOpen(false);
+      setSelectedVariantForImageUpload(null);
+      setImageFiles([]);
+    }
+  };
+
+  const handleDeleteVariantImage = async (
+    variantId: number,
+    imageId: number
+  ) => {
+    try {
+      await productService.deleteVariantImage(productId, variantId, imageId);
+
+      setProductVariants((prev) =>
+        prev.map((variant) =>
+          variant.variantId === variantId
+            ? {
+                ...variant,
+                images: variant.images.filter((img) => img.imageId !== imageId),
+              }
+            : variant
+        )
+      );
+      setVariants((prev) =>
+        prev.map((variant) =>
+          variant.variantId === variantId
+            ? {
+                ...variant,
+                images: variant.images.filter((img) => img.imageId !== imageId),
+              }
+            : variant
+        )
+      );
+
+      toast({
+        title: "Image Deleted",
+        description: "Image has been successfully deleted",
+      });
+    } catch (error) {
+      console.error("Error deleting image:", error);
+      toast({
+        title: "Delete Failed",
+        description: "Failed to delete image. Please try again.",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleSetPrimaryImage = async (variantId: number, imageId: number) => {
+    try {
+      await productService.setPrimaryVariantImage(
+        productId,
+        variantId,
+        imageId
+      );
+
+      setProductVariants((prev) =>
+        prev.map((variant) =>
+          variant.variantId === variantId
+            ? {
+                ...variant,
+                images: variant.images.map((img) => ({
+                  ...img,
+                  isPrimary: img.imageId === imageId,
+                })),
+              }
+            : variant
+        )
+      );
+      setVariants((prev) =>
+        prev.map((variant) =>
+          variant.variantId === variantId
+            ? {
+                ...variant,
+                images: variant.images.map((img) => ({
+                  ...img,
+                  isPrimary: img.imageId === imageId,
+                })),
+              }
+            : variant
+        )
+      );
+
+      toast({
+        title: "Primary Image Set",
+        description: "Primary image has been updated",
+      });
+    } catch (error) {
+      console.error("Error setting primary image:", error);
+      toast({
+        title: "Update Failed",
+        description: "Failed to set primary image. Please try again.",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleSaveVariant = async (variantId: number) => {
+    try {
+      const variant = productVariants.find((v) => v.variantId === variantId);
+      if (!variant) return;
+
+      const editedData = editingVariants[variantId];
+      if (!editedData) {
+        toast({
+          title: "No Changes",
+          description: "No changes to save for this variant",
+        });
+        return;
+      }
+
+      const updatedVariant = await productService.updateProductVariant(
+        productId,
+        variantId,
+        editedData
+      );
+
+      setProductVariants((prev) =>
+        prev.map((v) => (v.variantId === variantId ? updatedVariant : v))
+      );
+      setVariants((prev) =>
+        prev.map((v) => (v.variantId === variantId ? updatedVariant : v))
+      );
+
+      setEditingVariants((prev) => {
+        const newState = { ...prev };
+        delete newState[variantId];
+        return newState;
+      });
+
+      toast({
+        title: "Variant Saved",
+        description: "Variant changes have been saved successfully",
+      });
+    } catch (error) {
+      console.error("Error saving variant:", error);
+      toast({
+        title: "Save Failed",
+        description: "Failed to save variant changes. Please try again.",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleDeleteVariant = async (variantId: number) => {
+    try {
+      const variant = productVariants.find((v) => v.variantId === variantId);
+      if (!variant) return;
+
+      await productService.deleteVariant(productId, variantId);
+
+      setProductVariants((prev) =>
+        prev.filter((v) => v.variantId !== variantId)
+      );
+      setVariants((prev) => prev.filter((v) => v.variantId !== variantId));
+
+      setEditingVariants((prev) => {
+        const newState = { ...prev };
+        delete newState[variantId];
+        return newState;
+      });
+
+      setExpandedVariants((prev) => {
+        const newSet = new Set(prev);
+        newSet.delete(variantId);
+        return newSet;
+      });
+
+      toast({
+        title: "Variant Deleted",
+        description:
+          "Variant and all associated data have been deleted successfully",
+      });
+    } catch (error) {
+      console.error("Error deleting variant:", error);
+      toast({
+        title: "Delete Failed",
+        description: "Failed to delete variant. Please try again.",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const fetchProductDetails = async () => {
+    try {
+      const details = await productService.getProductDetails(productId);
+      setProductDetails(details);
+      setInitialProductDetails(details);
+    } catch (error) {
+      console.error("Error fetching product details:", error);
+      toast({
+        title: "Error",
+        description: "Failed to fetch product details",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleSaveProductDetails = async () => {
+    try {
+      setIsSubmitting(true);
+
+      const updateData: ProductDetailsUpdate = {};
+
+      if (productDetails.description !== initialProductDetails.description) {
+        updateData.description = productDetails.description;
+      }
+      if (productDetails.metaTitle !== initialProductDetails.metaTitle) {
+        updateData.metaTitle = productDetails.metaTitle;
+      }
+      if (
+        productDetails.metaDescription !== initialProductDetails.metaDescription
+      ) {
+        updateData.metaDescription = productDetails.metaDescription;
+      }
+      if (productDetails.metaKeywords !== initialProductDetails.metaKeywords) {
+        updateData.metaKeywords = productDetails.metaKeywords;
+      }
+      if (
+        productDetails.searchKeywords !== initialProductDetails.searchKeywords
+      ) {
+        updateData.searchKeywords = productDetails.searchKeywords;
+      }
+      if (productDetails.dimensionsCm !== initialProductDetails.dimensionsCm) {
+        updateData.dimensionsCm = productDetails.dimensionsCm;
+      }
+      if (productDetails.weightKg !== initialProductDetails.weightKg) {
+        updateData.weightKg = productDetails.weightKg;
+      }
+      if (productDetails.material !== initialProductDetails.material) {
+        updateData.material = productDetails.material;
+      }
+      if (
+        productDetails.careInstructions !==
+        initialProductDetails.careInstructions
+      ) {
+        updateData.careInstructions = productDetails.careInstructions;
+      }
+      if (productDetails.warrantyInfo !== initialProductDetails.warrantyInfo) {
+        updateData.warrantyInfo = productDetails.warrantyInfo;
+      }
+      if (productDetails.shippingInfo !== initialProductDetails.shippingInfo) {
+        updateData.shippingInfo = productDetails.shippingInfo;
+      }
+      if (productDetails.returnPolicy !== initialProductDetails.returnPolicy) {
+        updateData.returnPolicy = productDetails.returnPolicy;
+      }
+      if (
+        productDetails.maximumDaysForReturn !==
+        initialProductDetails.maximumDaysForReturn
+      ) {
+        updateData.maximumDaysForReturn = productDetails.maximumDaysForReturn;
+      }
+
+      const updatedDetails = await productService.updateProductDetails(
+        productId,
+        updateData
+      );
+      setProductDetails(updatedDetails);
+      setInitialProductDetails(updatedDetails);
+      setHasProductDetailsChanges(false);
+
+      toast({
+        title: "Product Details Updated",
+        description: "Product details have been updated successfully",
+      });
+    } catch (error) {
+      console.error("Error updating product details:", error);
+      toast({
+        title: "Update Failed",
+        description: "Failed to update product details. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const handleRemoveVariantAttribute = async (
+    variantId: number,
+    attributeValueId: number
+  ) => {
+    try {
+      await productService.removeVariantAttribute(
+        productId,
+        variantId,
+        attributeValueId
+      );
+
+      setProductVariants((prev) =>
+        prev.map((variant) =>
+          variant.variantId === variantId
+            ? {
+                ...variant,
+                attributes: variant.attributes.filter(
+                  (attr) => attr.attributeValueId !== attributeValueId
+                ),
+              }
+            : variant
+        )
+      );
+      setVariants((prev) =>
+        prev.map((variant) =>
+          variant.variantId === variantId
+            ? {
+                ...variant,
+                attributes: variant.attributes.filter(
+                  (attr) => attr.attributeValueId !== attributeValueId
+                ),
+              }
+            : variant
+        )
+      );
+
+      toast({
+        title: "Attribute Removed",
+        description: "Attribute has been successfully removed",
+      });
+    } catch (error) {
+      console.error("Error removing attribute:", error);
+      toast({
+        title: "Remove Failed",
+        description: "Failed to remove attribute. Please try again.",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleAddVariantAttributes = async (
+    variantId: number,
+    attributes: Array<{ attributeTypeName: string; attributeValue: string }>
+  ) => {
+    try {
+      const addedAttributes = await productService.addVariantAttributes(
+        productId,
+        variantId,
+        attributes
+      );
+
+      setProductVariants((prev) =>
+        prev.map((variant) =>
+          variant.variantId === variantId
+            ? {
+                ...variant,
+                attributes: [...variant.attributes, ...addedAttributes],
+              }
+            : variant
+        )
+      );
+      setVariants((prev) =>
+        prev.map((variant) =>
+          variant.variantId === variantId
+            ? {
+                ...variant,
+                attributes: [...variant.attributes, ...addedAttributes],
+              }
+            : variant
+        )
+      );
+
+      toast({
+        title: "Attributes Added",
+        description: `Successfully added ${addedAttributes.length} attribute${
+          addedAttributes.length !== 1 ? "s" : ""
+        }`,
+      });
+    } catch (error) {
+      console.error("Error adding attributes:", error);
+      toast({
+        title: "Add Failed",
+        description: "Failed to add attributes. Please try again.",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleAddVariant = () => {
+    router.push(`/dashboard/products/${productId}/variants/create`);
+  };
+
+  const toggleVariantExpansion = (variantId: number) => {
+    setExpandedVariants((prev) => {
+      const newSet = new Set(prev);
+      if (newSet.has(variantId)) {
+        newSet.delete(variantId);
+      } else {
+        newSet.clear(); // Close all others
+        newSet.add(variantId); // Open this one
+      }
+      return newSet;
+    });
+  };
+
+  const handleAttributesFromBackend = (
+    attributes: Array<{ name: string; values: string[] }>
+  ) => {
+    const formattedAttributes = attributes.flatMap((attr) =>
+      attr.values.map((value) => ({
+        attributeTypeId: attr.name,
+        attributeValue: value,
+      }))
+    );
+
+    setNewVariant((prev) => ({
+      ...prev,
+      attributes: [...prev.attributes, ...formattedAttributes],
+    }));
+  };
+
+  const handleCancelAddVariant = () => {
+    setIsAddVariantDialogOpen(false);
+    setNewVariant({
+      variantName: "",
+      variantSku: "",
+      variantBarcode: "",
+      price: 0,
+      salePrice: null,
+      costPrice: null,
+      isActive: true,
+      sortOrder: 0,
+      discountId: null,
+      attributes: [],
+      images: [],
+    });
+  };
+
+  const handleSaveNewVariant = async () => {
+    console.log("Saving new variant:", newVariant);
+    setIsAddVariantDialogOpen(false);
+    setNewVariant({
+      variantName: "",
+      variantSku: "",
+      variantBarcode: "",
+      price: 0,
+      salePrice: null,
+      costPrice: null,
+      isActive: true,
+      sortOrder: 0,
+      discountId: null,
+      attributes: [],
+      images: [],
+    });
   };
 
   const getVariantWarehouseStocks = (variantId: number): WarehouseStock[] => {
@@ -1413,9 +2047,9 @@ export default function ProductUpdate({ params }: ProductUpdateProps) {
                 <Warehouse className="h-4 w-4" />
                 Inventory
               </TabsTrigger>
-              <TabsTrigger value="seo" className="flex items-center gap-2">
-                <Globe className="h-4 w-4" />
-                SEO
+              <TabsTrigger value="details" className="flex items-center gap-2">
+                <Settings className="h-4 w-4" />
+                Product Details
               </TabsTrigger>
             </TabsList>
           </div>
@@ -1943,7 +2577,7 @@ export default function ProductUpdate({ params }: ProductUpdateProps) {
                       type="file"
                       multiple
                       accept="image/*"
-                      onChange={handleImageUpload}
+                      onChange={handleProductImageUpload}
                       className="hidden"
                       disabled={isImageUploading || existingImages.length >= 10}
                     />
@@ -2110,665 +2744,709 @@ export default function ProductUpdate({ params }: ProductUpdateProps) {
           <TabsContent value="variants" className="space-y-6">
             <Card className="border-border/40 shadow-sm">
               <CardHeader className="bg-primary/5">
-                <CardTitle className="flex items-center gap-2">
-                  <Layers className="h-5 w-5" />
-                  Product Variants
-                </CardTitle>
-                <CardDescription>
-                  Manage product variants with different attributes and pricing
-                </CardDescription>
+                <div className="flex items-center justify-between">
+                  <div>
+                    <CardTitle className="flex items-center gap-2">
+                      <Layers className="h-5 w-5" />
+                      Product Variants
+                    </CardTitle>
+                    <CardDescription>
+                      Manage all product variants with their attributes,
+                      pricing, images, and stock
+                    </CardDescription>
+                  </div>
+                  <Button
+                    type="button"
+                    onClick={handleAddVariant}
+                    className="bg-primary hover:bg-primary/90"
+                  >
+                    <Plus className="w-4 h-4 mr-2" />
+                    Add Variant
+                  </Button>
+                </div>
               </CardHeader>
               <CardContent className="pt-6">
-                <div className="space-y-4">
-                  {variants.map((variant, index) => (
-                    <div
-                      key={variant.variantId}
-                      className="p-4 border border-border/30 rounded-md space-y-4"
+                {variantsLoading ? (
+                  <div className="flex items-center justify-center py-8">
+                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+                    <span className="ml-2 text-muted-foreground">
+                      Loading variants...
+                    </span>
+                  </div>
+                ) : productVariants.length === 0 ? (
+                  <div className="text-center py-12">
+                    <div className="flex items-center justify-center mb-6">
+                      <div className="p-6 rounded-full bg-gradient-to-br from-primary/10 to-primary/5">
+                        <Layers className="w-12 h-12 text-primary" />
+                      </div>
+                    </div>
+                    <h3 className="text-xl font-semibold mb-3">
+                      No Variants Found
+                    </h3>
+                    <p className="text-muted-foreground mb-6 max-w-md mx-auto">
+                      This product doesn't have any variants yet. Create
+                      variants to offer different options like size, color, or
+                      material.
+                    </p>
+                    <Button
+                      type="button"
+                      onClick={handleAddVariant}
+                      className="bg-primary hover:bg-primary/90"
                     >
-                      <div className="flex items-center justify-between">
-                        <h4 className="font-medium">Variant {index + 1}</h4>
-                        <Button
-                          type="button"
-                          variant="outline"
-                          size="sm"
-                          className="text-destructive hover:bg-destructive/10"
-                          onClick={() => removeVariant(variant.variantId)}
-                        >
-                          <Trash2 className="w-4 h-4 mr-2" />
-                          Remove
-                        </Button>
-                      </div>
-
-                      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                        <div>
-                          <Label>Variant SKU</Label>
-                          <Input
-                            placeholder="Enter variant SKU"
-                            defaultValue={variant.variantSku}
-                            className="border-primary/20 focus-visible:ring-primary mt-2"
-                          />
-                        </div>
-
-                        <div>
-                          <Label>Variant Name</Label>
-                          <Input
-                            placeholder="Enter variant name"
-                            defaultValue={variant.variantName}
-                            className="border-primary/20 focus-visible:ring-primary mt-2"
-                          />
-                        </div>
-
-                        <div>
-                          <Label>Price</Label>
-                          <Input
-                            type="number"
-                            step="0.01"
-                            placeholder="0.00"
-                            defaultValue={variant.price}
-                            className="border-primary/20 focus-visible:ring-primary mt-2"
-                          />
-                        </div>
-
-                        <div>
-                          <Label>Sale Price</Label>
-                          <Input
-                            type="number"
-                            step="0.01"
-                            placeholder="0.00"
-                            defaultValue={variant.salePrice}
-                            className="border-primary/20 focus-visible:ring-primary mt-2"
-                          />
-                        </div>
-
-                        <div>
-                          <Label>Stock Quantity</Label>
-                          <Input
-                            type="number"
-                            placeholder="0"
-                            defaultValue={variant.stockQuantity}
-                            className="border-primary/20 focus-visible:ring-primary mt-2"
-                          />
-                        </div>
-
-                        <div className="flex items-center space-x-2">
-                          <Switch
-                            id={`variant-${index}-active`}
-                            defaultChecked={variant.isActive}
-                          />
-                          <Label
-                            htmlFor={`variant-${index}-active`}
-                            className="text-sm cursor-pointer"
+                      <Plus className="w-4 h-4 mr-2" />
+                      Create First Variant
+                    </Button>
+                  </div>
+                ) : (
+                  <div className="space-y-6">
+                    {/* Variants List */}
+                    <div className="space-y-6">
+                      {productVariants.map((variant, index) => {
+                        const isExpanded = expandedVariants.has(
+                          variant.variantId
+                        );
+                        return (
+                          <Card
+                            key={variant.variantId}
+                            className="border-border/30 shadow-sm hover:shadow-md transition-all duration-200"
                           >
-                            Active
-                          </Label>
-                        </div>
-                      </div>
-
-                      {/* Variant Attributes */}
-                      <div>
-                        <div className="flex items-center justify-between mb-2">
-                          <Label className="text-sm font-medium">
-                            Attributes
-                          </Label>
-                          <div className="flex gap-2">
-                            <Select
-                              onValueChange={(value) => {
-                                if (value) {
-                                  const [type, attrValue] = value.split(":");
-                                  addAttributeToVariant(
-                                    variant.variantId,
-                                    type,
-                                    attrValue
-                                  );
-                                }
-                              }}
+                            <CardHeader
+                              className="pb-4 cursor-pointer hover:bg-muted/30 transition-colors"
+                              onClick={() =>
+                                toggleVariantExpansion(variant.variantId)
+                              }
                             >
-                              <SelectTrigger className="w-[200px] text-xs">
-                                <SelectValue placeholder="Add Attribute" />
-                              </SelectTrigger>
-                              <SelectContent>
-                                {availableAttributeTypes.map((type) => (
-                                  <div key={type}>
-                                    <div className="px-2 py-1.5 text-xs font-semibold text-muted-foreground">
-                                      {type}
-                                    </div>
-                                    {getAttributeValues(type).map((value) => (
-                                      <SelectItem
-                                        key={`${type}:${value}`}
-                                        value={`${type}:${value}`}
-                                      >
-                                        {value}
-                                      </SelectItem>
-                                    ))}
-                                  </div>
-                                ))}
-                              </SelectContent>
-                            </Select>
-                            <Dialog
-                              open={isAttributeModalOpen}
-                              onOpenChange={setIsAttributeModalOpen}
-                            >
-                              <DialogTrigger asChild>
-                                <Button
-                                  type="button"
-                                  variant="outline"
-                                  size="sm"
-                                  className="text-xs"
-                                >
-                                  <Plus className="w-3 h-3 mr-1" />
-                                  New Type
-                                </Button>
-                              </DialogTrigger>
-                              <DialogContent className="sm:max-w-[425px]">
-                                <DialogHeader>
-                                  <DialogTitle>
-                                    Create New Attribute Type
-                                  </DialogTitle>
-                                  <DialogDescription>
-                                    Create a new attribute type and define its
-                                    possible values.
-                                  </DialogDescription>
-                                </DialogHeader>
-                                <div className="grid gap-4 py-4">
-                                  <div className="grid grid-cols-4 items-center gap-4">
-                                    <Label
-                                      htmlFor="attribute-type"
-                                      className="text-right"
+                              <div className="flex items-center justify-between">
+                                <div className="flex items-center gap-3">
+                                  <div className="flex items-center gap-2">
+                                    {isExpanded ? (
+                                      <ChevronDown className="w-4 h-4 text-muted-foreground" />
+                                    ) : (
+                                      <ChevronRight className="w-4 h-4 text-muted-foreground" />
+                                    )}
+                                    <Badge
+                                      variant="outline"
+                                      className="text-xs font-mono"
                                     >
-                                      Type Name
-                                    </Label>
-                                    <Input
-                                      id="attribute-type"
-                                      value={newAttributeType}
-                                      onChange={(e) =>
-                                        setNewAttributeType(e.target.value)
-                                      }
-                                      className="col-span-3"
-                                      placeholder="e.g., Brand, Model, etc."
-                                    />
-                                  </div>
-                                  <div className="grid grid-cols-4 items-center gap-4">
-                                    <Label
-                                      htmlFor="attribute-value"
-                                      className="text-right"
-                                    >
-                                      Add Value
-                                    </Label>
-                                    <div className="col-span-3 flex gap-2">
-                                      <Input
-                                        id="attribute-value"
-                                        value={currentAttributeValue}
-                                        onChange={(e) =>
-                                          setCurrentAttributeValue(
-                                            e.target.value
-                                          )
+                                      #{variant.variantId}
+                                    </Badge>
+                                    <div className="flex items-center gap-2">
+                                      <Switch
+                                        checked={
+                                          getVariantFieldValue(
+                                            variant,
+                                            "isActive"
+                                          ) as boolean
                                         }
-                                        placeholder="Enter value"
-                                        onKeyPress={(e) => {
-                                          if (e.key === "Enter") {
-                                            addAttributeValue();
-                                          }
+                                        onCheckedChange={(checked) => {
+                                          toggleVariantStatus(
+                                            variant.variantId,
+                                            checked
+                                          );
                                         }}
+                                        className="data-[state=checked]:bg-green-600"
+                                        onClick={(e) => e.stopPropagation()}
                                       />
+                                      <Label className="text-sm font-medium">
+                                        {variant.isActive
+                                          ? "Active"
+                                          : "Inactive"}
+                                      </Label>
+                                    </div>
+                                    {variant.isInStock && (
+                                      <Badge
+                                        variant="outline"
+                                        className="text-xs text-green-600 border-green-200"
+                                      >
+                                        In Stock
+                                      </Badge>
+                                    )}
+                                    {variant.isLowStock && (
+                                      <Badge
+                                        variant="outline"
+                                        className="text-xs text-yellow-600 border-yellow-200"
+                                      >
+                                        Low Stock
+                                      </Badge>
+                                    )}
+                                  </div>
+                                  <div className="text-sm text-muted-foreground">
+                                    {variant.variantName || "Unnamed Variant"}
+                                  </div>
+                                </div>
+                                <div className="flex items-center gap-2">
+                                  <Button
+                                    type="button"
+                                    variant="outline"
+                                    size="sm"
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      handleSaveVariant(variant.variantId);
+                                    }}
+                                    className="text-green-600 hover:bg-green-50"
+                                  >
+                                    <CheckCircle className="w-4 h-4 mr-2" />
+                                    Save
+                                  </Button>
+                                  <Button
+                                    type="button"
+                                    variant="outline"
+                                    size="sm"
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      setSelectedVariantForWarehouse(
+                                        variant.variantId
+                                      );
+                                      setIsWarehouseModalOpen(true);
+                                      const currentStocks =
+                                        getVariantWarehouseStocks(
+                                          variant.variantId
+                                        );
+                                      setVariantWarehouseStocks(currentStocks);
+                                    }}
+                                    className="text-blue-600 hover:bg-blue-50"
+                                  >
+                                    <Warehouse className="w-4 h-4 mr-2" />
+                                    Stock
+                                  </Button>
+                                  <Button
+                                    type="button"
+                                    variant="outline"
+                                    size="sm"
+                                    className="text-destructive hover:bg-destructive/10"
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      setIsDeleteVariantModalOpen(true);
+                                      setVariantToDelete(variant.variantId);
+                                    }}
+                                  >
+                                    <Trash2 className="w-4 h-4 mr-2" />
+                                    Delete
+                                  </Button>
+                                </div>
+                              </div>
+                            </CardHeader>
+
+                            {/* Collapsible Content */}
+                            <div
+                              className={`overflow-hidden transition-all duration-300 ease-in-out ${
+                                isExpanded
+                                  ? "max-h-[2000px] opacity-100"
+                                  : "max-h-0 opacity-0"
+                              }`}
+                            >
+                              <CardContent className="pt-0 pb-6">
+                                {/* Variant Basic Info - Editable */}
+                                <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
+                                  {/* Basic Information */}
+                                  <div className="space-y-4">
+                                    <h5 className="font-semibold text-sm text-muted-foreground uppercase tracking-wide">
+                                      Basic Information
+                                    </h5>
+                                    <div className="space-y-3">
+                                      <div>
+                                        <Label
+                                          htmlFor={`variant-name-${variant.variantId}`}
+                                          className="text-xs font-medium"
+                                        >
+                                          Variant Name
+                                        </Label>
+                                        <Input
+                                          id={`variant-name-${variant.variantId}`}
+                                          value={
+                                            getVariantFieldValue(
+                                              variant,
+                                              "variantName"
+                                            ) as string
+                                          }
+                                          onChange={(e) => {
+                                            updateVariantField(
+                                              variant.variantId,
+                                              "variantName",
+                                              e.target.value
+                                            );
+                                          }}
+                                          className="h-8 text-sm"
+                                        />
+                                      </div>
+                                      <div>
+                                        <Label
+                                          htmlFor={`variant-sku-${variant.variantId}`}
+                                          className="text-xs font-medium"
+                                        >
+                                          SKU
+                                        </Label>
+                                        <Input
+                                          id={`variant-sku-${variant.variantId}`}
+                                          value={
+                                            getVariantFieldValue(
+                                              variant,
+                                              "variantSku"
+                                            ) as string
+                                          }
+                                          onChange={(e) => {
+                                            updateVariantField(
+                                              variant.variantId,
+                                              "variantSku",
+                                              e.target.value
+                                            );
+                                          }}
+                                          className="h-8 text-sm font-mono"
+                                        />
+                                      </div>
+                                      <div>
+                                        <Label
+                                          htmlFor={`variant-barcode-${variant.variantId}`}
+                                          className="text-xs font-medium"
+                                        >
+                                          Barcode
+                                        </Label>
+                                        <Input
+                                          id={`variant-barcode-${variant.variantId}`}
+                                          value={
+                                            (getVariantFieldValue(
+                                              variant,
+                                              "variantBarcode"
+                                            ) as string) || ""
+                                          }
+                                          onChange={(e) => {
+                                            updateVariantField(
+                                              variant.variantId,
+                                              "variantBarcode",
+                                              e.target.value
+                                            );
+                                          }}
+                                          className="h-8 text-sm font-mono"
+                                          placeholder="Enter barcode"
+                                        />
+                                      </div>
+                                    </div>
+                                  </div>
+
+                                  {/* Pricing Information */}
+                                  <div className="space-y-4">
+                                    <h5 className="font-semibold text-sm text-muted-foreground uppercase tracking-wide">
+                                      Pricing
+                                    </h5>
+                                    <div className="space-y-3">
+                                      <div>
+                                        <Label
+                                          htmlFor={`variant-price-${variant.variantId}`}
+                                          className="text-xs font-medium"
+                                        >
+                                          Price
+                                        </Label>
+                                        <Input
+                                          id={`variant-price-${variant.variantId}`}
+                                          type="number"
+                                          step="0.01"
+                                          value={
+                                            getVariantFieldValue(
+                                              variant,
+                                              "price"
+                                            ) as number
+                                          }
+                                          onChange={(e) => {
+                                            updateVariantField(
+                                              variant.variantId,
+                                              "price",
+                                              parseFloat(e.target.value) || 0
+                                            );
+                                          }}
+                                          className="h-8 text-sm"
+                                        />
+                                      </div>
+                                      <div>
+                                        <Label
+                                          htmlFor={`variant-sale-price-${variant.variantId}`}
+                                          className="text-xs font-medium"
+                                        >
+                                          Sale Price
+                                        </Label>
+                                        <Input
+                                          id={`variant-sale-price-${variant.variantId}`}
+                                          type="number"
+                                          step="0.01"
+                                          value={
+                                            (getVariantFieldValue(
+                                              variant,
+                                              "salePrice"
+                                            ) as number) || ""
+                                          }
+                                          onChange={(e) => {
+                                            updateVariantField(
+                                              variant.variantId,
+                                              "salePrice",
+                                              parseFloat(e.target.value) || null
+                                            );
+                                          }}
+                                          className="h-8 text-sm"
+                                          placeholder="Enter sale price"
+                                        />
+                                      </div>
+                                      <div>
+                                        <Label
+                                          htmlFor={`variant-cost-price-${variant.variantId}`}
+                                          className="text-xs font-medium"
+                                        >
+                                          Cost Price
+                                        </Label>
+                                        <Input
+                                          id={`variant-cost-price-${variant.variantId}`}
+                                          type="number"
+                                          step="0.01"
+                                          value={
+                                            (getVariantFieldValue(
+                                              variant,
+                                              "costPrice"
+                                            ) as number) || ""
+                                          }
+                                          onChange={(e) => {
+                                            updateVariantField(
+                                              variant.variantId,
+                                              "costPrice",
+                                              parseFloat(e.target.value) || null
+                                            );
+                                          }}
+                                          className="h-8 text-sm"
+                                          placeholder="Enter cost price"
+                                        />
+                                      </div>
+                                    </div>
+                                  </div>
+                                </div>
+
+                                {/* Images and Attributes Section */}
+                                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                                  {/* Variant Images */}
+                                  <div>
+                                    <div className="flex items-center justify-between mb-3">
+                                      <h5 className="font-medium flex items-center gap-2">
+                                        <ImageIcon className="w-4 h-4" />
+                                        Images ({variant.images.length})
+                                      </h5>
                                       <Button
                                         type="button"
                                         variant="outline"
                                         size="sm"
-                                        onClick={addAttributeValue}
-                                        disabled={!currentAttributeValue.trim()}
+                                        onClick={() =>
+                                          handleVariantImageUpload(
+                                            variant.variantId
+                                          )
+                                        }
                                       >
-                                        <Plus className="w-3 h-3" />
+                                        <Plus className="w-4 h-4 mr-2" />
+                                        Add Image
                                       </Button>
                                     </div>
-                                  </div>
-                                  {newAttributeValues.length > 0 && (
-                                    <div className="grid grid-cols-4 items-start gap-4">
-                                      <Label className="text-right pt-2">
-                                        Values
-                                      </Label>
-                                      <div className="col-span-3">
-                                        <div className="flex flex-wrap gap-2">
-                                          {newAttributeValues.map(
-                                            (value, index) => (
-                                              <Badge
-                                                key={index}
+                                    {variant.images.length > 0 ? (
+                                      <div className="grid grid-cols-3 gap-2">
+                                        {variant.images.map((image) => (
+                                          <div
+                                            key={image.imageId}
+                                            className="relative group"
+                                          >
+                                            <img
+                                              src={image.url}
+                                              alt={
+                                                image.altText ||
+                                                variant.variantName
+                                              }
+                                              className="w-full h-20 object-cover rounded-md border"
+                                            />
+                                            {image.isPrimary && (
+                                              <div className="absolute top-1 right-1">
+                                                <Star className="w-3 h-3 text-yellow-500 fill-current" />
+                                              </div>
+                                            )}
+                                            <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity rounded-md flex items-center justify-center gap-1">
+                                              <Button
+                                                type="button"
                                                 variant="secondary"
-                                                className="flex items-center gap-1"
+                                                size="sm"
+                                                className="h-6 px-2 text-xs"
+                                                onClick={() => {
+                                                  handleSetPrimaryImage(
+                                                    variant.variantId,
+                                                    image.imageId
+                                                  );
+                                                }}
                                               >
-                                                {value}
-                                                <X
-                                                  className="w-3 h-3 cursor-pointer hover:text-destructive"
-                                                  onClick={() =>
-                                                    removeAttributeValue(value)
-                                                  }
+                                                <Star className="w-3 h-3 mr-1" />
+                                                Primary
+                                              </Button>
+                                              <Button
+                                                type="button"
+                                                variant="destructive"
+                                                size="sm"
+                                                className="h-6 px-2 text-xs"
+                                                onClick={() => {
+                                                  handleDeleteVariantImage(
+                                                    variant.variantId,
+                                                    image.imageId
+                                                  );
+                                                }}
+                                              >
+                                                <Trash2 className="w-3 h-3" />
+                                              </Button>
+                                            </div>
+                                          </div>
+                                        ))}
+                                      </div>
+                                    ) : (
+                                      <div className="text-center py-8 text-muted-foreground border-2 border-dashed border-border rounded-lg">
+                                        <ImageIcon className="w-8 h-8 mx-auto mb-2 opacity-50" />
+                                        <p className="text-sm">No images</p>
+                                        <p className="text-xs">
+                                          Click "Add Image" to upload
+                                        </p>
+                                      </div>
+                                    )}
+                                  </div>
+
+                                  {/* Variant Attributes */}
+                                  <div>
+                                    <div className="flex items-center justify-between mb-3">
+                                      <h5 className="font-medium flex items-center gap-2">
+                                        <Package className="w-4 h-4" />
+                                        Attributes ({variant.attributes.length})
+                                      </h5>
+                                      <Button
+                                        type="button"
+                                        variant="outline"
+                                        size="sm"
+                                        onClick={() => {
+                                          setSelectedVariantForAttributes(
+                                            variant.variantId
+                                          );
+                                          setIsAttributeModalOpen(true);
+                                        }}
+                                      >
+                                        <Plus className="w-4 h-4 mr-2" />
+                                        Manage
+                                      </Button>
+                                    </div>
+                                    {variant.attributes.length > 0 ? (
+                                      <div className="space-y-2">
+                                        {variant.attributes.map((attr) => (
+                                          <div
+                                            key={attr.attributeValueId}
+                                            className="flex items-center justify-between p-3 bg-muted/30 rounded-md hover:bg-muted/50 transition-colors"
+                                          >
+                                            <div className="flex-1">
+                                              <span className="font-medium text-sm">
+                                                {attr.attributeType}
+                                              </span>
+                                              <span className="text-muted-foreground text-sm ml-2">
+                                                {attr.attributeValue}
+                                              </span>
+                                            </div>
+                                            <Button
+                                              type="button"
+                                              variant="ghost"
+                                              size="sm"
+                                              className="h-6 w-6 p-0 text-destructive hover:bg-destructive/10"
+                                              onClick={() => {
+                                                handleRemoveVariantAttribute(
+                                                  variant.variantId,
+                                                  attr.attributeValueId
+                                                );
+                                              }}
+                                            >
+                                              <Trash2 className="w-3 h-3" />
+                                            </Button>
+                                          </div>
+                                        ))}
+                                      </div>
+                                    ) : (
+                                      <div className="text-center py-8 text-muted-foreground border-2 border-dashed border-border rounded-lg">
+                                        <Package className="w-8 h-8 mx-auto mb-2 opacity-50" />
+                                        <p className="text-sm">No attributes</p>
+                                        <p className="text-xs">
+                                          Click "Manage" to add attributes
+                                        </p>
+                                      </div>
+                                    )}
+                                  </div>
+                                </div>
+
+                                {/* Stock Information */}
+                                <div className="mt-6 space-y-4">
+                                  <h5 className="font-semibold text-sm text-muted-foreground uppercase tracking-wide">
+                                    Stock Information
+                                  </h5>
+                                  <div className="space-y-3">
+                                    {variant.warehouseStocks &&
+                                    variant.warehouseStocks.length > 0 ? (
+                                      <div className="space-y-2">
+                                        {variant.warehouseStocks.map(
+                                          (stock) => (
+                                            <div
+                                              key={stock.warehouseId}
+                                              className="flex items-center justify-between p-3 bg-muted/20 rounded-lg border"
+                                            >
+                                              <div className="flex-1">
+                                                <div className="font-medium text-sm">
+                                                  {stock.warehouseName}
+                                                </div>
+                                                <div className="text-xs text-muted-foreground">
+                                                  {stock.warehouseLocation}
+                                                </div>
+                                              </div>
+                                              <div className="flex items-center gap-3">
+                                                <div className="text-right">
+                                                  <div
+                                                    className={`font-semibold text-sm ${
+                                                      stock.isLowStock
+                                                        ? "text-yellow-600"
+                                                        : "text-green-600"
+                                                    }`}
+                                                  >
+                                                    {stock.stockQuantity} units
+                                                  </div>
+                                                  <div className="text-xs text-muted-foreground">
+                                                    Threshold:{" "}
+                                                    {stock.lowStockThreshold}
+                                                  </div>
+                                                </div>
+                                                <div
+                                                  className={`w-2 h-2 rounded-full ${
+                                                    stock.isLowStock
+                                                      ? "bg-yellow-500"
+                                                      : "bg-green-500"
+                                                  }`}
                                                 />
-                                              </Badge>
-                                            )
-                                          )}
-                                        </div>
-                                      </div>
-                                    </div>
-                                  )}
-                                </div>
-                                <DialogFooter>
-                                  <Button
-                                    type="button"
-                                    variant="outline"
-                                    onClick={() => {
-                                      setNewAttributeType("");
-                                      setNewAttributeValues([]);
-                                      setCurrentAttributeValue("");
-                                      setIsAttributeModalOpen(false);
-                                    }}
-                                  >
-                                    Cancel
-                                  </Button>
-                                  <Button
-                                    type="button"
-                                    onClick={addNewAttributeType}
-                                    disabled={
-                                      !newAttributeType.trim() ||
-                                      newAttributeValues.length === 0
-                                    }
-                                  >
-                                    Create Attribute Type
-                                  </Button>
-                                </DialogFooter>
-                              </DialogContent>
-                            </Dialog>
-                          </div>
-                        </div>
-                        <div className="flex flex-wrap gap-2">
-                          {variant.attributes.map(
-                            (attr: any, attrIndex: number) => (
-                              <Badge
-                                key={attrIndex}
-                                variant="secondary"
-                                className="flex items-center gap-1"
-                              >
-                                {attr.attributeType}: {attr.attributeValue}
-                                <X
-                                  className="w-3 h-3 cursor-pointer hover:text-destructive"
-                                  onClick={() =>
-                                    removeAttributeFromVariant(
-                                      variant.variantId,
-                                      attrIndex
-                                    )
-                                  }
-                                />
-                              </Badge>
-                            )
-                          )}
-                          {variant.attributes.length === 0 && (
-                            <p className="text-sm text-muted-foreground">
-                              No attributes added
-                            </p>
-                          )}
-                        </div>
-                      </div>
-
-                      {/* Variant Images */}
-                      <div>
-                        <div className="flex items-center justify-between mb-2">
-                          <Label className="text-sm font-medium">
-                            Variant Images
-                          </Label>
-                          <div className="flex items-center justify-center">
-                            <label className="flex items-center justify-center px-3 py-1 border border-dashed border-border rounded cursor-pointer hover:bg-muted/50 transition text-xs">
-                              <Upload className="w-3 h-3 mr-1" />
-                              Upload Images
-                              <input
-                                type="file"
-                                multiple
-                                accept="image/*"
-                                onChange={(e) =>
-                                  handleVariantImageUpload(variant.variantId, e)
-                                }
-                                className="hidden"
-                              />
-                            </label>
-                          </div>
-                        </div>
-
-                        {variant.images && variant.images.length > 0 ? (
-                          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2">
-                            {variant.images.map((image: any) => (
-                              <div
-                                key={image.imageId}
-                                className="relative group"
-                              >
-                                <div className="aspect-square w-full h-16 overflow-hidden bg-muted rounded-md border border-border/40">
-                                  <img
-                                    src={image.url}
-                                    alt={image.altText || "Variant image"}
-                                    className="w-full h-full object-contain p-1"
-                                  />
-                                </div>
-                                <div className="absolute -top-1 -right-1">
-                                  <Button
-                                    type="button"
-                                    variant="destructive"
-                                    size="icon"
-                                    className="h-4 w-4 rounded-full opacity-90 hover:opacity-100 shadow-sm"
-                                    onClick={() =>
-                                      removeVariantImage(
-                                        variant.variantId,
-                                        image.imageId
-                                      )
-                                    }
-                                  >
-                                    <X className="w-2 h-2" />
-                                  </Button>
-                                </div>
-                                <div className="absolute top-0 left-0 bg-black/50 text-white text-xs p-1 rounded-br-md">
-                                  {image.file
-                                    ? `${(
-                                        image.file.size /
-                                        1024 /
-                                        1024
-                                      ).toFixed(1)}MB`
-                                    : ""}
-                                </div>
-                              </div>
-                            ))}
-                          </div>
-                        ) : (
-                          <div className="text-center text-muted-foreground py-4 text-sm">
-                            No images uploaded for this variant
-                          </div>
-                        )}
-                      </div>
-
-                      {/* Warehouse Management */}
-                      <div>
-                        <div className="flex items-center justify-between mb-3">
-                          <Label className="text-sm font-medium flex items-center gap-2">
-                            <Warehouse className="w-4 h-4" />
-                            Warehouse Stock Management
-                          </Label>
-                          <div className="flex items-center gap-2">
-                            <div className="text-xs text-muted-foreground">
-                              {
-                                getVariantWarehouseStock(variant.variantId)
-                                  .length
-                              }{" "}
-                              warehouses
-                            </div>
-                            <Button
-                              type="button"
-                              variant="outline"
-                              size="sm"
-                              onClick={() =>
-                                openWarehouseSelector(variant.variantId)
-                              }
-                              className="border-primary/20 hover:bg-primary/5 hover:text-primary"
-                            >
-                              <Plus className="w-4 h-4 mr-2" />
-                              Assign Warehouses
-                            </Button>
-                          </div>
-                        </div>
-
-                        {getVariantWarehouseStock(variant.variantId).length >
-                        0 ? (
-                          <div className="space-y-3">
-                            {getPaginatedWarehouseStock(variant.variantId).map(
-                              (stock: any) => {
-                                const warehouse = getWarehouseById(
-                                  stock.warehouseId
-                                );
-                                const isLowStock =
-                                  stock.stockQuantity <= stock.stockThreshold;
-
-                                return (
-                                  <div
-                                    key={stock.warehouseId}
-                                    className="p-3 border border-border/30 rounded-lg bg-muted/20"
-                                  >
-                                    <div className="flex items-center justify-between mb-2">
-                                      <div className="flex items-center gap-2">
-                                        <Button
-                                          type="button"
-                                          variant="link"
-                                          className="p-0 h-auto text-sm font-medium text-primary hover:text-primary/80"
-                                          onClick={() =>
-                                            navigateToWarehouse(
-                                              stock.warehouseId
-                                            )
-                                          }
-                                        >
-                                          {warehouse?.warehouseName}
-                                          <ExternalLink className="w-3 h-3 ml-1" />
-                                        </Button>
-                                        <Badge
-                                          variant="outline"
-                                          className="text-xs"
-                                        >
-                                          {warehouse?.location}
-                                        </Badge>
-                                      </div>
-                                      <div className="flex items-center gap-2">
-                                        {isLowStock ? (
-                                          <Badge
-                                            variant="destructive"
-                                            className="text-xs"
-                                          >
-                                            <AlertTriangle className="w-3 h-3 mr-1" />
-                                            Low Stock
-                                          </Badge>
-                                        ) : (
-                                          <Badge
-                                            variant="default"
-                                            className="text-xs bg-green-100 text-green-800"
-                                          >
-                                            <CheckCircle className="w-3 h-3 mr-1" />
-                                            In Stock
-                                          </Badge>
+                                              </div>
+                                            </div>
+                                          )
                                         )}
-                                        <Button
-                                          type="button"
-                                          variant="outline"
-                                          size="sm"
-                                          onClick={() =>
-                                            removeWarehouseFromVariant(
-                                              variant.variantId,
-                                              stock.warehouseId
-                                            )
-                                          }
-                                          className="h-6 px-2 text-destructive hover:bg-destructive/10 hover:text-destructive"
-                                        >
-                                          <Trash2 className="w-3 h-3" />
-                                        </Button>
+                                      </div>
+                                    ) : (
+                                      <div className="text-center py-6 text-muted-foreground border-2 border-dashed border-border rounded-lg">
+                                        <Warehouse className="w-8 h-8 mx-auto mb-2 opacity-50" />
+                                        <p className="text-sm">
+                                          No stock assigned to warehouses
+                                        </p>
+                                      </div>
+                                    )}
+                                    <Button
+                                      type="button"
+                                      variant="outline"
+                                      size="sm"
+                                      className="w-full"
+                                      onClick={() => {
+                                        setSelectedVariantForWarehouse(
+                                          variant.variantId
+                                        );
+                                        setIsWarehouseModalOpen(true);
+                                        const currentStocks =
+                                          getVariantWarehouseStocks(
+                                            variant.variantId
+                                          );
+                                        setVariantWarehouseStocks(
+                                          currentStocks
+                                        );
+                                      }}
+                                    >
+                                      <Warehouse className="w-4 h-4 mr-2" />
+                                      Manage Warehouse Stock
+                                    </Button>
+                                  </div>
+                                </div>
+
+                                {/* Additional Info */}
+                                <div className="mt-6 pt-4 border-t">
+                                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
+                                    <div>
+                                      <span className="text-muted-foreground">
+                                        Created:
+                                      </span>
+                                      <div className="font-medium">
+                                        {new Date(
+                                          variant.createdAt
+                                        ).toLocaleDateString()}
                                       </div>
                                     </div>
-
-                                    <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-                                      <div>
-                                        <Label className="text-xs text-muted-foreground">
-                                          Stock Quantity
-                                        </Label>
-                                        <div className="flex items-center gap-2 mt-1">
-                                          <Input
-                                            type="number"
-                                            min="0"
-                                            value={stock.stockQuantity}
-                                            onChange={(e) =>
-                                              updateVariantWarehouseStock(
-                                                variant.variantId,
-                                                stock.warehouseId,
-                                                "stockQuantity",
-                                                parseInt(e.target.value) || 0
-                                              )
-                                            }
-                                            className="h-8 text-sm"
-                                          />
-                                          <span className="text-xs text-muted-foreground">
-                                            units
-                                          </span>
-                                        </div>
-                                      </div>
-
-                                      <div>
-                                        <Label className="text-xs text-muted-foreground">
-                                          Stock Threshold
-                                        </Label>
-                                        <div className="flex items-center gap-2 mt-1">
-                                          <Input
-                                            type="number"
-                                            min="0"
-                                            value={stock.stockThreshold}
-                                            onChange={(e) =>
-                                              updateVariantWarehouseStock(
-                                                variant.variantId,
-                                                stock.warehouseId,
-                                                "stockThreshold",
-                                                parseInt(e.target.value) || 0
-                                              )
-                                            }
-                                            className="h-8 text-sm"
-                                          />
-                                          <span className="text-xs text-muted-foreground">
-                                            units
-                                          </span>
-                                        </div>
-                                      </div>
-
-                                      <div>
-                                        <Label className="text-xs text-muted-foreground">
-                                          Last Updated
-                                        </Label>
-                                        <div className="text-sm text-muted-foreground mt-1">
-                                          {new Date(
-                                            stock.lastUpdated
-                                          ).toLocaleDateString()}
-                                        </div>
+                                    <div>
+                                      <span className="text-muted-foreground">
+                                        Updated:
+                                      </span>
+                                      <div className="font-medium">
+                                        {new Date(
+                                          variant.updatedAt
+                                        ).toLocaleDateString()}
                                       </div>
                                     </div>
-
-                                    <div className="mt-2 text-xs text-muted-foreground">
-                                      Manager: {warehouse?.manager} • Phone:{" "}
-                                      {warehouse?.phone}
+                                    {variant.discount && (
+                                      <div>
+                                        <span className="text-muted-foreground">
+                                          Discount:
+                                        </span>
+                                        <div className="font-medium text-green-600">
+                                          {variant.discount.percentage}% off
+                                        </div>
+                                      </div>
+                                    )}
+                                    <div>
+                                      <span className="text-muted-foreground">
+                                        Status:
+                                      </span>
+                                      <div className="font-medium">
+                                        {variant.isActive
+                                          ? "Active"
+                                          : "Inactive"}
+                                      </div>
                                     </div>
                                   </div>
-                                );
-                              }
-                            )}
-
-                            {/* Pagination */}
-                            {getTotalWarehousePages(variant.variantId) > 1 && (
-                              <div className="flex items-center justify-between pt-2">
-                                <div className="text-xs text-muted-foreground">
-                                  Page {getWarehousePage(variant.variantId) + 1}{" "}
-                                  of {getTotalWarehousePages(variant.variantId)}
                                 </div>
-                                <div className="flex gap-1">
-                                  <Button
-                                    type="button"
-                                    variant="outline"
-                                    size="sm"
-                                    className="h-7 px-2"
-                                    onClick={() =>
-                                      setWarehousePage(
-                                        variant.variantId,
-                                        getWarehousePage(variant.variantId) - 1
-                                      )
-                                    }
-                                    disabled={
-                                      getWarehousePage(variant.variantId) === 0
-                                    }
-                                  >
-                                    Previous
-                                  </Button>
-                                  <Button
-                                    type="button"
-                                    variant="outline"
-                                    size="sm"
-                                    className="h-7 px-2"
-                                    onClick={() =>
-                                      setWarehousePage(
-                                        variant.variantId,
-                                        getWarehousePage(variant.variantId) + 1
-                                      )
-                                    }
-                                    disabled={
-                                      getWarehousePage(variant.variantId) >=
-                                      getTotalWarehousePages(
-                                        variant.variantId
-                                      ) -
-                                        1
-                                    }
-                                  >
-                                    Next
-                                  </Button>
-                                </div>
-                              </div>
-                            )}
-                          </div>
-                        ) : (
-                          <div className="text-center text-muted-foreground py-8 text-sm border border-dashed border-border/30 rounded-lg">
-                            <Warehouse className="w-8 h-8 mx-auto mb-3 opacity-50" />
-                            <p className="mb-2">
-                              No warehouse stock configured for this variant
-                            </p>
-                            <p className="text-xs mb-4">
-                              Assign warehouses to manage stock levels
-                            </p>
-                            <Button
-                              type="button"
-                              variant="outline"
-                              size="sm"
-                              onClick={() =>
-                                openWarehouseSelector(variant.variantId)
-                              }
-                              className="border-primary/20 hover:bg-primary/5 hover:text-primary"
-                            >
-                              <Plus className="w-4 h-4 mr-2" />
-                              Assign Warehouses
-                            </Button>
-                          </div>
-                        )}
-                      </div>
+                              </CardContent>
+                            </div>
+                          </Card>
+                        );
+                      })}
                     </div>
-                  ))}
 
-                  <Button
-                    type="button"
-                    variant="outline"
-                    className="w-full mt-2 border-primary/20 hover:bg-primary/5 hover:text-primary"
-                    onClick={addNewVariant}
-                  >
-                    <Plus className="w-4 h-4 mr-2" />
-                    Add Product Variant
-                  </Button>
-                </div>
+                    {/* Pagination */}
+                    {variantsResponse && variantsResponse.totalPages > 1 && (
+                      <div className="flex items-center justify-between">
+                        <div className="text-sm text-muted-foreground">
+                          Showing {variantsResponse.content.length} of{" "}
+                          {variantsResponse.totalElements} variants
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <Button
+                            type="button"
+                            variant="outline"
+                            size="sm"
+                            disabled={!variantsResponse.hasPrevious}
+                            onClick={() =>
+                              fetchProductVariants(variantsPage - 1)
+                            }
+                          >
+                            Previous
+                          </Button>
+                          <span className="text-sm">
+                            Page {variantsPage + 1} of{" "}
+                            {variantsResponse.totalPages}
+                          </span>
+                          <Button
+                            type="button"
+                            variant="outline"
+                            size="sm"
+                            disabled={!variantsResponse.hasNext}
+                            onClick={() =>
+                              fetchProductVariants(variantsPage + 1)
+                            }
+                          >
+                            Next
+                          </Button>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                )}
               </CardContent>
             </Card>
-
-            {/* Variants Save Button */}
-            <div className="flex justify-end">
-              <Button
-                type="button"
-                onClick={() => {
-                  // Save variants changes
-                  initialFormData.current = {
-                    ...initialFormData.current,
-                    variants: [...variants],
-                    variantWarehouseStock: { ...variantWarehouseStock },
-                  };
-                  setHasUnsavedChanges(false);
-                  toast({
-                    title: "Variants Saved",
-                    description:
-                      "Product variants have been saved successfully",
-                  });
-                }}
-                disabled={!hasUnsavedChanges}
-                className="bg-primary hover:bg-primary/90"
-              >
-                <Save className="mr-2 h-4 w-4" />
-                Save Variants
-              </Button>
-            </div>
           </TabsContent>
 
           {/* Inventory Tab */}
@@ -2796,26 +3474,19 @@ export default function ProductUpdate({ params }: ProductUpdateProps) {
                     <h3 className="text-lg font-semibold mb-2">
                       Variants-Based Inventory
                     </h3>
-                    <p className="text-muted-foreground mb-4 max-w-md mx-auto">
-                      This product has {variants.length} variant
-                      {variants.length !== 1 ? "s" : ""}. Stock quantities and
-                      warehouse assignments are managed individually for each
-                      variant.
+                    <p className="text-muted-foreground mb-6">
+                      Since this product has variants, inventory management is
+                      handled at the variant level. Each variant can have
+                      different stock levels across different warehouses.
                     </p>
-                    <div className="space-y-2 mb-6">
-                      <div className="flex items-center justify-center gap-2 text-sm text-muted-foreground">
-                        <CheckCircle className="w-4 h-4 text-green-500" />
-                        <span>
-                          Each variant can have different stock levels
-                        </span>
-                      </div>
-                      <div className="flex items-center justify-center gap-2 text-sm text-muted-foreground">
-                        <CheckCircle className="w-4 h-4 text-green-500" />
-                        <span>Warehouse assignments are per variant</span>
-                      </div>
-                      <div className="flex items-center justify-center gap-2 text-sm text-muted-foreground">
-                        <CheckCircle className="w-4 h-4 text-green-500" />
-                        <span>Individual stock thresholds and alerts</span>
+                    <div className="flex items-center justify-center gap-4">
+                      <div className="text-center">
+                        <div className="text-2xl font-bold text-primary">
+                          {variants.length}
+                        </div>
+                        <div className="text-sm text-muted-foreground">
+                          Active Variants
+                        </div>
                       </div>
                     </div>
                     <Button
@@ -2847,222 +3518,326 @@ export default function ProductUpdate({ params }: ProductUpdateProps) {
                     Direct Inventory Management
                   </CardTitle>
                   <CardDescription>
-                    Manage stock levels and warehouse assignments for this
-                    product directly.
+                    Manage stock levels across different warehouses for this
+                    product.
                   </CardDescription>
                 </CardHeader>
                 <CardContent className="pt-6">
                   <div className="space-y-4">
-                    {/* Product-level stock summary */}
-                    <div className="p-4 border border-border/30 rounded-md bg-muted/20">
-                      <h4 className="font-medium mb-2">
-                        Product Stock Summary
-                      </h4>
-                      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                        <div className="text-center">
-                          <div className="text-2xl font-bold text-primary">
-                            0
-                          </div>
-                          <div className="text-sm text-muted-foreground">
-                            Total Stock
-                          </div>
-                        </div>
-                        <div className="text-center">
-                          <div className="text-2xl font-bold text-green-600">
-                            0
-                          </div>
-                          <div className="text-sm text-muted-foreground">
-                            Available
-                          </div>
-                        </div>
-                        <div className="text-center">
-                          <div className="text-2xl font-bold text-orange-600">
-                            0
-                          </div>
-                          <div className="text-sm text-muted-foreground">
-                            Low Stock Alerts
-                          </div>
+                    <div className="text-center py-8">
+                      <div className="flex items-center justify-center mb-4">
+                        <div className="p-4 rounded-full bg-muted/20">
+                          <Package className="w-8 h-8 text-muted-foreground" />
                         </div>
                       </div>
-                    </div>
-
-                    {/* Warehouse assignments */}
-                    <div>
-                      <div className="flex items-center justify-between mb-4">
-                        <h4 className="font-medium">Warehouse Assignments</h4>
-                        <Button
-                          type="button"
-                          variant="outline"
-                          size="sm"
-                          className="border-primary/20 hover:bg-primary/5 hover:text-primary"
-                        >
-                          <Plus className="w-4 h-4 mr-2" />
-                          Assign Warehouse
-                        </Button>
-                      </div>
-
-                      <div className="text-center py-8 text-muted-foreground border border-dashed border-border/30 rounded-lg">
-                        <Warehouse className="w-8 h-8 mx-auto mb-3 opacity-50" />
-                        <p className="mb-2">
-                          No warehouses assigned to this product
-                        </p>
-                        <p className="text-xs mb-4">
-                          Assign warehouses to manage stock levels
-                        </p>
-                        <Button
-                          type="button"
-                          variant="outline"
-                          size="sm"
-                          className="border-primary/20 hover:bg-primary/5 hover:text-primary"
-                        >
-                          <Plus className="w-4 h-4 mr-2" />
-                          Assign First Warehouse
-                        </Button>
-                      </div>
-                    </div>
-
-                    {/* Quick actions */}
-                    <div className="p-4 border border-border/30 rounded-md">
-                      <h4 className="font-medium mb-3">Quick Actions</h4>
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                        <Button
-                          type="button"
-                          variant="outline"
-                          className="justify-start"
-                        >
-                          <Package className="w-4 h-4 mr-2" />
-                          Bulk Stock Update
-                        </Button>
-                        <Button
-                          type="button"
-                          variant="outline"
-                          className="justify-start"
-                        >
-                          <AlertTriangle className="w-4 h-4 mr-2" />
-                          Set Stock Alerts
-                        </Button>
-                      </div>
+                      <h3 className="text-lg font-semibold mb-2">
+                        No Inventory Data
+                      </h3>
+                      <p className="text-muted-foreground mb-6">
+                        This product doesn't have any inventory data yet. Add
+                        stock levels for different warehouses to get started.
+                      </p>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        className="border-primary/20 hover:bg-primary/5 hover:text-primary"
+                      >
+                        <Plus className="w-4 h-4 mr-2" />
+                        Add Inventory
+                      </Button>
                     </div>
                   </div>
                 </CardContent>
               </Card>
             )}
-
-            {/* Inventory Save Button */}
-            <div className="flex justify-end">
-              <Button
-                type="button"
-                onClick={() => {
-                  // Save inventory changes
-                  const currentFormData = form.getValues();
-                  initialFormData.current = {
-                    ...initialFormData.current,
-                    formData: currentFormData,
-                  };
-                  setHasUnsavedChanges(false);
-                  toast({
-                    title: "Inventory Saved",
-                    description:
-                      "Inventory information has been saved successfully",
-                  });
-                }}
-                disabled={!hasUnsavedChanges}
-                className="bg-primary hover:bg-primary/90"
-              >
-                <Save className="mr-2 h-4 w-4" />
-                Save Inventory
-              </Button>
-            </div>
           </TabsContent>
 
-          {/* SEO Tab */}
-          <TabsContent value="seo" className="space-y-6">
+          {/* Product Details Tab */}
+          <TabsContent value="details" className="space-y-6">
             <Card className="border-border/40 shadow-sm">
               <CardHeader className="bg-primary/5">
                 <CardTitle className="flex items-center gap-2">
-                  <Globe className="h-5 w-5" />
-                  SEO & Meta Information
+                  <Settings className="h-5 w-5" />
+                  Product Details & SEO
                 </CardTitle>
                 <CardDescription>
-                  Optimize your product for search engines
+                  Configure detailed product information, SEO settings, and
+                  policies
                 </CardDescription>
               </CardHeader>
-              <CardContent className="pt-6 grid gap-6">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  <div className="col-span-full">
-                    <Label htmlFor="metaTitle">Meta Title</Label>
-                    <Input
-                      id="metaTitle"
-                      placeholder="SEO title for search engines"
-                      {...form.register("metaTitle")}
-                      className="border-primary/20 focus-visible:ring-primary mt-2"
-                    />
+              <CardContent className="pt-6">
+                <div className="space-y-8">
+                  {/* SEO Section */}
+                  <div className="space-y-6">
+                    <div className="flex items-center gap-2">
+                      <Globe className="h-5 w-5 text-primary" />
+                      <h3 className="text-lg font-semibold">
+                        SEO & Meta Information
+                      </h3>
+                    </div>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                      <div>
+                        <Label htmlFor="metaTitle">Meta Title</Label>
+                        <Input
+                          id="metaTitle"
+                          placeholder="Enter meta title"
+                          value={productDetails.metaTitle || ""}
+                          onChange={(e) =>
+                            setProductDetails((prev) => ({
+                              ...prev,
+                              metaTitle: e.target.value,
+                            }))
+                          }
+                          className="border-primary/20 focus-visible:ring-primary mt-2"
+                        />
+                      </div>
+                      <div>
+                        <Label htmlFor="metaDescription">
+                          Meta Description
+                        </Label>
+                        <Textarea
+                          id="metaDescription"
+                          placeholder="Enter meta description"
+                          value={productDetails.metaDescription || ""}
+                          onChange={(e) =>
+                            setProductDetails((prev) => ({
+                              ...prev,
+                              metaDescription: e.target.value,
+                            }))
+                          }
+                          className="border-primary/20 focus-visible:ring-primary mt-2"
+                          rows={3}
+                        />
+                      </div>
+                    </div>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                      <div>
+                        <Label htmlFor="metaKeywords">Meta Keywords</Label>
+                        <Input
+                          id="metaKeywords"
+                          placeholder="Enter meta keywords (comma-separated)"
+                          value={productDetails.metaKeywords || ""}
+                          onChange={(e) =>
+                            setProductDetails((prev) => ({
+                              ...prev,
+                              metaKeywords: e.target.value,
+                            }))
+                          }
+                          className="border-primary/20 focus-visible:ring-primary mt-2"
+                        />
+                      </div>
+                      <div>
+                        <Label htmlFor="searchKeywords">Search Keywords</Label>
+                        <Input
+                          id="searchKeywords"
+                          placeholder="Enter search keywords (comma-separated)"
+                          value={productDetails.searchKeywords || ""}
+                          onChange={(e) =>
+                            setProductDetails((prev) => ({
+                              ...prev,
+                              searchKeywords: e.target.value,
+                            }))
+                          }
+                          className="border-primary/20 focus-visible:ring-primary mt-2"
+                        />
+                      </div>
+                    </div>
                   </div>
 
-                  <div className="col-span-full">
-                    <Label htmlFor="metaDescription">Meta Description</Label>
-                    <Textarea
-                      id="metaDescription"
-                      placeholder="SEO description for search engines"
-                      {...form.register("metaDescription")}
-                      className="min-h-[80px] border-primary/20 focus-visible:ring-primary mt-2"
-                      rows={3}
-                    />
+                  {/* Product Information Section */}
+                  <div className="space-y-6">
+                    <div className="flex items-center gap-2">
+                      <Package className="h-5 w-5 text-primary" />
+                      <h3 className="text-lg font-semibold">
+                        Product Information
+                      </h3>
+                    </div>
+                    <div>
+                      <Label htmlFor="description">Product Description</Label>
+                      <Textarea
+                        id="description"
+                        placeholder="Enter detailed product description"
+                        value={productDetails.description || ""}
+                        onChange={(e) =>
+                          setProductDetails((prev) => ({
+                            ...prev,
+                            description: e.target.value,
+                          }))
+                        }
+                        className="border-primary/20 focus-visible:ring-primary mt-2"
+                        rows={4}
+                      />
+                    </div>
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                      <div>
+                        <Label htmlFor="dimensionsCm">Dimensions (cm)</Label>
+                        <Input
+                          id="dimensionsCm"
+                          placeholder="e.g., 10 x 15 x 5"
+                          value={productDetails.dimensionsCm || ""}
+                          onChange={(e) =>
+                            setProductDetails((prev) => ({
+                              ...prev,
+                              dimensionsCm: e.target.value,
+                            }))
+                          }
+                          className="border-primary/20 focus-visible:ring-primary mt-2"
+                        />
+                      </div>
+                      <div>
+                        <Label htmlFor="weightKg">Weight (kg)</Label>
+                        <Input
+                          id="weightKg"
+                          type="number"
+                          step="0.001"
+                          placeholder="0.000"
+                          value={productDetails.weightKg || ""}
+                          onChange={(e) =>
+                            setProductDetails((prev) => ({
+                              ...prev,
+                              weightKg: parseFloat(e.target.value) || 0,
+                            }))
+                          }
+                          className="border-primary/20 focus-visible:ring-primary mt-2"
+                        />
+                      </div>
+                      <div>
+                        <Label htmlFor="material">Material</Label>
+                        <Input
+                          id="material"
+                          placeholder="e.g., Cotton, Plastic, Metal"
+                          value={productDetails.material || ""}
+                          onChange={(e) =>
+                            setProductDetails((prev) => ({
+                              ...prev,
+                              material: e.target.value,
+                            }))
+                          }
+                          className="border-primary/20 focus-visible:ring-primary mt-2"
+                        />
+                      </div>
+                    </div>
                   </div>
 
-                  <div className="col-span-full">
-                    <Label htmlFor="metaKeywords">Meta Keywords</Label>
-                    <Input
-                      id="metaKeywords"
-                      placeholder="Keywords separated by commas"
-                      {...form.register("metaKeywords")}
-                      className="border-primary/20 focus-visible:ring-primary mt-2"
-                    />
+                  {/* Policies Section */}
+                  <div className="space-y-6">
+                    <div className="flex items-center gap-2">
+                      <Tag className="h-5 w-5 text-primary" />
+                      <h3 className="text-lg font-semibold">
+                        Policies & Information
+                      </h3>
+                    </div>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                      <div>
+                        <Label htmlFor="careInstructions">
+                          Care Instructions
+                        </Label>
+                        <Textarea
+                          id="careInstructions"
+                          placeholder="Enter care instructions"
+                          value={productDetails.careInstructions || ""}
+                          onChange={(e) =>
+                            setProductDetails((prev) => ({
+                              ...prev,
+                              careInstructions: e.target.value,
+                            }))
+                          }
+                          className="border-primary/20 focus-visible:ring-primary mt-2"
+                          rows={3}
+                        />
+                      </div>
+                      <div>
+                        <Label htmlFor="warrantyInfo">
+                          Warranty Information
+                        </Label>
+                        <Textarea
+                          id="warrantyInfo"
+                          placeholder="Enter warranty information"
+                          value={productDetails.warrantyInfo || ""}
+                          onChange={(e) =>
+                            setProductDetails((prev) => ({
+                              ...prev,
+                              warrantyInfo: e.target.value,
+                            }))
+                          }
+                          className="border-primary/20 focus-visible:ring-primary mt-2"
+                          rows={3}
+                        />
+                      </div>
+                    </div>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                      <div>
+                        <Label htmlFor="shippingInfo">
+                          Shipping Information
+                        </Label>
+                        <Textarea
+                          id="shippingInfo"
+                          placeholder="Enter shipping information"
+                          value={productDetails.shippingInfo || ""}
+                          onChange={(e) =>
+                            setProductDetails((prev) => ({
+                              ...prev,
+                              shippingInfo: e.target.value,
+                            }))
+                          }
+                          className="border-primary/20 focus-visible:ring-primary mt-2"
+                          rows={3}
+                        />
+                      </div>
+                      <div>
+                        <Label htmlFor="returnPolicy">Return Policy</Label>
+                        <Textarea
+                          id="returnPolicy"
+                          placeholder="Enter return policy"
+                          value={productDetails.returnPolicy || ""}
+                          onChange={(e) =>
+                            setProductDetails((prev) => ({
+                              ...prev,
+                              returnPolicy: e.target.value,
+                            }))
+                          }
+                          className="border-primary/20 focus-visible:ring-primary mt-2"
+                          rows={3}
+                        />
+                      </div>
+                    </div>
+                    <div>
+                      <Label htmlFor="maximumDaysForReturn">
+                        Maximum Days for Return
+                      </Label>
+                      <Input
+                        id="maximumDaysForReturn"
+                        type="number"
+                        placeholder="30"
+                        value={productDetails.maximumDaysForReturn || ""}
+                        onChange={(e) =>
+                          setProductDetails((prev) => ({
+                            ...prev,
+                            maximumDaysForReturn: parseInt(e.target.value) || 0,
+                          }))
+                        }
+                        className="border-primary/20 focus-visible:ring-primary mt-2"
+                      />
+                      <p className="text-sm text-muted-foreground mt-1">
+                        Number of days after delivery when the product can be
+                        returned
+                      </p>
+                    </div>
                   </div>
-
-                  <div className="col-span-full">
-                    <Label htmlFor="searchKeywords">Search Keywords</Label>
-                    <Textarea
-                      id="searchKeywords"
-                      placeholder="Enter search keywords that customers might use to find this product. Separate multiple keywords with commas or new lines."
-                      {...form.register("searchKeywords")}
-                      className="min-h-[100px] border-primary/20 focus-visible:ring-primary mt-2"
-                      rows={4}
-                    />
-                    <p className="text-xs text-muted-foreground mt-1">
-                      These keywords help customers find your product through
-                      search. Include synonyms, alternative names, and related
-                      terms.
-                    </p>
-                  </div>
+                </div>
+                <div className="flex justify-end mt-8">
+                  <Button
+                    type="button"
+                    onClick={handleSaveProductDetails}
+                    disabled={!hasProductDetailsChanges || isSubmitting}
+                    className="bg-primary hover:bg-primary/90"
+                  >
+                    <Save className="mr-2 h-4 w-4" />
+                    Save Product Details
+                  </Button>
                 </div>
               </CardContent>
             </Card>
-
-            {/* SEO Save Button */}
-            <div className="flex justify-end">
-              <Button
-                type="button"
-                onClick={() => {
-                  // Save SEO changes
-                  const currentFormData = form.getValues();
-                  initialFormData.current = {
-                    ...initialFormData.current,
-                    formData: currentFormData,
-                  };
-                  setHasUnsavedChanges(false);
-                  toast({
-                    title: "SEO Saved",
-                    description: "SEO information has been saved successfully",
-                  });
-                }}
-                disabled={!hasUnsavedChanges}
-                className="bg-primary hover:bg-primary/90"
-              >
-                <Save className="mr-2 h-4 w-4" />
-                Save SEO
-              </Button>
-            </div>
           </TabsContent>
         </Tabs>
 
@@ -3070,40 +3845,443 @@ export default function ProductUpdate({ params }: ProductUpdateProps) {
       </form>
 
       {/* Warehouse Selector Modal */}
-      {isWarehouseSelectorOpen && selectedVariantForWarehouse !== null && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-          <div className="bg-background rounded-lg shadow-lg max-w-4xl w-full max-h-[90vh] overflow-y-auto">
-            <div className="p-6">
-              <div className="flex items-center justify-between mb-4">
-                <h2 className="text-lg font-semibold">
-                  Assign Warehouses to Variant
-                </h2>
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => {
-                    setIsWarehouseSelectorOpen(false);
-                    setSelectedVariantForWarehouse(null);
-                  }}
+      {isWarehouseSelectorOpen && selectedVariantForWarehouse && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+          <div className="bg-background p-6 rounded-lg max-w-md w-full mx-4">
+            <h3 className="text-lg font-semibold mb-4">Assign Warehouses</h3>
+            <p className="text-muted-foreground mb-4">
+              Select warehouses for variant:{" "}
+              {productVariants.find(
+                (v) => v.variantId === selectedVariantForWarehouse
+              )?.variantName || "Unknown"}
+            </p>
+            <div className="space-y-2 max-h-60 overflow-y-auto">
+              {warehouses.map((warehouse: any) => (
+                <div
+                  key={warehouse.warehouseId}
+                  className="flex items-center space-x-2"
                 >
-                  <X className="w-4 h-4" />
-                </Button>
-              </div>
-              <WarehouseSelector
-                warehouseStocks={getVariantWarehouseStocks(
-                  selectedVariantForWarehouse
-                )}
-                onWarehouseStocksChange={handleWarehouseAssignment}
-                title="Warehouse Stock Assignment"
-                description={`Assign stock quantities to warehouses for variant ${selectedVariantForWarehouse}`}
-              />
+                  <input
+                    type="checkbox"
+                    id={`warehouse-${warehouse.warehouseId}`}
+                    checked={getVariantWarehouseStocks(
+                      selectedVariantForWarehouse
+                    ).some(
+                      (stock: any) =>
+                        stock.warehouseId === warehouse.warehouseId
+                    )}
+                    onChange={(e) => {
+                      const warehouseIds = e.target.checked
+                        ? [
+                            ...getVariantWarehouseStocks(
+                              selectedVariantForWarehouse
+                            ).map((s: any) => s.warehouseId),
+                            warehouse.warehouseId,
+                          ]
+                        : getVariantWarehouseStocks(selectedVariantForWarehouse)
+                            .map((s: any) => s.warehouseId)
+                            .filter((id: any) => id !== warehouse.warehouseId);
+
+                      // Convert warehouse IDs to WarehouseStock format
+                      const warehouseStocks: WarehouseStock[] =
+                        warehouseIds.map((id: any) => ({
+                          warehouseId: parseInt(id.replace("wh-", "")),
+                          stockQuantity: 0,
+                          lowStockThreshold: 10,
+                          warehouseName:
+                            warehouses.find((w: any) => w.warehouseId === id)
+                              ?.name || "Unknown",
+                        }));
+
+                      handleWarehouseAssignment(warehouseStocks);
+                    }}
+                  />
+                  <label
+                    htmlFor={`warehouse-${warehouse.warehouseId}`}
+                    className="text-sm"
+                  >
+                    {warehouse.name}
+                  </label>
+                </div>
+              ))}
+            </div>
+            <div className="flex justify-end gap-2 mt-6">
+              <Button
+                variant="outline"
+                onClick={() => {
+                  setIsWarehouseSelectorOpen(false);
+                  setSelectedVariantForWarehouse(null);
+                }}
+              >
+                Cancel
+              </Button>
+              <Button
+                onClick={() => {
+                  setIsWarehouseSelectorOpen(false);
+                  setSelectedVariantForWarehouse(null);
+                }}
+              >
+                Done
+              </Button>
             </div>
           </div>
         </div>
       )}
 
-      {/* Unsaved Changes Confirmation Modal */}
+      {/* Image Upload Modal */}
+      <Dialog
+        open={isImageUploadModalOpen}
+        onOpenChange={setIsImageUploadModalOpen}
+      >
+        <DialogContent className="max-w-2xl">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <ImageIcon className="w-5 h-5" />
+              Upload Images
+            </DialogTitle>
+            <DialogDescription>
+              {selectedVariantForImageUpload && (
+                <>
+                  Upload images for variant:{" "}
+                  <span className="font-semibold">
+                    {productVariants.find(
+                      (v) => v.variantId === selectedVariantForImageUpload
+                    )?.variantName || "Unknown"}
+                  </span>
+                </>
+              )}
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-4">
+            {/* File Upload Area */}
+            <div className="border-2 border-dashed border-border rounded-lg p-6 text-center">
+              <ImageIcon className="w-12 h-12 mx-auto mb-4 text-muted-foreground" />
+              <h4 className="font-medium mb-2">Select Images</h4>
+              <p className="text-sm text-muted-foreground mb-4">
+                Choose multiple images to upload for this variant
+              </p>
+              <input
+                type="file"
+                multiple
+                accept="image/*"
+                onChange={handleFileSelect}
+                className="hidden"
+                id="image-upload"
+              />
+              <label
+                htmlFor="image-upload"
+                className="inline-flex items-center px-4 py-2 border border-border rounded-md shadow-sm text-sm font-medium text-foreground bg-background hover:bg-muted cursor-pointer"
+              >
+                <Plus className="w-4 h-4 mr-2" />
+                Choose Files
+              </label>
+            </div>
+
+            {/* Selected Files Preview */}
+            {imageFiles.length > 0 && (
+              <div className="border rounded-lg p-4">
+                <h4 className="font-medium mb-3">
+                  Selected Files ({imageFiles.length})
+                </h4>
+                <div className="grid grid-cols-3 gap-2">
+                  {imageFiles.map((file, index) => (
+                    <div key={index} className="relative">
+                      <img
+                        src={URL.createObjectURL(file)}
+                        alt={file.name}
+                        className="w-full h-20 object-cover rounded-md border"
+                      />
+                      <div className="absolute top-1 right-1">
+                        <Button
+                          type="button"
+                          variant="destructive"
+                          size="sm"
+                          className="h-5 w-5 p-0"
+                          onClick={() => {
+                            setImageFiles((prev) =>
+                              prev.filter((_, i) => i !== index)
+                            );
+                          }}
+                        >
+                          <X className="w-3 h-3" />
+                        </Button>
+                      </div>
+                      <div className="absolute bottom-0 left-0 right-0 bg-black/50 text-white text-xs p-1 rounded-b-md">
+                        {file.name}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => {
+                setIsImageUploadModalOpen(false);
+                setSelectedVariantForImageUpload(null);
+                setImageFiles([]);
+              }}
+            >
+              Cancel
+            </Button>
+            <Button
+              onClick={uploadImages}
+              disabled={imageFiles.length === 0 || isImageUploading}
+            >
+              {isImageUploading ? (
+                <>
+                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                  Uploading...
+                </>
+              ) : (
+                <>
+                  Upload {imageFiles.length} Image
+                  {imageFiles.length !== 1 ? "s" : ""}
+                </>
+              )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Attribute Management Modal */}
+      <Dialog
+        open={isAttributeModalOpen}
+        onOpenChange={setIsAttributeModalOpen}
+      >
+        <DialogContent className="max-w-2xl">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Package className="w-5 h-5" />
+              Manage Variant Attributes
+            </DialogTitle>
+            <DialogDescription>
+              {selectedVariantForAttributes && (
+                <>
+                  Manage attributes for variant:{" "}
+                  <span className="font-semibold">
+                    {productVariants.find(
+                      (v) => v.variantId === selectedVariantForAttributes
+                    )?.variantName || "Unknown"}
+                  </span>
+                </>
+              )}
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-4">
+            {/* Fetch from Backend */}
+            <div className="border rounded-lg p-4">
+              <h4 className="font-medium mb-3">Available Attributes</h4>
+              <p className="text-sm text-muted-foreground mb-3">
+                Select from existing attribute types and values
+              </p>
+              <FetchAttributesDialog
+                onAttributesSelected={async (attributes) => {
+                  if (!selectedVariantForAttributes) return;
+
+                  const attributeRequests = attributes.flatMap((attr) =>
+                    attr.values.map((value) => ({
+                      attributeTypeName: attr.name,
+                      attributeValue: value,
+                    }))
+                  );
+
+                  await handleAddVariantAttributes(
+                    selectedVariantForAttributes,
+                    attributeRequests
+                  );
+                }}
+              />
+            </div>
+
+            {/* Add New Attribute */}
+            <div className="border rounded-lg p-4">
+              <h4 className="font-medium mb-3">Add New Attribute</h4>
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <Label htmlFor="attribute-type">Attribute Type</Label>
+                  <Input
+                    id="attribute-type"
+                    placeholder="e.g., Color, Size, Material"
+                    className="h-8"
+                    value={attributeTypeName}
+                    onChange={(e) => setAttributeTypeName(e.target.value)}
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="attribute-value">Attribute Value</Label>
+                  <Input
+                    id="attribute-value"
+                    placeholder="e.g., Red, Large, Cotton"
+                    className="h-8"
+                    value={attributeValue}
+                    onChange={(e) => setAttributeValue(e.target.value)}
+                  />
+                </div>
+              </div>
+              <Button
+                type="button"
+                className="mt-3"
+                onClick={async () => {
+                  if (!attributeTypeName.trim() || !attributeValue.trim()) {
+                    toast({
+                      title: "Missing Fields",
+                      description:
+                        "Please fill in both attribute type and value",
+                      variant: "destructive",
+                    });
+                    return;
+                  }
+
+                  if (!selectedVariantForAttributes) return;
+
+                  await handleAddVariantAttributes(
+                    selectedVariantForAttributes,
+                    [
+                      {
+                        attributeTypeName: attributeTypeName.trim(),
+                        attributeValue: attributeValue.trim(),
+                      },
+                    ]
+                  );
+
+                  setAttributeTypeName("");
+                  setAttributeValue("");
+                }}
+              >
+                <Plus className="w-4 h-4 mr-2" />
+                Add Attribute
+              </Button>
+            </div>
+
+            {/* Current Attributes */}
+            <div className="border rounded-lg p-4">
+              <h4 className="font-medium mb-3">Current Attributes</h4>
+              {selectedVariantForAttributes && (
+                <div className="space-y-2">
+                  {productVariants
+                    .find((v) => v.variantId === selectedVariantForAttributes)
+                    ?.attributes.map((attr) => (
+                      <div
+                        key={attr.attributeValueId}
+                        className="flex items-center justify-between p-3 bg-muted/30 rounded-md"
+                      >
+                        <div className="flex-1">
+                          <span className="font-medium text-sm">
+                            {attr.attributeType}
+                          </span>
+                          <span className="text-muted-foreground text-sm ml-2">
+                            {attr.attributeValue}
+                          </span>
+                        </div>
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="sm"
+                          className="h-6 w-6 p-0 text-destructive hover:bg-destructive/10"
+                          onClick={() => {
+                            handleRemoveVariantAttribute(
+                              selectedVariantForAttributes!,
+                              attr.attributeValueId
+                            );
+                          }}
+                        >
+                          <Trash2 className="w-3 h-3" />
+                        </Button>
+                      </div>
+                    ))}
+                </div>
+              )}
+            </div>
+          </div>
+
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => {
+                setIsAttributeModalOpen(false);
+                setSelectedVariantForAttributes(null);
+              }}
+            >
+              Close
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Warehouse Stock Management Modal */}
+      <Dialog
+        open={isWarehouseModalOpen}
+        onOpenChange={setIsWarehouseModalOpen}
+      >
+        <DialogContent className="max-w-4xl max-h-[90vh] overflow-hidden">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Warehouse className="w-5 h-5" />
+              Manage Warehouse Stock
+            </DialogTitle>
+            <DialogDescription>
+              {selectedVariantForWarehouse && (
+                <>
+                  Manage stock for variant:{" "}
+                  <span className="font-semibold">
+                    {productVariants.find(
+                      (v) => v.variantId === selectedVariantForWarehouse
+                    )?.variantName || "Unknown"}
+                  </span>
+                </>
+              )}
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="overflow-y-auto max-h-[60vh]">
+            <WarehouseSelector
+              warehouseStocks={variantWarehouseStocks}
+              onWarehouseStocksChange={(stocks) => {
+                setVariantWarehouseStocks(stocks);
+                // TODO: Update variant warehouse stocks in backend
+                console.log("Updated warehouse stocks:", stocks);
+              }}
+              title="Warehouse Stock Assignment"
+              description="Assign stock quantities to warehouses for this variant"
+            />
+          </div>
+
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => {
+                setIsWarehouseModalOpen(false);
+                setSelectedVariantForWarehouse(null);
+                setVariantWarehouseStocks([]);
+              }}
+            >
+              Cancel
+            </Button>
+            <Button
+              onClick={() => {
+                // TODO: Save warehouse stock changes
+                console.log(
+                  "Saving warehouse stocks for variant:",
+                  selectedVariantForWarehouse
+                );
+                setIsWarehouseModalOpen(false);
+                setSelectedVariantForWarehouse(null);
+                setVariantWarehouseStocks([]);
+              }}
+            >
+              Save Changes
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Unsaved Changes Modal */}
       <AlertDialog
         open={isUnsavedChangesModalOpen}
         onOpenChange={setIsUnsavedChangesModalOpen}
@@ -3112,19 +4290,465 @@ export default function ProductUpdate({ params }: ProductUpdateProps) {
           <AlertDialogHeader>
             <AlertDialogTitle>Unsaved Changes</AlertDialogTitle>
             <AlertDialogDescription>
-              You have unsaved changes that will be lost if you continue. What
-              would you like to do?
+              You have unsaved changes. What would you like to do?
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel onClick={handleCancelAction}>
               Cancel
             </AlertDialogCancel>
-            <Button variant="outline" onClick={handleDiscardChanges}>
+            <AlertDialogAction
+              onClick={handleDiscardChanges}
+              className="bg-destructive hover:bg-destructive/90"
+            >
               Discard Changes
-            </Button>
+            </AlertDialogAction>
             <AlertDialogAction onClick={handleSaveChanges}>
               Save Changes
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Add New Variant Dialog */}
+      <Dialog
+        open={isAddVariantDialogOpen}
+        onOpenChange={setIsAddVariantDialogOpen}
+      >
+        <DialogContent className="max-w-4xl max-h-[90vh] overflow-hidden">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Plus className="w-5 h-5" />
+              Create New Variant
+            </DialogTitle>
+            <DialogDescription>
+              Add a new variant to this product with all necessary information
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="overflow-y-auto max-h-[70vh] pr-2">
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              {/* Basic Information */}
+              <div className="space-y-4">
+                <h4 className="font-semibold text-sm text-muted-foreground uppercase tracking-wide">
+                  Basic Information
+                </h4>
+                <div className="space-y-3">
+                  <div>
+                    <Label
+                      htmlFor="variant-name"
+                      className="text-sm font-medium"
+                    >
+                      Variant Name *
+                    </Label>
+                    <Input
+                      id="variant-name"
+                      value={newVariant.variantName}
+                      onChange={(e) =>
+                        setNewVariant((prev) => ({
+                          ...prev,
+                          variantName: e.target.value,
+                        }))
+                      }
+                      placeholder="Enter variant name"
+                      required
+                    />
+                  </div>
+                  <div>
+                    <Label
+                      htmlFor="variant-sku"
+                      className="text-sm font-medium"
+                    >
+                      SKU *
+                    </Label>
+                    <Input
+                      id="variant-sku"
+                      value={newVariant.variantSku}
+                      onChange={(e) =>
+                        setNewVariant((prev) => ({
+                          ...prev,
+                          variantSku: e.target.value,
+                        }))
+                      }
+                      placeholder="Enter SKU"
+                      className="font-mono"
+                      required
+                    />
+                  </div>
+                  <div>
+                    <Label
+                      htmlFor="variant-barcode"
+                      className="text-sm font-medium"
+                    >
+                      Barcode
+                    </Label>
+                    <Input
+                      id="variant-barcode"
+                      value={newVariant.variantBarcode}
+                      onChange={(e) =>
+                        setNewVariant((prev) => ({
+                          ...prev,
+                          variantBarcode: e.target.value,
+                        }))
+                      }
+                      placeholder="Enter barcode"
+                      className="font-mono"
+                    />
+                  </div>
+                  <div>
+                    <Label htmlFor="sort-order" className="text-sm font-medium">
+                      Sort Order
+                    </Label>
+                    <Input
+                      id="sort-order"
+                      type="number"
+                      value={newVariant.sortOrder}
+                      onChange={(e) =>
+                        setNewVariant((prev) => ({
+                          ...prev,
+                          sortOrder: parseInt(e.target.value) || 0,
+                        }))
+                      }
+                      placeholder="0"
+                    />
+                  </div>
+                </div>
+              </div>
+
+              {/* Pricing Information */}
+              <div className="space-y-4">
+                <h4 className="font-semibold text-sm text-muted-foreground uppercase tracking-wide">
+                  Pricing Information
+                </h4>
+                <div className="space-y-3">
+                  <div>
+                    <div className="flex items-center gap-2">
+                      <Label
+                        htmlFor="variant-price"
+                        className="text-sm font-medium"
+                      >
+                        Price *
+                      </Label>
+                      <TooltipProvider>
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <HelpCircle className="w-4 h-4 text-muted-foreground cursor-help" />
+                          </TooltipTrigger>
+                          <TooltipContent>
+                            <p>The main selling price of this variant</p>
+                          </TooltipContent>
+                        </Tooltip>
+                      </TooltipProvider>
+                    </div>
+                    <Input
+                      id="variant-price"
+                      type="number"
+                      step="0.01"
+                      min="0"
+                      value={newVariant.price}
+                      onChange={(e) =>
+                        setNewVariant((prev) => ({
+                          ...prev,
+                          price: parseFloat(e.target.value) || 0,
+                        }))
+                      }
+                      placeholder="0.00"
+                      required
+                    />
+                  </div>
+                  <div>
+                    <div className="flex items-center gap-2">
+                      <Label
+                        htmlFor="variant-sale-price"
+                        className="text-sm font-medium"
+                      >
+                        Sale Price (Compare At Price)
+                      </Label>
+                      <TooltipProvider>
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <HelpCircle className="w-4 h-4 text-muted-foreground cursor-help" />
+                          </TooltipTrigger>
+                          <TooltipContent>
+                            <p>
+                              The original price before discount. Used to show
+                              savings to customers
+                            </p>
+                          </TooltipContent>
+                        </Tooltip>
+                      </TooltipProvider>
+                    </div>
+                    <Input
+                      id="variant-sale-price"
+                      type="number"
+                      step="0.01"
+                      min="0"
+                      value={newVariant.salePrice || ""}
+                      onChange={(e) =>
+                        setNewVariant((prev) => ({
+                          ...prev,
+                          salePrice: parseFloat(e.target.value) || null,
+                        }))
+                      }
+                      placeholder="Enter sale price"
+                    />
+                  </div>
+                  <div>
+                    <div className="flex items-center gap-2">
+                      <Label
+                        htmlFor="variant-cost-price"
+                        className="text-sm font-medium"
+                      >
+                        Cost Price
+                      </Label>
+                      <TooltipProvider>
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <HelpCircle className="w-4 h-4 text-muted-foreground cursor-help" />
+                          </TooltipTrigger>
+                          <TooltipContent>
+                            <p>
+                              The cost to produce/purchase this variant. Used
+                              for profit calculations
+                            </p>
+                          </TooltipContent>
+                        </Tooltip>
+                      </TooltipProvider>
+                    </div>
+                    <Input
+                      id="variant-cost-price"
+                      type="number"
+                      step="0.01"
+                      min="0"
+                      value={newVariant.costPrice || ""}
+                      onChange={(e) =>
+                        setNewVariant((prev) => ({
+                          ...prev,
+                          costPrice: parseFloat(e.target.value) || null,
+                        }))
+                      }
+                      placeholder="Enter cost price"
+                    />
+                  </div>
+                </div>
+              </div>
+
+              {/* Status */}
+              <div className="space-y-4">
+                <h4 className="font-semibold text-sm text-muted-foreground uppercase tracking-wide">
+                  Status
+                </h4>
+                <div className="space-y-3">
+                  <div className="flex items-center gap-3">
+                    <Switch
+                      checked={newVariant.isActive}
+                      onCheckedChange={(checked) =>
+                        setNewVariant((prev) => ({
+                          ...prev,
+                          isActive: checked,
+                        }))
+                      }
+                      className="data-[state=checked]:bg-green-600"
+                    />
+                    <Label className="text-sm font-medium">Active Status</Label>
+                  </div>
+                </div>
+              </div>
+
+              {/* Attributes */}
+              <div className="space-y-4">
+                <h4 className="font-semibold text-sm text-muted-foreground uppercase tracking-wide">
+                  Variant Attributes
+                </h4>
+                <div className="space-y-3">
+                  <div className="flex gap-2">
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={() => {
+                        // TODO: Add manual attribute logic
+                        console.log("Add manual attribute");
+                      }}
+                    >
+                      <Plus className="w-4 h-4 mr-2" />
+                      Add Manually
+                    </Button>
+                    <FetchAttributesDialog
+                      onAttributesSelected={handleAttributesFromBackend}
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    {newVariant.attributes.map((attr, index) => (
+                      <div
+                        key={index}
+                        className="flex items-center justify-between p-2 bg-muted/30 rounded"
+                      >
+                        <span className="text-sm">
+                          {attr.attributeTypeId}: {attr.attributeValue}
+                        </span>
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="sm"
+                          className="h-6 w-6 p-0 text-destructive"
+                          onClick={() => {
+                            setNewVariant((prev) => ({
+                              ...prev,
+                              attributes: prev.attributes.filter(
+                                (_, i) => i !== index
+                              ),
+                            }));
+                          }}
+                        >
+                          <X className="w-3 h-3" />
+                        </Button>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </div>
+
+              {/* Images */}
+              <div className="space-y-4">
+                <h4 className="font-semibold text-sm text-muted-foreground uppercase tracking-wide">
+                  Variant Images
+                </h4>
+                <div className="space-y-3">
+                  <div className="border-2 border-dashed border-border rounded-lg p-6 text-center hover:border-primary/50 transition-colors">
+                    <ImageIcon className="w-12 h-12 mx-auto mb-3 text-muted-foreground" />
+                    <p className="text-sm text-muted-foreground mb-3">
+                      Upload images for this variant
+                    </p>
+                    <input
+                      type="file"
+                      multiple
+                      accept="image/*"
+                      onChange={(e) => {
+                        const files = Array.from(e.target.files || []);
+                        setNewVariant((prev) => ({
+                          ...prev,
+                          images: [...prev.images, ...files],
+                        }));
+                      }}
+                      className="hidden"
+                      id="variant-images"
+                    />
+                    <label
+                      htmlFor="variant-images"
+                      className="inline-flex items-center px-4 py-2 border border-border rounded-md text-sm font-medium cursor-pointer hover:bg-muted transition-colors"
+                    >
+                      <Plus className="w-4 h-4 mr-2" />
+                      Choose Images
+                    </label>
+                  </div>
+                  {newVariant.images.length > 0 && (
+                    <div className="space-y-3">
+                      <div className="text-sm font-medium text-muted-foreground">
+                        Selected Images ({newVariant.images.length})
+                      </div>
+                      <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+                        {newVariant.images.map((file, index) => (
+                          <div key={index} className="relative group">
+                            <img
+                              src={URL.createObjectURL(file)}
+                              alt={file.name}
+                              className="w-full h-32 object-cover rounded-lg border shadow-sm"
+                            />
+                            <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity rounded-lg flex items-center justify-center">
+                              <Button
+                                type="button"
+                                variant="destructive"
+                                size="sm"
+                                className="h-8 w-8 p-0"
+                                onClick={() => {
+                                  setNewVariant((prev) => ({
+                                    ...prev,
+                                    images: prev.images.filter(
+                                      (_, i) => i !== index
+                                    ),
+                                  }));
+                                }}
+                              >
+                                <X className="w-4 h-4" />
+                              </Button>
+                            </div>
+                            <div className="absolute bottom-0 left-0 right-0 bg-black/70 text-white text-xs p-2 rounded-b-lg">
+                              <div className="truncate">{file.name}</div>
+                              <div className="text-xs opacity-75">
+                                {(file.size / 1024 / 1024).toFixed(2)} MB
+                              </div>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <DialogFooter className="flex gap-2">
+            <Button variant="outline" onClick={handleCancelAddVariant}>
+              Cancel
+            </Button>
+            <Button
+              onClick={handleSaveNewVariant}
+              className="bg-primary hover:bg-primary/90"
+            >
+              Create Variant
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Delete Variant Confirmation Modal */}
+      <AlertDialog
+        open={isDeleteVariantModalOpen}
+        onOpenChange={setIsDeleteVariantModalOpen}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle className="flex items-center gap-2">
+              <Trash2 className="w-5 h-5 text-destructive" />
+              Delete Variant
+            </AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to delete this variant? This action cannot
+              be undone.
+              <br />
+              <br />
+              <strong>This will permanently delete:</strong>
+              <ul className="list-disc list-inside mt-2 space-y-1">
+                <li>All variant images (from Cloudinary and database)</li>
+                <li>All variant attributes and associations</li>
+                <li>All stock information for this variant</li>
+                <li>The variant itself</li>
+              </ul>
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel
+              onClick={() => {
+                setIsDeleteVariantModalOpen(false);
+                setVariantToDelete(null);
+              }}
+            >
+              Cancel
+            </AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => {
+                if (variantToDelete) {
+                  handleDeleteVariant(variantToDelete);
+                  setIsDeleteVariantModalOpen(false);
+                  setVariantToDelete(null);
+                }
+              }}
+              className="bg-destructive hover:bg-destructive/90"
+            >
+              <Trash2 className="w-4 h-4 mr-2" />
+              Delete Variant
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

@@ -47,6 +47,103 @@ export interface ProductVideo {
   duration?: number;
 }
 
+export interface ProductVariant {
+  variantId: number;
+  variantSku: string;
+  variantName: string;
+  variantBarcode?: string;
+  price: number;
+  salePrice?: number;
+  costPrice?: number;
+  isActive: boolean;
+  isInStock: boolean;
+  isLowStock: boolean;
+  createdAt: string;
+  updatedAt: string;
+  discount?: {
+    discountId: number;
+    name: string;
+    percentage: number;
+    startDate: string;
+    endDate: string;
+    isActive: boolean;
+  };
+  discountedPrice?: number;
+  hasActiveDiscount: boolean;
+  images: ProductVariantImage[];
+  attributes: ProductVariantAttribute[];
+  warehouseStocks: ProductVariantWarehouseStock[];
+}
+
+export interface ProductVariantImage {
+  imageId: number;
+  url: string;
+  altText?: string;
+  isPrimary: boolean;
+  sortOrder?: number;
+}
+
+export interface ProductVariantAttribute {
+  attributeValueId: number;
+  attributeValue: string;
+  attributeTypeId: number;
+  attributeType: string;
+}
+
+export interface ProductVariantWarehouseStock {
+  warehouseId: number;
+  warehouseName: string;
+  warehouseLocation: string;
+  stockQuantity: number;
+  lowStockThreshold: number;
+  isLowStock: boolean;
+  lastUpdated: string;
+}
+
+export interface ProductVariantsResponse {
+  content: ProductVariant[];
+  page: number;
+  size: number;
+  totalElements: number;
+  totalPages: number;
+  first: boolean;
+  last: boolean;
+  hasNext: boolean;
+  hasPrevious: boolean;
+}
+
+export interface ProductDetails {
+  description?: string;
+  metaTitle?: string;
+  metaDescription?: string;
+  metaKeywords?: string;
+  searchKeywords?: string;
+  dimensionsCm?: string;
+  weightKg?: number;
+  material?: string;
+  careInstructions?: string;
+  warrantyInfo?: string;
+  shippingInfo?: string;
+  returnPolicy?: string;
+  maximumDaysForReturn?: number;
+}
+
+export interface ProductDetailsUpdate {
+  description?: string;
+  metaTitle?: string;
+  metaDescription?: string;
+  metaKeywords?: string;
+  searchKeywords?: string;
+  dimensionsCm?: string;
+  weightKg?: number;
+  material?: string;
+  careInstructions?: string;
+  warrantyInfo?: string;
+  shippingInfo?: string;
+  returnPolicy?: string;
+  maximumDaysForReturn?: number;
+}
+
 export interface ProductBasicInfoUpdate {
   productName?: string;
   shortDescription?: string;
@@ -466,6 +563,226 @@ class ProductService {
             "Content-Type": "multipart/form-data",
           },
         }
+      );
+      return response.data;
+    } catch (error) {
+      throw handleApiError(error);
+    }
+  }
+
+  /**
+   * Get all variants for a product with pagination
+   */
+  async getProductVariants(
+    productId: string,
+    page: number = 0,
+    size: number = 10,
+    sortBy: string = "id",
+    sortDir: string = "asc"
+  ): Promise<ProductVariantsResponse> {
+    try {
+      const response = await apiClient.get(
+        `/v1/products/${productId}/variants?page=${page}&size=${size}&sortBy=${sortBy}&sortDir=${sortDir}`
+      );
+      return response.data;
+    } catch (error) {
+      throw handleApiError(error);
+    }
+  }
+
+  async updateProductVariant(
+    productId: string,
+    variantId: number,
+    updates: Record<string, any>
+  ): Promise<ProductVariant> {
+    try {
+      const response = await apiClient.put(
+        `/v1/products/${productId}/variants/${variantId}`,
+        updates
+      );
+      return response.data;
+    } catch (error) {
+      throw handleApiError(error);
+    }
+  }
+
+  async deleteVariantImage(
+    productId: string,
+    variantId: number,
+    imageId: number
+  ): Promise<void> {
+    try {
+      await apiClient.delete(
+        `/v1/products/${productId}/variants/${variantId}/images/${imageId}`
+      );
+    } catch (error) {
+      throw handleApiError(error);
+    }
+  }
+
+  async deleteVariant(
+    productId: string,
+    variantId: number
+  ): Promise<{ success: boolean; message: string }> {
+    try {
+      const response = await apiClient.delete(
+        `/v1/products/${productId}/variants/${variantId}`
+      );
+      return response.data;
+    } catch (error) {
+      throw handleApiError(error);
+    }
+  }
+
+  async setPrimaryVariantImage(
+    productId: string,
+    variantId: number,
+    imageId: number
+  ): Promise<void> {
+    try {
+      await apiClient.put(
+        `/v1/products/${productId}/variants/${variantId}/images/${imageId}/primary`
+      );
+    } catch (error) {
+      throw handleApiError(error);
+    }
+  }
+
+  async uploadVariantImages(
+    productId: string,
+    variantId: number,
+    images: File[]
+  ): Promise<ProductVariantImage[]> {
+    try {
+      const formData = new FormData();
+      images.forEach((image) => {
+        formData.append("images", image);
+      });
+
+      const response = await apiClient.post(
+        `/v1/products/${productId}/variants/${variantId}/images`,
+        formData,
+        {
+          headers: {
+            "Content-Type": "multipart/form-data",
+          },
+        }
+      );
+      return response.data;
+    } catch (error) {
+      throw handleApiError(error);
+    }
+  }
+
+  async removeVariantAttribute(
+    productId: string,
+    variantId: number,
+    attributeValueId: number
+  ): Promise<void> {
+    try {
+      await apiClient.delete(
+        `/v1/products/${productId}/variants/${variantId}/attributes/${attributeValueId}`
+      );
+    } catch (error) {
+      throw handleApiError(error);
+    }
+  }
+
+  async addVariantAttributes(
+    productId: string,
+    variantId: number,
+    attributes: Array<{ attributeTypeName: string; attributeValue: string }>
+  ): Promise<ProductVariantAttribute[]> {
+    try {
+      const response = await apiClient.post(
+        `/v1/products/${productId}/variants/${variantId}/attributes`,
+        attributes
+      );
+      return response.data;
+    } catch (error) {
+      throw handleApiError(error);
+    }
+  }
+
+  async createProductVariant(
+    productId: string,
+    variantData: {
+      variantName: string;
+      variantSku: string;
+      variantBarcode?: string;
+      price: number;
+      salePrice?: number;
+      costPrice?: number;
+      isActive: boolean;
+      attributes: Array<{ attributeTypeName: string; attributeValue: string }>;
+      images: File[];
+      warehouseStocks: Array<{
+        warehouseId: number;
+        warehouseName: string;
+        stockQuantity: number;
+        lowStockThreshold: number;
+      }>;
+    }
+  ): Promise<ProductVariant> {
+    try {
+      const formData = new FormData();
+
+      formData.append("variantName", variantData.variantName);
+      formData.append("variantSku", variantData.variantSku);
+      if (variantData.variantBarcode) {
+        formData.append("variantBarcode", variantData.variantBarcode);
+      }
+      formData.append("price", variantData.price.toString());
+      if (variantData.salePrice) {
+        formData.append("salePrice", variantData.salePrice.toString());
+      }
+      if (variantData.costPrice) {
+        formData.append("costPrice", variantData.costPrice.toString());
+      }
+      formData.append("isActive", variantData.isActive.toString());
+      formData.append("attributes", JSON.stringify(variantData.attributes));
+      formData.append(
+        "warehouseStocks",
+        JSON.stringify(variantData.warehouseStocks)
+      );
+
+      variantData.images.forEach((image) => {
+        formData.append("images", image);
+      });
+
+      const response = await apiClient.post(
+        `/v1/products/${productId}/variants`,
+        formData,
+        {
+          headers: {
+            "Content-Type": "multipart/form-data",
+          },
+        }
+      );
+      return response.data;
+    } catch (error) {
+      // Don't convert to string - we need the original error object for proper error handling
+      throw error;
+    }
+  }
+
+  async getProductDetails(productId: string): Promise<ProductDetails> {
+    try {
+      const response = await apiClient.get(`/v1/products/${productId}/details`);
+      return response.data;
+    } catch (error) {
+      throw handleApiError(error);
+    }
+  }
+
+  async updateProductDetails(
+    productId: string,
+    updateData: ProductDetailsUpdate
+  ): Promise<ProductDetails> {
+    try {
+      const response = await apiClient.put(
+        `/v1/products/${productId}/details`,
+        updateData
       );
       return response.data;
     } catch (error) {

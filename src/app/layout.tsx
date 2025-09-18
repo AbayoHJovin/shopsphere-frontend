@@ -1,9 +1,9 @@
-import './globals.css'
-import type { Metadata } from 'next'
-import { ThemeProvider } from 'next-themes'
+import "./globals.css";
+import type { Metadata } from "next";
+import { ThemeProvider } from "next-themes";
 import localFont from "next/font/local";
-import ReduxProvider from '@/lib/redux/provider';
-import QueryProvider from '@/lib/tanstack/query-provider';
+import ReduxProvider from "@/lib/redux/provider";
+import QueryProvider from "@/lib/tanstack/query-provider";
 import { Toaster } from "@/components/ui/toaster";
 import { AuthChecker } from "@/components/auth/auth-checker";
 
@@ -20,14 +20,14 @@ const geistMono = localFont({
 });
 
 export const metadata: Metadata = {
-  title: 'ShopSphere Admin',
-  description: 'ShopSphere eCommerce Admin Dashboard',
-}
+  title: "ShopSphere Admin",
+  description: "ShopSphere eCommerce Admin Dashboard",
+};
 
 export default function RootLayout({
   children,
 }: {
-  children: React.ReactNode
+  children: React.ReactNode;
 }) {
   return (
     <html lang="en" suppressHydrationWarning>
@@ -35,14 +35,12 @@ export default function RootLayout({
         <ReduxProvider>
           <QueryProvider>
             <ThemeProvider attribute="class" defaultTheme="light" enableSystem>
-              <AuthChecker>
-                {children}
-              </AuthChecker>
+              <AuthChecker>{children}</AuthChecker>
               <Toaster />
             </ThemeProvider>
           </QueryProvider>
         </ReduxProvider>
       </body>
     </html>
-  )
+  );
 }
