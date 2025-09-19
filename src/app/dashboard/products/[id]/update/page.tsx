@@ -39,8 +39,15 @@ import { CategoryDropdown } from "@/components/products/CategoryDropdown";
 import { BrandDropdown } from "@/components/products/BrandDropdown";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
-import { WarehouseStock } from "@/components/WarehouseSelector";
-import { WarehouseSelector } from "@/components/WarehouseSelector";
+import {
+  WarehouseSelector,
+  WarehouseStock,
+} from "@/components/WarehouseSelector";
+import {
+  WarehouseSelectorWithBatches,
+  WarehouseStockWithBatches,
+} from "@/components/WarehouseSelectorWithBatches";
+import { BatchManagement } from "@/components/BatchManagement";
 import {
   Dialog,
   DialogContent,
@@ -479,6 +486,11 @@ export default function ProductUpdate({ params }: ProductUpdateProps) {
   const [productWarehouseStocks, setProductWarehouseStocks] = useState<any[]>(
     []
   );
+  const [
+    productWarehouseStocksWithBatches,
+    setProductWarehouseStocksWithBatches,
+  ] = useState<WarehouseStockWithBatches[]>([]);
+  const [useBatchManagement, setUseBatchManagement] = useState(true);
   const [isInventoryModalOpen, setIsInventoryModalOpen] = useState(false);
   const [productHasVariants, setProductHasVariants] = useState(false);
   const initialFormData = useRef<any>(null);
@@ -1814,25 +1826,41 @@ export default function ProductUpdate({ params }: ProductUpdateProps) {
 
   const handleAddInventory = async () => {
     await checkProductVariants();
-    if (!productHasVariants) {
-      setIsInventoryModalOpen(true);
+    if (productHasVariants) {
+      toast({
+        title: "Cannot Add Stock",
+        description:
+          "This product has variants. Stock should be managed at the variant level.",
+        variant: "destructive",
+      });
+      return;
     }
+    setIsInventoryModalOpen(true);
   };
 
   const handleSaveProductInventory = async (warehouseStocks: any[]) => {
     try {
       setIsSubmitting(true);
 
-      const warehouseStockRequests = warehouseStocks.map((stock) => ({
-        warehouseId: parseInt(stock.warehouseId),
-        stockQuantity: stock.stockQuantity,
-        lowStockThreshold: stock.lowStockThreshold,
-      }));
+      if (useBatchManagement && productWarehouseStocksWithBatches.length > 0) {
+        // Use batch-based inventory management
+        await productService.assignProductStockWithBatches(
+          productId,
+          productWarehouseStocksWithBatches
+        );
+      } else {
+        // Use regular inventory management
+        const warehouseStockRequests = warehouseStocks.map((stock) => ({
+          warehouseId: parseInt(stock.warehouseId),
+          stockQuantity: stock.stockQuantity,
+          lowStockThreshold: stock.lowStockThreshold,
+        }));
 
-      await productService.assignProductStock(
-        productId,
-        warehouseStockRequests
-      );
+        await productService.assignProductStock(
+          productId,
+          warehouseStockRequests
+        );
+      }
 
       setProductWarehouseStocks(warehouseStocks);
       setIsInventoryModalOpen(false);
@@ -3654,10 +3682,10 @@ export default function ProductUpdate({ params }: ProductUpdateProps) {
                 <CardContent className="pt-6">
                   <div className="space-y-4">
                     {productWarehouseStocks.length > 0 ? (
-                      <div className="space-y-4">
+                      <div className="space-y-6">
                         <div className="flex items-center justify-between">
                           <h3 className="text-lg font-semibold">
-                            Current Inventory
+                            Warehouse Inventory
                           </h3>
                           <Button
                             type="button"
@@ -3667,107 +3695,49 @@ export default function ProductUpdate({ params }: ProductUpdateProps) {
                             className="border-primary/20 hover:bg-primary/5 hover:text-primary"
                           >
                             <Plus className="w-4 h-4 mr-2" />
-                            Add Inventory
+                            Add More Warehouses
                           </Button>
                         </div>
-                        <div className="grid gap-4">
-                          {productWarehouseStocks.map((stock, index) => (
-                            <div
-                              key={index}
-                              className="p-4 border border-border/40 rounded-lg space-y-4"
-                            >
-                              <div className="flex items-center justify-between">
+
+                        {productWarehouseStocks.map((stock, index) => (
+                          <div key={index} className="space-y-4">
+                            <div className="flex items-center justify-between p-4 border border-border/40 rounded-lg bg-muted/20">
+                              <div>
                                 <h4 className="font-medium text-lg">
                                   {stock.warehouseName}
                                 </h4>
-                                <Button
-                                  type="button"
-                                  variant="outline"
-                                  size="sm"
-                                  onClick={() => {
-                                    const updatedStocks =
-                                      productWarehouseStocks.filter(
-                                        (_, i) => i !== index
-                                      );
-                                    updateProductStock(updatedStocks);
-                                  }}
-                                  className="text-red-600 hover:text-red-700 hover:bg-red-50"
-                                >
-                                  <X className="w-4 h-4" />
-                                </Button>
+                                <p className="text-sm text-muted-foreground">
+                                  Total Stock: {stock.stockQuantity} units
+                                </p>
+                                <p className="text-sm text-muted-foreground">
+                                  Low Stock Threshold: {stock.lowStockThreshold}
+                                </p>
                               </div>
-                              <div className="grid grid-cols-2 gap-4">
-                                <div>
-                                  <Label htmlFor={`stock-${index}`}>
-                                    Stock Quantity
-                                  </Label>
-                                  <Input
-                                    id={`stock-${index}`}
-                                    type="number"
-                                    min="0"
-                                    value={stock.stockQuantity}
-                                    onChange={(e) => {
-                                      const updatedStocks = [
-                                        ...productWarehouseStocks,
-                                      ];
-                                      updatedStocks[index] = {
-                                        ...updatedStocks[index],
-                                        stockQuantity:
-                                          parseInt(e.target.value) || 0,
-                                      };
-                                      setProductWarehouseStocks(updatedStocks);
-                                    }}
-                                    className="mt-1"
-                                  />
-                                </div>
-                                <div>
-                                  <Label htmlFor={`threshold-${index}`}>
-                                    Low Stock Threshold
-                                  </Label>
-                                  <Input
-                                    id={`threshold-${index}`}
-                                    type="number"
-                                    min="0"
-                                    value={stock.lowStockThreshold}
-                                    onChange={(e) => {
-                                      const updatedStocks = [
-                                        ...productWarehouseStocks,
-                                      ];
-                                      updatedStocks[index] = {
-                                        ...updatedStocks[index],
-                                        lowStockThreshold:
-                                          parseInt(e.target.value) || 0,
-                                      };
-                                      setProductWarehouseStocks(updatedStocks);
-                                    }}
-                                    className="mt-1"
-                                  />
-                                </div>
-                              </div>
+                              <Button
+                                type="button"
+                                variant="outline"
+                                size="sm"
+                                onClick={() => {
+                                  const updatedStocks =
+                                    productWarehouseStocks.filter(
+                                      (_, i) => i !== index
+                                    );
+                                  updateProductStock(updatedStocks);
+                                }}
+                                className="text-red-600 hover:text-red-700 hover:bg-red-50"
+                              >
+                                <X className="w-4 h-4" />
+                              </Button>
                             </div>
-                          ))}
-                        </div>
-                        <div className="flex justify-end gap-2 pt-4">
-                          <Button
-                            type="button"
-                            variant="outline"
-                            onClick={handleAddInventory}
-                            className="border-primary/20 hover:bg-primary/5 hover:text-primary"
-                          >
-                            <Plus className="w-4 h-4 mr-2" />
-                            Add More Warehouses
-                          </Button>
-                          <Button
-                            type="button"
-                            onClick={() =>
-                              updateProductStock(productWarehouseStocks)
-                            }
-                            disabled={isSubmitting}
-                            className="bg-primary hover:bg-primary/90"
-                          >
-                            {isSubmitting ? "Saving..." : "Save Changes"}
-                          </Button>
-                        </div>
+
+                            <BatchManagement
+                              stockId={stock.stockId}
+                              warehouseName={stock.warehouseName}
+                              productName={form.productName || "Product"}
+                              onBatchUpdate={fetchProductStockData}
+                            />
+                          </div>
+                        ))}
                       </div>
                     ) : (
                       <div className="text-center py-8">
@@ -5051,6 +5021,35 @@ export default function ProductUpdate({ params }: ProductUpdateProps) {
             description="Assign stock levels to different warehouses for this product"
           />
 
+          <div className="flex items-center space-x-2">
+            <input
+              type="checkbox"
+              id="useBatchManagement"
+              checked={useBatchManagement}
+              onChange={(e) => setUseBatchManagement(e.target.checked)}
+              className="rounded"
+            />
+            <Label htmlFor="useBatchManagement">
+              Use Batch Management (Recommended)
+            </Label>
+          </div>
+
+          {useBatchManagement ? (
+            <WarehouseSelectorWithBatches
+              warehouseStocks={productWarehouseStocksWithBatches}
+              onWarehouseStocksChange={setProductWarehouseStocksWithBatches}
+              title="Manage Product Inventory with Batches"
+              description="Assign stock levels with batch details to different warehouses for this product"
+            />
+          ) : (
+            <WarehouseSelector
+              warehouseStocks={productWarehouseStocks}
+              onWarehouseStocksChange={setProductWarehouseStocks}
+              title="Manage Product Inventory"
+              description="Assign stock levels to different warehouses for this product"
+            />
+          )}
+
           <DialogFooter>
             <Button
               variant="outline"
@@ -5059,7 +5058,13 @@ export default function ProductUpdate({ params }: ProductUpdateProps) {
               Cancel
             </Button>
             <Button
-              onClick={() => handleSaveProductInventory(productWarehouseStocks)}
+              onClick={() =>
+                handleSaveProductInventory(
+                  useBatchManagement
+                    ? productWarehouseStocksWithBatches
+                    : productWarehouseStocks
+                )
+              }
               disabled={isSubmitting}
             >
               {isSubmitting ? "Saving..." : "Save Inventory"}

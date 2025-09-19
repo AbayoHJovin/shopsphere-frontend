@@ -238,6 +238,25 @@ export default function CreateVariantPage() {
       setIsCreating(true);
       clearValidationErrors();
 
+      const hasStock = await productService.checkProductHasStock(productId);
+      if (hasStock.hasStock) {
+        const confirmed = window.confirm(
+          "This product already has stock assigned at the product level. " +
+            "Creating variants will remove all existing product-level stock. " +
+            "Do you want to continue?"
+        );
+
+        if (!confirmed) {
+          setIsCreating(false);
+          return;
+        }
+
+        await productService.removeProductStock(productId);
+        toast.success(
+          "Product-level stock removed. Proceeding with variant creation."
+        );
+      }
+
       const variantData = {
         ...data,
         attributes: variantAttributes,

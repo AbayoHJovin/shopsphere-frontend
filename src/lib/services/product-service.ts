@@ -12,7 +12,6 @@ export interface ProductPricing {
   sku: string;
   price: number;
   compareAtPrice?: number;
-  costPrice?: number;
   profitMargin?: number;
   profitPercentage?: number;
   currency: string;
@@ -21,7 +20,6 @@ export interface ProductPricing {
 export interface ProductPricingUpdate {
   price?: number;
   compareAtPrice?: number;
-  costPrice?: number;
 }
 
 export interface ProductMedia {
@@ -54,7 +52,6 @@ export interface ProductVariant {
   variantBarcode?: string;
   price: number;
   salePrice?: number;
-  costPrice?: number;
   isActive: boolean;
   isInStock: boolean;
   isLowStock: boolean;
@@ -159,7 +156,6 @@ export interface ProductBasicInfoUpdate {
   careInstructions?: string;
   price?: number;
   compareAtPrice?: number;
-  costPrice?: number;
   categoryId?: number;
   brandId?: string;
   active?: boolean;
@@ -184,7 +180,6 @@ export interface ProductBasicInfo {
   careInstructions?: string;
   price: number;
   compareAtPrice?: number;
-  costPrice?: number;
   categoryId?: number;
   categoryName?: string;
   brandId?: string;
@@ -331,6 +326,66 @@ class ProductService {
       const response = await apiClient.post(
         `/v1/products/${productId}/assign-stock`,
         warehouseStocks
+      );
+      return response.data;
+    } catch (error) {
+      throw handleApiError(error);
+    }
+  }
+
+  async assignProductStockWithBatches(
+    productId: string,
+    warehouseStocks: Array<{
+      warehouseId: number;
+      warehouseName?: string;
+      lowStockThreshold: number;
+      batches: Array<{
+        batchNumber: string;
+        manufactureDate?: string;
+        expiryDate?: string;
+        quantity: number;
+        supplierName?: string;
+        supplierBatchNumber?: string;
+      }>;
+    }>
+  ): Promise<{
+    success: boolean;
+    message: string;
+    assignedWarehouses: number;
+    totalBatchesCreated: number;
+  }> {
+    try {
+      const response = await apiClient.post(
+        `/v1/products/${productId}/assign-stock-with-batches`,
+        warehouseStocks
+      );
+      return response.data;
+    } catch (error) {
+      throw handleApiError(error);
+    }
+  }
+
+  async checkProductHasStock(productId: string): Promise<{
+    hasStock: boolean;
+    message: string;
+  }> {
+    try {
+      const response = await apiClient.get(
+        `/v1/products/${productId}/has-stock`
+      );
+      return response.data;
+    } catch (error) {
+      throw handleApiError(error);
+    }
+  }
+
+  async removeProductStock(productId: string): Promise<{
+    success: boolean;
+    message: string;
+  }> {
+    try {
+      const response = await apiClient.delete(
+        `/v1/products/${productId}/stock`
       );
       return response.data;
     } catch (error) {
@@ -751,7 +806,6 @@ class ProductService {
       variantBarcode?: string;
       price: number;
       salePrice?: number;
-      costPrice?: number;
       isActive: boolean;
       attributes: Array<{ attributeTypeName: string; attributeValue: string }>;
       images: File[];
