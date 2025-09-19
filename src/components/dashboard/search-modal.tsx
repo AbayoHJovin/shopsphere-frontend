@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
+import { productService } from "@/lib/services/product-service";
 import {
   Dialog,
   DialogContent,
@@ -170,7 +171,16 @@ export function SearchModal({
       title: "Create Product",
       description: "Add a new product to inventory",
       icon: Plus,
-      href: "/dashboard/products/create",
+      action: async () => {
+        try {
+          const response = await productService.createEmptyProduct(
+            "New Product"
+          );
+          router.push(`/dashboard/products/${response.productId}/update`);
+        } catch (error) {
+          console.error("Error creating product:", error);
+        }
+      },
       category: "Quick Actions",
       keywords: ["create", "add", "new", "product"],
     },

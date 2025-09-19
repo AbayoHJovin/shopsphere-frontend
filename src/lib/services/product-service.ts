@@ -285,25 +285,7 @@ class ProductService {
     }
   }
 
-  /**
-   * Create a new product
-   */
-  async createProduct(productData: FormData) {
-    try {
-      const response = await apiClient.post(`/v1/products`, productData, {
-        headers: {
-          "Content-Type": "multipart/form-data",
-        },
-      });
-      return response.data;
-    } catch (error) {
-      throw handleApiError(error);
-    }
-  }
-
-  async createEmptyProduct(
-    name: string
-  ): Promise<{
+  async createEmptyProduct(name: string): Promise<{
     productId: string;
     status: string;
     completionPercentage: number;
@@ -312,6 +294,43 @@ class ProductService {
     try {
       const response = await apiClient.post(
         `/v1/products/create-empty?name=${encodeURIComponent(name)}`
+      );
+      return response.data;
+    } catch (error) {
+      throw handleApiError(error);
+    }
+  }
+
+  async checkProductHasVariants(productId: string): Promise<{
+    hasVariants: boolean;
+    message: string;
+  }> {
+    try {
+      const response = await apiClient.get(
+        `/v1/products/${productId}/has-variants`
+      );
+      return response.data;
+    } catch (error) {
+      throw handleApiError(error);
+    }
+  }
+
+  async assignProductStock(
+    productId: string,
+    warehouseStocks: Array<{
+      warehouseId: number;
+      stockQuantity: number;
+      lowStockThreshold: number;
+    }>
+  ): Promise<{
+    success: boolean;
+    message: string;
+    assignedWarehouses: number;
+  }> {
+    try {
+      const response = await apiClient.post(
+        `/v1/products/${productId}/assign-stock`,
+        warehouseStocks
       );
       return response.data;
     } catch (error) {
@@ -803,6 +822,34 @@ class ProductService {
       const response = await apiClient.put(
         `/v1/products/${productId}/details`,
         updateData
+      );
+      return response.data;
+    } catch (error) {
+      throw handleApiError(error);
+    }
+  }
+
+  async getProductWarehouseStock(
+    productId: string,
+    page: number = 0,
+    size: number = 10,
+    sort: string = "warehouse.name",
+    direction: string = "asc"
+  ): Promise<{
+    content: Array<{
+      warehouseId: number;
+      warehouseName: string;
+      stockQuantity: number;
+      lowStockThreshold: number;
+    }>;
+    totalElements: number;
+    totalPages: number;
+    size: number;
+    number: number;
+  }> {
+    try {
+      const response = await apiClient.get(
+        `/v1/products/${productId}/warehouse-stock?page=${page}&size=${size}&sort=${sort}&direction=${direction}`
       );
       return response.data;
     } catch (error) {

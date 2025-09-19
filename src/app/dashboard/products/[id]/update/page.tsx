@@ -476,6 +476,11 @@ export default function ProductUpdate({ params }: ProductUpdateProps) {
     useState<ProductDetails>({});
   const [hasProductDetailsChanges, setHasProductDetailsChanges] =
     useState(false);
+  const [productWarehouseStocks, setProductWarehouseStocks] = useState<any[]>(
+    []
+  );
+  const [isInventoryModalOpen, setIsInventoryModalOpen] = useState(false);
+  const [productHasVariants, setProductHasVariants] = useState(false);
   const initialFormData = useRef<any>(null);
 
   // Form setup
@@ -575,6 +580,13 @@ export default function ProductUpdate({ params }: ProductUpdateProps) {
 
     fetchProductData();
   }, [productId, form, toast]);
+
+  // Check if product has variants for inventory management
+  useEffect(() => {
+    if (productId) {
+      checkProductVariants();
+    }
+  }, [productId]);
 
   // Fetch product variants
   const fetchProductVariants = async (page: number = 0) => {
@@ -959,6 +971,12 @@ export default function ProductUpdate({ params }: ProductUpdateProps) {
       fetchProductDetails();
     }
   }, [productId, activeTab]);
+
+  useEffect(() => {
+    if (productId && activeTab === "inventory" && !productHasVariants) {
+      fetchProductStockData();
+    }
+  }, [productId, activeTab, productHasVariants]);
 
   const removeImageById = async (imageId: number) => {
     try {
@@ -1476,7 +1494,9 @@ export default function ProductUpdate({ params }: ProductUpdateProps) {
           variant.variantId === variantId
             ? {
                 ...variant,
-                images: variant.images.filter((img) => img.imageId !== imageId),
+                images: variant.images.filter(
+                  (img: any) => img.imageId !== imageId
+                ),
               }
             : variant
         )
@@ -1509,7 +1529,7 @@ export default function ProductUpdate({ params }: ProductUpdateProps) {
           variant.variantId === variantId
             ? {
                 ...variant,
-                images: variant.images.map((img) => ({
+                images: variant.images.map((img: any) => ({
                   ...img,
                   isPrimary: img.imageId === imageId,
                 })),
@@ -1522,7 +1542,7 @@ export default function ProductUpdate({ params }: ProductUpdateProps) {
           variant.variantId === variantId
             ? {
                 ...variant,
-                images: variant.images.map((img) => ({
+                images: variant.images.map((img: any) => ({
                   ...img,
                   isPrimary: img.imageId === imageId,
                 })),
@@ -1646,6 +1666,57 @@ export default function ProductUpdate({ params }: ProductUpdateProps) {
     }
   };
 
+  const fetchProductStockData = async () => {
+    try {
+      const stockData = await productService.getProductWarehouseStock(
+        productId,
+        0,
+        100
+      );
+      setProductWarehouseStocks(stockData.content);
+    } catch (error) {
+      console.error("Error fetching product stock data:", error);
+      toast({
+        title: "Error",
+        description: "Failed to fetch product stock data",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const updateProductStock = async (warehouseStocks: any[]) => {
+    try {
+      setIsSubmitting(true);
+
+      const stockRequests = warehouseStocks.map((stock) => ({
+        warehouseId: stock.warehouseId,
+        stockQuantity: stock.stockQuantity,
+        lowStockThreshold: stock.lowStockThreshold,
+      }));
+
+      await productService.assignProductStock(productId, stockRequests);
+
+      // Refresh stock data after update
+      await fetchProductStockData();
+
+      toast({
+        title: "Stock Updated",
+        description: "Product stock has been updated successfully",
+      });
+    } catch (error: any) {
+      console.error("Error updating product stock:", error);
+      toast({
+        title: "Update Failed",
+        description:
+          error?.response?.data?.message ||
+          "Failed to update product stock. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
   const handleSaveProductDetails = async () => {
     try {
       setIsSubmitting(true);
@@ -1732,6 +1803,58 @@ export default function ProductUpdate({ params }: ProductUpdateProps) {
     }
   };
 
+  const checkProductVariants = async () => {
+    try {
+      const response = await productService.checkProductHasVariants(productId);
+      setProductHasVariants(response.hasVariants);
+    } catch (error) {
+      console.error("Error checking product variants:", error);
+    }
+  };
+
+  const handleAddInventory = async () => {
+    await checkProductVariants();
+    if (!productHasVariants) {
+      setIsInventoryModalOpen(true);
+    }
+  };
+
+  const handleSaveProductInventory = async (warehouseStocks: any[]) => {
+    try {
+      setIsSubmitting(true);
+
+      const warehouseStockRequests = warehouseStocks.map((stock) => ({
+        warehouseId: parseInt(stock.warehouseId),
+        stockQuantity: stock.stockQuantity,
+        lowStockThreshold: stock.lowStockThreshold,
+      }));
+
+      await productService.assignProductStock(
+        productId,
+        warehouseStockRequests
+      );
+
+      setProductWarehouseStocks(warehouseStocks);
+      setIsInventoryModalOpen(false);
+
+      toast({
+        title: "Inventory Updated",
+        description: "Product inventory has been updated successfully",
+      });
+    } catch (error: any) {
+      console.error("Error updating product inventory:", error);
+      toast({
+        title: "Update Failed",
+        description:
+          error?.response?.data?.message ||
+          "Failed to update product inventory. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
   const handleRemoveVariantAttribute = async (
     variantId: number,
     attributeValueId: number
@@ -1749,7 +1872,7 @@ export default function ProductUpdate({ params }: ProductUpdateProps) {
             ? {
                 ...variant,
                 attributes: variant.attributes.filter(
-                  (attr) => attr.attributeValueId !== attributeValueId
+                  (attr: any) => attr.attributeValueId !== attributeValueId
                 ),
               }
             : variant
@@ -1761,7 +1884,7 @@ export default function ProductUpdate({ params }: ProductUpdateProps) {
             ? {
                 ...variant,
                 attributes: variant.attributes.filter(
-                  (attr) => attr.attributeValueId !== attributeValueId
+                  (attr: any) => attr.attributeValueId !== attributeValueId
                 ),
               }
             : variant
@@ -3530,28 +3653,147 @@ export default function ProductUpdate({ params }: ProductUpdateProps) {
                 </CardHeader>
                 <CardContent className="pt-6">
                   <div className="space-y-4">
-                    <div className="text-center py-8">
-                      <div className="flex items-center justify-center mb-4">
-                        <div className="p-4 rounded-full bg-muted/20">
-                          <Package className="w-8 h-8 text-muted-foreground" />
+                    {productWarehouseStocks.length > 0 ? (
+                      <div className="space-y-4">
+                        <div className="flex items-center justify-between">
+                          <h3 className="text-lg font-semibold">
+                            Current Inventory
+                          </h3>
+                          <Button
+                            type="button"
+                            variant="outline"
+                            size="sm"
+                            onClick={handleAddInventory}
+                            className="border-primary/20 hover:bg-primary/5 hover:text-primary"
+                          >
+                            <Plus className="w-4 h-4 mr-2" />
+                            Add Inventory
+                          </Button>
+                        </div>
+                        <div className="grid gap-4">
+                          {productWarehouseStocks.map((stock, index) => (
+                            <div
+                              key={index}
+                              className="p-4 border border-border/40 rounded-lg space-y-4"
+                            >
+                              <div className="flex items-center justify-between">
+                                <h4 className="font-medium text-lg">
+                                  {stock.warehouseName}
+                                </h4>
+                                <Button
+                                  type="button"
+                                  variant="outline"
+                                  size="sm"
+                                  onClick={() => {
+                                    const updatedStocks =
+                                      productWarehouseStocks.filter(
+                                        (_, i) => i !== index
+                                      );
+                                    updateProductStock(updatedStocks);
+                                  }}
+                                  className="text-red-600 hover:text-red-700 hover:bg-red-50"
+                                >
+                                  <X className="w-4 h-4" />
+                                </Button>
+                              </div>
+                              <div className="grid grid-cols-2 gap-4">
+                                <div>
+                                  <Label htmlFor={`stock-${index}`}>
+                                    Stock Quantity
+                                  </Label>
+                                  <Input
+                                    id={`stock-${index}`}
+                                    type="number"
+                                    min="0"
+                                    value={stock.stockQuantity}
+                                    onChange={(e) => {
+                                      const updatedStocks = [
+                                        ...productWarehouseStocks,
+                                      ];
+                                      updatedStocks[index] = {
+                                        ...updatedStocks[index],
+                                        stockQuantity:
+                                          parseInt(e.target.value) || 0,
+                                      };
+                                      setProductWarehouseStocks(updatedStocks);
+                                    }}
+                                    className="mt-1"
+                                  />
+                                </div>
+                                <div>
+                                  <Label htmlFor={`threshold-${index}`}>
+                                    Low Stock Threshold
+                                  </Label>
+                                  <Input
+                                    id={`threshold-${index}`}
+                                    type="number"
+                                    min="0"
+                                    value={stock.lowStockThreshold}
+                                    onChange={(e) => {
+                                      const updatedStocks = [
+                                        ...productWarehouseStocks,
+                                      ];
+                                      updatedStocks[index] = {
+                                        ...updatedStocks[index],
+                                        lowStockThreshold:
+                                          parseInt(e.target.value) || 0,
+                                      };
+                                      setProductWarehouseStocks(updatedStocks);
+                                    }}
+                                    className="mt-1"
+                                  />
+                                </div>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                        <div className="flex justify-end gap-2 pt-4">
+                          <Button
+                            type="button"
+                            variant="outline"
+                            onClick={handleAddInventory}
+                            className="border-primary/20 hover:bg-primary/5 hover:text-primary"
+                          >
+                            <Plus className="w-4 h-4 mr-2" />
+                            Add More Warehouses
+                          </Button>
+                          <Button
+                            type="button"
+                            onClick={() =>
+                              updateProductStock(productWarehouseStocks)
+                            }
+                            disabled={isSubmitting}
+                            className="bg-primary hover:bg-primary/90"
+                          >
+                            {isSubmitting ? "Saving..." : "Save Changes"}
+                          </Button>
                         </div>
                       </div>
-                      <h3 className="text-lg font-semibold mb-2">
-                        No Inventory Data
-                      </h3>
-                      <p className="text-muted-foreground mb-6">
-                        This product doesn't have any inventory data yet. Add
-                        stock levels for different warehouses to get started.
-                      </p>
-                      <Button
-                        type="button"
-                        variant="outline"
-                        className="border-primary/20 hover:bg-primary/5 hover:text-primary"
-                      >
-                        <Plus className="w-4 h-4 mr-2" />
-                        Add Inventory
-                      </Button>
-                    </div>
+                    ) : (
+                      <div className="text-center py-8">
+                        <div className="flex items-center justify-center mb-4">
+                          <div className="p-4 rounded-full bg-muted/20">
+                            <Package className="w-8 h-8 text-muted-foreground" />
+                          </div>
+                        </div>
+                        <h3 className="text-lg font-semibold mb-2">
+                          No Inventory Data
+                        </h3>
+                        <p className="text-muted-foreground mb-6">
+                          This product doesn't have any inventory data yet. Add
+                          stock levels for different warehouses to get started.
+                        </p>
+                        <Button
+                          type="button"
+                          variant="outline"
+                          onClick={handleAddInventory}
+                          className="border-primary/20 hover:bg-primary/5 hover:text-primary"
+                        >
+                          <Plus className="w-4 h-4 mr-2" />
+                          Add Inventory
+                        </Button>
+                      </div>
+                    )}
                   </div>
                 </CardContent>
               </Card>
@@ -4785,6 +5027,46 @@ export default function ProductUpdate({ params }: ProductUpdateProps) {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {/* Inventory Management Modal */}
+      <Dialog
+        open={isInventoryModalOpen}
+        onOpenChange={setIsInventoryModalOpen}
+      >
+        <DialogContent className="max-w-4xl">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Warehouse className="w-5 h-5" />
+              Manage Product Inventory
+            </DialogTitle>
+            <DialogDescription>
+              Assign stock levels to different warehouses for this product.
+            </DialogDescription>
+          </DialogHeader>
+
+          <WarehouseSelector
+            warehouseStocks={productWarehouseStocks}
+            onWarehouseStocksChange={setProductWarehouseStocks}
+            title="Manage Product Inventory"
+            description="Assign stock levels to different warehouses for this product"
+          />
+
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => setIsInventoryModalOpen(false)}
+            >
+              Cancel
+            </Button>
+            <Button
+              onClick={() => handleSaveProductInventory(productWarehouseStocks)}
+              disabled={isSubmitting}
+            >
+              {isSubmitting ? "Saving..." : "Save Inventory"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
