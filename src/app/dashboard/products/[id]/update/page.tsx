@@ -48,6 +48,8 @@ import {
   WarehouseStockWithBatches,
 } from "@/components/WarehouseSelectorWithBatches";
 import { BatchManagement } from "@/components/BatchManagement";
+import { VariantBatchManagement } from "@/components/VariantBatchManagement";
+import { WarehouseStockWithBatches as WarehouseStockBatchDisplay } from "@/components/WarehouseStockWithBatches";
 import {
   Dialog,
   DialogContent,
@@ -3427,70 +3429,16 @@ export default function ProductUpdate({ params }: ProductUpdateProps) {
                                   </div>
                                 </div>
 
-                                {/* Stock Information */}
+                                {/* Stock & Batch Information */}
                                 <div className="mt-6 space-y-4">
-                                  <h5 className="font-semibold text-sm text-muted-foreground uppercase tracking-wide">
-                                    Stock Information
-                                  </h5>
-                                  <div className="space-y-3">
-                                    {variant.warehouseStocks &&
-                                    variant.warehouseStocks.length > 0 ? (
-                                      <div className="space-y-2">
-                                        {variant.warehouseStocks.map(
-                                          (stock) => (
-                                            <div
-                                              key={stock.warehouseId}
-                                              className="flex items-center justify-between p-3 bg-muted/20 rounded-lg border"
-                                            >
-                                              <div className="flex-1">
-                                                <div className="font-medium text-sm">
-                                                  {stock.warehouseName}
-                                                </div>
-                                                <div className="text-xs text-muted-foreground">
-                                                  {stock.warehouseLocation}
-                                                </div>
-                                              </div>
-                                              <div className="flex items-center gap-3">
-                                                <div className="text-right">
-                                                  <div
-                                                    className={`font-semibold text-sm ${
-                                                      stock.isLowStock
-                                                        ? "text-yellow-600"
-                                                        : "text-green-600"
-                                                    }`}
-                                                  >
-                                                    {stock.stockQuantity} units
-                                                  </div>
-                                                  <div className="text-xs text-muted-foreground">
-                                                    Threshold:{" "}
-                                                    {stock.lowStockThreshold}
-                                                  </div>
-                                                </div>
-                                                <div
-                                                  className={`w-2 h-2 rounded-full ${
-                                                    stock.isLowStock
-                                                      ? "bg-yellow-500"
-                                                      : "bg-green-500"
-                                                  }`}
-                                                />
-                                              </div>
-                                            </div>
-                                          )
-                                        )}
-                                      </div>
-                                    ) : (
-                                      <div className="text-center py-6 text-muted-foreground border-2 border-dashed border-border rounded-lg">
-                                        <Warehouse className="w-8 h-8 mx-auto mb-2 opacity-50" />
-                                        <p className="text-sm">
-                                          No stock assigned to warehouses
-                                        </p>
-                                      </div>
-                                    )}
+                                  <div className="flex items-center justify-between">
+                                    <h5 className="font-semibold text-sm text-muted-foreground uppercase tracking-wide">
+                                      Stock & Batch Information
+                                    </h5>
                                     <Button
                                       type="button"
                                       variant="outline"
                                       size="sm"
-                                      className="w-full"
                                       onClick={() => {
                                         setSelectedVariantForWarehouse(
                                           variant.variantId
@@ -3504,11 +3452,50 @@ export default function ProductUpdate({ params }: ProductUpdateProps) {
                                           currentStocks
                                         );
                                       }}
+                                      className="text-blue-600 hover:bg-blue-50"
                                     >
                                       <Warehouse className="w-4 h-4 mr-2" />
-                                      Manage Warehouse Stock
+                                      Manage Stock
                                     </Button>
                                   </div>
+                                  
+                                  {variant.warehouseStocks &&
+                                  variant.warehouseStocks.length > 0 ? (
+                                    <WarehouseStockBatchDisplay
+                                      variantId={variant.variantId}
+                                      variantName={variant.variantName || "Unnamed Variant"}
+                                      warehouseStocks={variant.warehouseStocks}
+                                    />
+                                  ) : (
+                                    <div className="text-center py-8 text-muted-foreground border-2 border-dashed border-border rounded-lg">
+                                      <Warehouse className="w-8 h-8 mx-auto mb-2 opacity-50" />
+                                      <p className="text-sm mb-2">
+                                        No stock assigned to warehouses
+                                      </p>
+                                      <Button
+                                        type="button"
+                                        variant="outline"
+                                        size="sm"
+                                        onClick={() => {
+                                          setSelectedVariantForWarehouse(
+                                            variant.variantId
+                                          );
+                                          setIsWarehouseModalOpen(true);
+                                          const currentStocks =
+                                            getVariantWarehouseStocks(
+                                              variant.variantId
+                                            );
+                                          setVariantWarehouseStocks(
+                                            currentStocks
+                                          );
+                                        }}
+                                        className="text-blue-600 hover:bg-blue-50"
+                                      >
+                                        <Warehouse className="w-4 h-4 mr-2" />
+                                        Assign to Warehouses
+                                      </Button>
+                                    </div>
+                                  )}
                                 </div>
 
                                 {/* Additional Info */}
@@ -5072,6 +5059,7 @@ export default function ProductUpdate({ params }: ProductUpdateProps) {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
     </div>
   );
 }

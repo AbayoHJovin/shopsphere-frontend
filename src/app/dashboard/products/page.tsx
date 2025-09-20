@@ -415,9 +415,20 @@ export default function ProductsPage() {
                             {product.productName}
                           </span>
                           {product.shortDescription && (
-                            <span className="text-sm text-muted-foreground">
-                              {product.shortDescription}
-                            </span>
+                            <TooltipProvider>
+                              <Tooltip>
+                                <TooltipTrigger asChild>
+                                  <span className="text-sm text-muted-foreground line-clamp-2 cursor-help">
+                                    {product.shortDescription.length > 100 
+                                      ? `${product.shortDescription.substring(0, 100)}...` 
+                                      : product.shortDescription}
+                                  </span>
+                                </TooltipTrigger>
+                                <TooltipContent className="max-w-xs">
+                                  <p>{product.shortDescription}</p>
+                                </TooltipContent>
+                              </Tooltip>
+                            </TooltipProvider>
                           )}
                           <div className="flex gap-1 mt-1">
                             {product.isBestSeller && (

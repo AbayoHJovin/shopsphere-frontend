@@ -36,6 +36,15 @@ export interface CreateStockBatchRequest {
   supplierBatchNumber?: string;
 }
 
+export interface CreateVariantBatchRequest {
+  batchNumber: string;
+  manufactureDate?: string;
+  expiryDate?: string;
+  quantity: number;
+  supplierName?: string;
+  supplierBatchNumber?: string;
+}
+
 export interface UpdateStockBatchRequest {
   batchNumber: string;
   manufactureDate?: string;
@@ -68,6 +77,17 @@ class StockBatchService {
     }
   }
 
+  async getBatchesByVariantId(variantId: number): Promise<StockBatch[]> {
+    try {
+      const response = await apiClient.get(
+        `/v1/stock-batches/variant/${variantId}`
+      );
+      return response.data;
+    } catch (error) {
+      throw handleApiError(error);
+    }
+  }
+
   async getBatchById(batchId: number): Promise<StockBatch> {
     try {
       const response = await apiClient.get(`/v1/stock-batches/${batchId}`);
@@ -80,6 +100,22 @@ class StockBatchService {
   async createBatch(request: CreateStockBatchRequest): Promise<StockBatch> {
     try {
       const response = await apiClient.post(`/v1/stock-batches`, request);
+      return response.data;
+    } catch (error) {
+      throw handleApiError(error);
+    }
+  }
+
+  async createBatchForVariant(
+    variantId: number,
+    warehouseId: number,
+    request: CreateVariantBatchRequest
+  ): Promise<StockBatch> {
+    try {
+      const response = await apiClient.post(
+        `/v1/stock-batches/variant/${variantId}/warehouse/${warehouseId}`,
+        request
+      );
       return response.data;
     } catch (error) {
       throw handleApiError(error);
