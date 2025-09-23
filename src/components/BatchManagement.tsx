@@ -123,12 +123,22 @@ export function BatchManagement({
         return;
       }
 
-      // Prepare the request data
+      // Prepare the request data with proper date/time formatting
       const requestData = {
         stockId: stockId,
         batchNumber: createForm.batchNumber.trim(),
-        manufactureDate: createForm.manufactureDate || undefined,
-        expiryDate: createForm.expiryDate || undefined,
+        manufactureDate:
+          createForm.manufactureDate && createFormTimes.manufactureTime
+            ? `${createForm.manufactureDate}T${createFormTimes.manufactureTime}:00`
+            : createForm.manufactureDate
+            ? `${createForm.manufactureDate}T00:00:00`
+            : undefined,
+        expiryDate:
+          createForm.expiryDate && createFormTimes.expiryTime
+            ? `${createForm.expiryDate}T${createFormTimes.expiryTime}:00`
+            : createForm.expiryDate
+            ? `${createForm.expiryDate}T00:00:00`
+            : undefined,
         quantity: createForm.quantity,
         supplierName: createForm.supplierName || undefined,
         supplierBatchNumber: createForm.supplierBatchNumber || undefined,

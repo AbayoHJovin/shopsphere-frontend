@@ -596,14 +596,7 @@ export default function OrderDetailsPage() {
                 </div>
 
                 <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <label className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
-                      Zip Code
-                    </label>
-                    <p className="text-sm">
-                      {order.shippingAddress.zipCode || "Not provided"}
-                    </p>
-                  </div>
+                
                   <div>
                     <label className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
                       Country

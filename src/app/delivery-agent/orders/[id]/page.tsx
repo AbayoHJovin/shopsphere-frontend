@@ -316,7 +316,6 @@ export default function DeliveryAgentOrderDetails() {
                     <p className="text-sm text-muted-foreground">
                       {order.shippingAddress?.city || "N/A"},{" "}
                       {order.shippingAddress?.state || "N/A"}{" "}
-                      {order.shippingAddress?.postalCode || "N/A"}
                     </p>
                     <p className="text-sm text-muted-foreground">
                       {order.shippingAddress?.country || "N/A"}

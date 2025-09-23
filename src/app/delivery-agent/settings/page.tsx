@@ -47,7 +47,6 @@ export default function DeliveryAgentSettings() {
     address: "",
     city: "",
     state: "",
-    postalCode: "",
     country: "",
   });
   const [isEditing, setIsEditing] = useState(false);
@@ -63,7 +62,6 @@ export default function DeliveryAgentSettings() {
         address: "",
         city: "",
         state: "",
-        postalCode: "",
         country: "",
       });
     }
@@ -248,17 +246,6 @@ export default function DeliveryAgentSettings() {
                         value={profileData.state}
                         onChange={(e) =>
                           handleInputChange("state", e.target.value)
-                        }
-                        disabled={!isEditing}
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="postalCode">Postal Code</Label>
-                      <Input
-                        id="postalCode"
-                        value={profileData.postalCode}
-                        onChange={(e) =>
-                          handleInputChange("postalCode", e.target.value)
                         }
                         disabled={!isEditing}
                       />

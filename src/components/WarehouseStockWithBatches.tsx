@@ -28,13 +28,20 @@ import {
   CollapsibleContent,
   CollapsibleTrigger,
 } from "@/components/ui/collapsible";
+import { Calendar } from "@/components/ui/calendar";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
+import { cn } from "@/lib/utils";
 import { useToast } from "@/components/ui/use-toast";
 import {
   Plus,
   Trash2,
   Edit,
   Package,
-  Calendar,
+  CalendarIcon,
   AlertTriangle,
   CheckCircle,
   XCircle,
@@ -45,7 +52,10 @@ import {
   Eye,
   EyeOff,
 } from "lucide-react";
-import { stockBatchService, StockBatch } from "@/lib/services/stock-batch-service";
+import {
+  stockBatchService,
+  StockBatch,
+} from "@/lib/services/stock-batch-service";
 import { format } from "date-fns";
 
 interface WarehouseStock {
@@ -82,12 +92,16 @@ export function WarehouseStockWithBatches({
   const { toast } = useToast();
   const [batches, setBatches] = useState<StockBatch[]>([]);
   const [loading, setLoading] = useState(false);
-  const [expandedWarehouses, setExpandedWarehouses] = useState<Set<number>>(new Set());
+  const [expandedWarehouses, setExpandedWarehouses] = useState<Set<number>>(
+    new Set()
+  );
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
   const [selectedBatch, setSelectedBatch] = useState<StockBatch | null>(null);
-  const [selectedWarehouseId, setSelectedWarehouseId] = useState<number | null>(null);
+  const [selectedWarehouseId, setSelectedWarehouseId] = useState<number | null>(
+    null
+  );
   const [formData, setFormData] = useState<BatchFormData>({
     stockId: 0,
     batchNumber: "",
@@ -96,6 +110,11 @@ export function WarehouseStockWithBatches({
     expiryDate: "",
     supplierName: "",
     supplierBatchNumber: "",
+  });
+
+  const [formTimes, setFormTimes] = useState({
+    manufactureTime: "",
+    expiryTime: "",
   });
 
   // Fetch batches for this variant
@@ -143,7 +162,9 @@ export function WarehouseStockWithBatches({
   };
 
   const handleCreateBatch = async (warehouseId: number) => {
-    const warehouse = warehouseStocks.find(w => w.warehouseId === warehouseId);
+    const warehouse = warehouseStocks.find(
+      (w) => w.warehouseId === warehouseId
+    );
     if (!warehouse) {
       toast({
         title: "Error",
@@ -155,13 +176,17 @@ export function WarehouseStockWithBatches({
 
     setSelectedWarehouseId(warehouseId);
     setFormData({
-      stockId: 0, // Not needed for the new endpoint
+      stockId: 0,
       batchNumber: "",
       quantity: 1,
       manufactureDate: "",
       expiryDate: "",
       supplierName: "",
       supplierBatchNumber: "",
+    });
+    setFormTimes({
+      manufactureTime: "",
+      expiryTime: "",
     });
     setIsCreateModalOpen(true);
   };
@@ -190,7 +215,11 @@ export function WarehouseStockWithBatches({
       setLoading(true);
 
       // Validate required fields
-      if (!formData.batchNumber || formData.quantity <= 0 || !selectedWarehouseId) {
+      if (
+        !formData.batchNumber ||
+        formData.quantity <= 0 ||
+        !selectedWarehouseId
+      ) {
         toast({
           title: "Validation Error",
           description: "Please fill in all required fields",
@@ -206,8 +235,18 @@ export function WarehouseStockWithBatches({
         {
           batchNumber: String(formData.batchNumber).trim(),
           quantity: Number(formData.quantity),
-          manufactureDate: formData.manufactureDate || undefined,
-          expiryDate: formData.expiryDate || undefined,
+          manufactureDate:
+            formData.manufactureDate && formTimes.manufactureTime
+              ? `${formData.manufactureDate}T${formTimes.manufactureTime}:00`
+              : formData.manufactureDate
+              ? `${formData.manufactureDate}T00:00:00`
+              : undefined,
+          expiryDate:
+            formData.expiryDate && formTimes.expiryTime
+              ? `${formData.expiryDate}T${formTimes.expiryTime}:00`
+              : formData.expiryDate
+              ? `${formData.expiryDate}T00:00:00`
+              : undefined,
           supplierName: formData.supplierName || undefined,
           supplierBatchNumber: formData.supplierBatchNumber || undefined,
         }
@@ -218,6 +257,19 @@ export function WarehouseStockWithBatches({
         description: "Batch created successfully",
       });
 
+      setFormData({
+        stockId: 0,
+        batchNumber: "",
+        quantity: 1,
+        manufactureDate: "",
+        expiryDate: "",
+        supplierName: "",
+        supplierBatchNumber: "",
+      });
+      setFormTimes({
+        manufactureTime: "",
+        expiryTime: "",
+      });
       setIsCreateModalOpen(false);
       setSelectedWarehouseId(null);
       await fetchBatches();
@@ -323,7 +375,10 @@ export function WarehouseStockWithBatches({
     }
     if (batch.isExpiringSoon) {
       return (
-        <Badge variant="outline" className="text-xs text-yellow-600 border-yellow-200">
+        <Badge
+          variant="outline"
+          className="text-xs text-yellow-600 border-yellow-200"
+        >
           <AlertTriangle className="w-3 h-3 mr-1" />
           Expiring Soon
         </Badge>
@@ -331,7 +386,10 @@ export function WarehouseStockWithBatches({
     }
     if (batch.isAvailable) {
       return (
-        <Badge variant="outline" className="text-xs text-green-600 border-green-200">
+        <Badge
+          variant="outline"
+          className="text-xs text-green-600 border-green-200"
+        >
           <CheckCircle className="w-3 h-3 mr-1" />
           Active
         </Badge>
@@ -350,11 +408,19 @@ export function WarehouseStockWithBatches({
       {warehouseStocks.map((stock) => {
         const warehouseBatches = batchesByWarehouse[stock.warehouseId] || [];
         const isExpanded = expandedWarehouses.has(stock.warehouseId);
-        const totalBatchQuantity = warehouseBatches.reduce((sum, batch) => sum + batch.quantity, 0);
-        const activeBatches = warehouseBatches.filter(batch => batch.isAvailable);
+        const totalBatchQuantity = warehouseBatches.reduce(
+          (sum, batch) => sum + batch.quantity,
+          0
+        );
+        const activeBatches = warehouseBatches.filter(
+          (batch) => batch.isAvailable
+        );
 
         return (
-          <div key={stock.warehouseId} className="border rounded-lg overflow-hidden">
+          <div
+            key={stock.warehouseId}
+            className="border rounded-lg overflow-hidden"
+          >
             <Collapsible>
               <CollapsibleTrigger asChild>
                 <div
@@ -369,7 +435,9 @@ export function WarehouseStockWithBatches({
                     )}
                     <Warehouse className="w-4 h-4 text-blue-600" />
                     <div>
-                      <div className="font-medium text-sm">{stock.warehouseName}</div>
+                      <div className="font-medium text-sm">
+                        {stock.warehouseName}
+                      </div>
                       {stock.warehouseLocation && (
                         <div className="text-xs text-muted-foreground">
                           {stock.warehouseLocation}
@@ -382,7 +450,9 @@ export function WarehouseStockWithBatches({
                     <div className="text-right">
                       <div
                         className={`font-semibold text-sm ${
-                          stock.isLowStock ? "text-yellow-600" : "text-green-600"
+                          stock.isLowStock
+                            ? "text-yellow-600"
+                            : "text-green-600"
                         }`}
                       >
                         {stock.stockQuantity} units
@@ -395,7 +465,8 @@ export function WarehouseStockWithBatches({
                     {warehouseBatches.length > 0 && (
                       <div className="text-right">
                         <div className="text-sm font-medium text-blue-600">
-                          {warehouseBatches.length} batch{warehouseBatches.length !== 1 ? 'es' : ''}
+                          {warehouseBatches.length} batch
+                          {warehouseBatches.length !== 1 ? "es" : ""}
                         </div>
                         <div className="text-xs text-muted-foreground">
                           {activeBatches.length} active
@@ -451,13 +522,21 @@ export function WarehouseStockWithBatches({
                                 {batch.manufactureDate && (
                                   <span className="flex items-center gap-1">
                                     <Calendar className="w-3 h-3" />
-                                    Mfg: {format(new Date(batch.manufactureDate), "MMM dd, yyyy")}
+                                    Mfg:{" "}
+                                    {format(
+                                      new Date(batch.manufactureDate),
+                                      "MMM dd, yyyy"
+                                    )}
                                   </span>
                                 )}
                                 {batch.expiryDate && (
                                   <span className="flex items-center gap-1">
                                     <Calendar className="w-3 h-3" />
-                                    Exp: {format(new Date(batch.expiryDate), "MMM dd, yyyy")}
+                                    Exp:{" "}
+                                    {format(
+                                      new Date(batch.expiryDate),
+                                      "MMM dd, yyyy"
+                                    )}
                                   </span>
                                 )}
                                 {batch.supplierName && (
@@ -493,7 +572,9 @@ export function WarehouseStockWithBatches({
                       <div className="text-center py-8 text-muted-foreground border-2 border-dashed border-border rounded-lg">
                         <Package className="w-8 h-8 mx-auto mb-2 opacity-50" />
                         <p className="text-sm">No batches found</p>
-                        <p className="text-xs mb-4">Create your first batch to track inventory</p>
+                        <p className="text-xs mb-4">
+                          Create your first batch to track inventory
+                        </p>
                         <Button
                           size="sm"
                           variant="outline"
@@ -519,7 +600,11 @@ export function WarehouseStockWithBatches({
             <DialogTitle>Create New Batch</DialogTitle>
             <DialogDescription>
               Create a new stock batch for {variantName} in{" "}
-              {warehouseStocks.find(w => w.warehouseId === selectedWarehouseId)?.warehouseName}
+              {
+                warehouseStocks.find(
+                  (w) => w.warehouseId === selectedWarehouseId
+                )?.warehouseName
+              }
             </DialogDescription>
           </DialogHeader>
 
@@ -529,7 +614,9 @@ export function WarehouseStockWithBatches({
               <Input
                 id="batchNumber"
                 value={formData.batchNumber}
-                onChange={(e) => setFormData({ ...formData, batchNumber: e.target.value })}
+                onChange={(e) =>
+                  setFormData({ ...formData, batchNumber: e.target.value })
+                }
                 placeholder="Enter batch number"
               />
             </div>
@@ -541,27 +628,120 @@ export function WarehouseStockWithBatches({
                 type="number"
                 min="1"
                 value={formData.quantity}
-                onChange={(e) => setFormData({ ...formData, quantity: Number(e.target.value) })}
+                onChange={(e) =>
+                  setFormData({ ...formData, quantity: Number(e.target.value) })
+                }
               />
             </div>
 
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <Label htmlFor="manufactureDate">Manufacture Date</Label>
+            <div>
+              <Label htmlFor="manufactureDate">Manufacture Date</Label>
+              <div className="flex gap-2">
+                <Popover>
+                  <PopoverTrigger asChild>
+                    <Button
+                      variant={"outline"}
+                      className={cn(
+                        "flex-1 justify-start text-left font-normal",
+                        !formData.manufactureDate && "text-muted-foreground"
+                      )}
+                    >
+                      <CalendarIcon className="mr-2 h-4 w-4" />
+                      {formData.manufactureDate ? (
+                        format(new Date(formData.manufactureDate), "PPP")
+                      ) : (
+                        <span>Pick a date (optional)</span>
+                      )}
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-auto p-0">
+                    <Calendar
+                      mode="single"
+                      selected={
+                        formData.manufactureDate
+                          ? new Date(formData.manufactureDate)
+                          : undefined
+                      }
+                      onSelect={(date) => {
+                        if (date) {
+                          const dateStr = format(date, "yyyy-MM-dd");
+                          setFormData({
+                            ...formData,
+                            manufactureDate: dateStr,
+                          });
+                        }
+                      }}
+                      initialFocus
+                    />
+                  </PopoverContent>
+                </Popover>
                 <Input
-                  id="manufactureDate"
-                  type="date"
-                  value={formData.manufactureDate}
-                  onChange={(e) => setFormData({ ...formData, manufactureDate: e.target.value })}
+                  type="time"
+                  value={formTimes.manufactureTime}
+                  onChange={(e) =>
+                    setFormTimes({
+                      ...formTimes,
+                      manufactureTime: e.target.value,
+                    })
+                  }
+                  className="w-32"
+                  placeholder="Time (optional)"
                 />
               </div>
-              <div>
-                <Label htmlFor="expiryDate">Expiry Date</Label>
+            </div>
+
+            <div>
+              <Label htmlFor="expiryDate">Expiry Date</Label>
+              <div className="flex gap-2">
+                <Popover>
+                  <PopoverTrigger asChild>
+                    <Button
+                      variant={"outline"}
+                      className={cn(
+                        "flex-1 justify-start text-left font-normal",
+                        !formData.expiryDate && "text-muted-foreground"
+                      )}
+                    >
+                      <CalendarIcon className="mr-2 h-4 w-4" />
+                      {formData.expiryDate ? (
+                        format(new Date(formData.expiryDate), "PPP")
+                      ) : (
+                        <span>Pick a date (optional)</span>
+                      )}
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-auto p-0">
+                    <Calendar
+                      mode="single"
+                      selected={
+                        formData.expiryDate
+                          ? new Date(formData.expiryDate)
+                          : undefined
+                      }
+                      onSelect={(date) => {
+                        if (date) {
+                          const dateStr = format(date, "yyyy-MM-dd");
+                          setFormData({
+                            ...formData,
+                            expiryDate: dateStr,
+                          });
+                        }
+                      }}
+                      initialFocus
+                    />
+                  </PopoverContent>
+                </Popover>
                 <Input
-                  id="expiryDate"
-                  type="date"
-                  value={formData.expiryDate}
-                  onChange={(e) => setFormData({ ...formData, expiryDate: e.target.value })}
+                  type="time"
+                  value={formTimes.expiryTime}
+                  onChange={(e) =>
+                    setFormTimes({
+                      ...formTimes,
+                      expiryTime: e.target.value,
+                    })
+                  }
+                  className="w-32"
+                  placeholder="Time (optional)"
                 />
               </div>
             </div>
@@ -571,7 +751,9 @@ export function WarehouseStockWithBatches({
               <Input
                 id="supplierName"
                 value={formData.supplierName}
-                onChange={(e) => setFormData({ ...formData, supplierName: e.target.value })}
+                onChange={(e) =>
+                  setFormData({ ...formData, supplierName: e.target.value })
+                }
                 placeholder="Enter supplier name"
               />
             </div>
@@ -581,7 +763,12 @@ export function WarehouseStockWithBatches({
               <Input
                 id="supplierBatchNumber"
                 value={formData.supplierBatchNumber}
-                onChange={(e) => setFormData({ ...formData, supplierBatchNumber: e.target.value })}
+                onChange={(e) =>
+                  setFormData({
+                    ...formData,
+                    supplierBatchNumber: e.target.value,
+                  })
+                }
                 placeholder="Enter supplier batch number"
               />
             </div>
@@ -618,7 +805,9 @@ export function WarehouseStockWithBatches({
               <Input
                 id="editBatchNumber"
                 value={formData.batchNumber}
-                onChange={(e) => setFormData({ ...formData, batchNumber: e.target.value })}
+                onChange={(e) =>
+                  setFormData({ ...formData, batchNumber: e.target.value })
+                }
                 placeholder="Enter batch number"
               />
             </div>
@@ -630,7 +819,9 @@ export function WarehouseStockWithBatches({
                 type="number"
                 min="0"
                 value={formData.quantity}
-                onChange={(e) => setFormData({ ...formData, quantity: Number(e.target.value) })}
+                onChange={(e) =>
+                  setFormData({ ...formData, quantity: Number(e.target.value) })
+                }
               />
             </div>
 
@@ -641,7 +832,12 @@ export function WarehouseStockWithBatches({
                   id="editManufactureDate"
                   type="date"
                   value={formData.manufactureDate}
-                  onChange={(e) => setFormData({ ...formData, manufactureDate: e.target.value })}
+                  onChange={(e) =>
+                    setFormData({
+                      ...formData,
+                      manufactureDate: e.target.value,
+                    })
+                  }
                 />
               </div>
               <div>
@@ -650,7 +846,9 @@ export function WarehouseStockWithBatches({
                   id="editExpiryDate"
                   type="date"
                   value={formData.expiryDate}
-                  onChange={(e) => setFormData({ ...formData, expiryDate: e.target.value })}
+                  onChange={(e) =>
+                    setFormData({ ...formData, expiryDate: e.target.value })
+                  }
                 />
               </div>
             </div>
@@ -660,17 +858,26 @@ export function WarehouseStockWithBatches({
               <Input
                 id="editSupplierName"
                 value={formData.supplierName}
-                onChange={(e) => setFormData({ ...formData, supplierName: e.target.value })}
+                onChange={(e) =>
+                  setFormData({ ...formData, supplierName: e.target.value })
+                }
                 placeholder="Enter supplier name"
               />
             </div>
 
             <div>
-              <Label htmlFor="editSupplierBatchNumber">Supplier Batch Number</Label>
+              <Label htmlFor="editSupplierBatchNumber">
+                Supplier Batch Number
+              </Label>
               <Input
                 id="editSupplierBatchNumber"
                 value={formData.supplierBatchNumber}
-                onChange={(e) => setFormData({ ...formData, supplierBatchNumber: e.target.value })}
+                onChange={(e) =>
+                  setFormData({
+                    ...formData,
+                    supplierBatchNumber: e.target.value,
+                  })
+                }
                 placeholder="Enter supplier batch number"
               />
             </div>
@@ -697,8 +904,9 @@ export function WarehouseStockWithBatches({
           <AlertDialogHeader>
             <AlertDialogTitle>Delete Batch</AlertDialogTitle>
             <AlertDialogDescription>
-              Are you sure you want to delete batch "{selectedBatch?.batchNumber}"? 
-              This action cannot be undone and will remove {selectedBatch?.quantity} units from inventory.
+              Are you sure you want to delete batch "
+              {selectedBatch?.batchNumber}"? This action cannot be undone and
+              will remove {selectedBatch?.quantity} units from inventory.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
