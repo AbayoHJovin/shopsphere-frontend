@@ -47,15 +47,42 @@ export interface VariantImageDTO {
   sortOrder?: number;
 }
 
+export interface AdminOrderBatchDTO {
+  batchId: string;
+  batchNumber: string;
+  quantityFromBatch: number;
+  manufactureDate?: string;
+  expiryDate?: string;
+  batchStatus: string;
+  supplierName?: string;
+  costPrice?: number;
+}
+
+export interface AdminOrderWarehouseDTO {
+  warehouseId: string;
+  warehouseName: string;
+  warehouseLocation?: string;
+  warehouseAddress?: string;
+  warehousePhone?: string;
+  warehouseManager?: string;
+  quantityFromWarehouse: number;
+  batches: AdminOrderBatchDTO[];
+}
+
 export interface AdminOrderItemDTO {
   id: string;
   productId: string;
-  variantId: string;
+  variantId?: string;
   product: SimpleProductDTO;
   quantity: number;
   price: number;
+  originalPrice?: number;
   totalPrice: number;
+  discountPercentage?: number;
+  discountName?: string;
+  hasDiscount?: boolean;
   availableStock: number;
+  warehouses: AdminOrderWarehouseDTO[];
 }
 
 export interface AdminOrderAddressDTO {
@@ -65,6 +92,8 @@ export interface AdminOrderAddressDTO {
   state: string;
   country: string;
   phone: string;
+  latitude?: number;
+  longitude?: number;
 }
 
 export interface AdminPaymentInfoDTO {

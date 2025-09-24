@@ -15,6 +15,7 @@ import {
   X,
   Plus,
   Truck,
+  ExternalLink,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
@@ -70,6 +71,7 @@ export default function OrderDetailsPage() {
   const [loadingAgents, setLoadingAgents] = useState(false);
   const [assigning, setAssigning] = useState(false);
   const [agentSearchTerm, setAgentSearchTerm] = useState("");
+  const [mapType, setMapType] = useState<'satellite' | 'roadmap' | 'hybrid' | 'terrain'>('satellite');
 
   const orderId = params.id as string;
 
@@ -464,11 +466,50 @@ export default function OrderDetailsPage() {
                             {item.product.description}
                           </p>
                         )}
+                        
+                        {/* Discount Information */}
+                        {item.hasDiscount && item.originalPrice && item.discountPercentage && (
+                          <div className="mt-2 p-2 bg-green-50 border border-green-200 rounded-lg">
+                            <div className="flex items-center justify-between">
+                              <div className="flex items-center gap-2">
+                                <Badge variant="secondary" className="bg-green-100 text-green-800 font-semibold">
+                                  -{Math.round(item.discountPercentage)}% DISCOUNT
+                                </Badge>
+                                <span className="text-xs text-green-700 font-medium">
+                                  Applied at purchase
+                                </span>
+                              </div>
+                            </div>
+                            <div className="flex items-center gap-3 mt-1">
+                              <div className="text-sm">
+                                <span className="text-muted-foreground">Original: </span>
+                                <span className="line-through text-red-600 font-medium">
+                                  ${item.originalPrice.toFixed(2)}
+                                </span>
+                              </div>
+                              <div className="text-sm">
+                                <span className="text-muted-foreground">Discounted: </span>
+                                <span className="text-green-700 font-semibold">
+                                  ${item.price?.toFixed(2) || "0.00"}
+                                </span>
+                              </div>
+                              <div className="text-sm">
+                                <span className="text-muted-foreground">Saved: </span>
+                                <span className="text-green-700 font-semibold">
+                                  ${(item.originalPrice - item.price).toFixed(2)}
+                                </span>
+                              </div>
+                            </div>
+                          </div>
+                        )}
+                        
                         <div className="flex items-center gap-4 mt-2 text-sm text-muted-foreground">
                           <span>Quantity: {item.quantity}</span>
-                          <span>
-                            Price: ${item.price?.toFixed(2) || "0.00"}
-                          </span>
+                          {!item.hasDiscount && (
+                            <span>
+                              Price: ${item.price?.toFixed(2) || "0.00"}
+                            </span>
+                          )}
                           {item.availableStock !== undefined && (
                             <span>Stock: {item.availableStock}</span>
                           )}
@@ -478,15 +519,87 @@ export default function OrderDetailsPage() {
                             Variant ID: {item.variantId}
                           </p>
                         )}
+
+                        {/* Warehouse and Batch Information */}
+                        {item.warehouses && item.warehouses.length > 0 && (
+                          <div className="mt-3 p-3 bg-gray-50 rounded-lg">
+                            <h5 className="text-sm font-medium mb-2 flex items-center gap-2">
+                              <Package className="h-4 w-4" />
+                              Sourced from {item.warehouses.length} warehouse(s)
+                            </h5>
+                            <div className="space-y-2">
+                              {item.warehouses.map((warehouse, warehouseIndex) => (
+                                <div key={warehouse.warehouseId} className="text-xs">
+                                  <div className="flex items-center justify-between mb-1">
+                                    <span className="font-medium text-blue-700">
+                                      {warehouse.warehouseName}
+                                    </span>
+                                    <span className="text-muted-foreground">
+                                      Qty: {warehouse.quantityFromWarehouse}
+                                    </span>
+                                  </div>
+                                  {warehouse.warehouseLocation && (
+                                    <p className="text-muted-foreground mb-1">
+                                      📍 {warehouse.warehouseLocation}
+                                    </p>
+                                  )}
+                                  
+                                  {/* Batches */}
+                                  {warehouse.batches && warehouse.batches.length > 0 && (
+                                    <div className="ml-4 mt-1">
+                                      <p className="text-muted-foreground mb-1">
+                                        Batches ({warehouse.batches.length}):
+                                      </p>
+                                      <div className="space-y-1">
+                                        {warehouse.batches.map((batch, batchIndex) => (
+                                          <div key={batch.batchId} className="flex items-center justify-between bg-white p-2 rounded border">
+                                            <div>
+                                              <span className="font-mono text-xs">
+                                                {batch.batchNumber}
+                                              </span>
+                                              <Badge 
+                                                variant={batch.batchStatus === 'ACTIVE' ? 'default' : 'secondary'}
+                                                className="ml-2 text-xs"
+                                              >
+                                                {batch.batchStatus}
+                                              </Badge>
+                                            </div>
+                                            <span className="text-muted-foreground">
+                                              Qty: {batch.quantityFromBatch}
+                                            </span>
+                                          </div>
+                                        ))}
+                                      </div>
+                                    </div>
+                                  )}
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                        )}
                       </div>
 
                       {/* Price */}
                       <div className="text-right flex-shrink-0">
-                        <p className="font-medium">
-                          $
-                          {item.totalPrice?.toFixed(2) ||
-                            (item.price * item.quantity).toFixed(2)}
-                        </p>
+                        {item.hasDiscount && item.originalPrice ? (
+                          <div>
+                            <p className="text-sm text-muted-foreground line-through">
+                              ${(item.originalPrice * item.quantity).toFixed(2)}
+                            </p>
+                            <p className="font-medium text-green-600">
+                              ${item.totalPrice?.toFixed(2) || (item.price * item.quantity).toFixed(2)}
+                            </p>
+                            <p className="text-xs text-green-600">
+                              Saved: ${((item.originalPrice - item.price) * item.quantity).toFixed(2)}
+                            </p>
+                          </div>
+                        ) : (
+                          <p className="font-medium">
+                            $
+                            {item.totalPrice?.toFixed(2) ||
+                              (item.price * item.quantity).toFixed(2)}
+                          </p>
+                        )}
                       </div>
                     </div>
                   ))}
@@ -596,7 +709,6 @@ export default function OrderDetailsPage() {
                 </div>
 
                 <div className="grid grid-cols-2 gap-4">
-                
                   <div>
                     <label className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
                       Country
@@ -605,7 +717,110 @@ export default function OrderDetailsPage() {
                       {order.shippingAddress.country || "Not provided"}
                     </p>
                   </div>
+                  <div>
+                    <label className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
+                      Phone
+                    </label>
+                    <p className="text-sm">
+                      {order.shippingAddress.phone || "Not provided"}
+                    </p>
+                  </div>
                 </div>
+
+                {/* Google Maps Integration */}
+                {order.shippingAddress.latitude && order.shippingAddress.longitude && (
+                  <div className="space-y-3">
+                    <Separator />
+                    <div>
+                      <label className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
+                        Delivery Location
+                      </label>
+                      <div className="mt-2">
+                        {/* Map Type Toggle Buttons */}
+                        <div className="flex gap-1 mb-2">
+                          <Button
+                            variant={mapType === 'satellite' ? 'default' : 'outline'}
+                            size="sm"
+                            onClick={() => setMapType('satellite')}
+                            className="text-xs"
+                          >
+                            Satellite
+                          </Button>
+                          <Button
+                            variant={mapType === 'roadmap' ? 'default' : 'outline'}
+                            size="sm"
+                            onClick={() => setMapType('roadmap')}
+                            className="text-xs"
+                          >
+                            Roadmap
+                          </Button>
+                          <Button
+                            variant={mapType === 'hybrid' ? 'default' : 'outline'}
+                            size="sm"
+                            onClick={() => setMapType('hybrid')}
+                            className="text-xs"
+                          >
+                            Hybrid
+                          </Button>
+                          <Button
+                            variant={mapType === 'terrain' ? 'default' : 'outline'}
+                            size="sm"
+                            onClick={() => setMapType('terrain')}
+                            className="text-xs"
+                          >
+                            Terrain
+                          </Button>
+                        </div>
+
+                        {/* Google Maps Embed with Dynamic Map Type */}
+                        <div className="relative w-full h-48 rounded-lg overflow-hidden border">
+                          <iframe
+                            src={`https://www.google.com/maps/embed/v1/place?key=${process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY}&q=${order.shippingAddress.latitude},${order.shippingAddress.longitude}&zoom=18&maptype=${mapType}`}
+                            width="100%"
+                            height="100%"
+                            style={{ border: 0 }}
+                            allowFullScreen
+                            loading="lazy"
+                            referrerPolicy="no-referrer-when-downgrade"
+                            className="rounded-lg"
+                          />
+                        </div>
+                        
+                        {/* Coordinates and Actions */}
+                        <div className="flex items-center justify-between mt-2">
+                          <div className="text-xs text-muted-foreground">
+                            <p>Lat: {order.shippingAddress.latitude.toFixed(6)}</p>
+                            <p>Lng: {order.shippingAddress.longitude.toFixed(6)}</p>
+                          </div>
+                          <div className="flex gap-2">
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => {
+                                const url = `https://www.google.com/maps?q=${order.shippingAddress.latitude},${order.shippingAddress.longitude}`;
+                                window.open(url, '_blank');
+                              }}
+                            >
+                              <ExternalLink className="h-3 w-3 mr-1" />
+                              Open in Maps
+                            </Button>
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => {
+                                const url = `https://www.google.com/maps/dir/?api=1&destination=${order.shippingAddress.latitude},${order.shippingAddress.longitude}`;
+                                window.open(url, '_blank');
+                              }}
+                            >
+                              <Truck className="h-3 w-3 mr-1" />
+                              Get Directions
+                            </Button>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                )}
 
                 {order.shippingAddress.phone && (
                   <div className="pt-2 border-t">
