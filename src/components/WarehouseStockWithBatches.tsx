@@ -193,15 +193,39 @@ export function WarehouseStockWithBatches({
 
   const handleEditBatch = (batch: StockBatch) => {
     setSelectedBatch(batch);
+    
+    // Extract date and time from the batch data
+    const extractDateAndTime = (dateTimeStr: string | null) => {
+      if (!dateTimeStr) return { date: "", time: "" };
+      
+      try {
+        const dateObj = new Date(dateTimeStr);
+        const date = format(dateObj, "yyyy-MM-dd");
+        const time = format(dateObj, "HH:mm");
+        return { date, time };
+      } catch (error) {
+        return { date: "", time: "" };
+      }
+    };
+
+    const manufactureDateTime = extractDateAndTime(batch.manufactureDate);
+    const expiryDateTime = extractDateAndTime(batch.expiryDate);
+
     setFormData({
       stockId: Number(batch.stockId),
       batchNumber: batch.batchNumber,
       quantity: batch.quantity,
-      manufactureDate: batch.manufactureDate || "",
-      expiryDate: batch.expiryDate || "",
+      manufactureDate: manufactureDateTime.date,
+      expiryDate: expiryDateTime.date,
       supplierName: batch.supplierName || "",
       supplierBatchNumber: batch.supplierBatchNumber || "",
     });
+
+    setFormTimes({
+      manufactureTime: manufactureDateTime.time,
+      expiryTime: expiryDateTime.time,
+    });
+
     setIsEditModalOpen(true);
   };
 
@@ -292,10 +316,20 @@ export function WarehouseStockWithBatches({
       setLoading(true);
 
       await stockBatchService.updateBatch(selectedBatch.id, {
-        batchNumber: String(formData.batchNumber),
+        batchNumber: String(formData.batchNumber).trim(),
         quantity: Number(formData.quantity),
-        manufactureDate: formData.manufactureDate || undefined,
-        expiryDate: formData.expiryDate || undefined,
+        manufactureDate:
+          formData.manufactureDate && formTimes.manufactureTime
+            ? `${formData.manufactureDate}T${formTimes.manufactureTime}:00`
+            : formData.manufactureDate
+            ? `${formData.manufactureDate}T00:00:00`
+            : undefined,
+        expiryDate:
+          formData.expiryDate && formTimes.expiryTime
+            ? `${formData.expiryDate}T${formTimes.expiryTime}:00`
+            : formData.expiryDate
+            ? `${formData.expiryDate}T00:00:00`
+            : undefined,
         supplierName: formData.supplierName || undefined,
         supplierBatchNumber: formData.supplierBatchNumber || undefined,
       });
@@ -770,7 +804,12 @@ export function WarehouseStockWithBatches({
           <DialogHeader>
             <DialogTitle>Edit Batch</DialogTitle>
             <DialogDescription>
-              Update batch information for {selectedBatch?.batchNumber}
+              Update batch information for {selectedBatch?.batchNumber} in{" "}
+              {
+                warehouseStocks.find(
+                  (w) => w.warehouseId === selectedBatch?.stockId
+                )?.warehouseName
+              }
             </DialogDescription>
           </DialogHeader>
 
@@ -792,7 +831,7 @@ export function WarehouseStockWithBatches({
               <Input
                 id="editQuantity"
                 type="number"
-                min="0"
+                min="1"
                 value={formData.quantity}
                 onChange={(e) =>
                   setFormData({ ...formData, quantity: Number(e.target.value) })
@@ -800,30 +839,114 @@ export function WarehouseStockWithBatches({
               />
             </div>
 
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <Label htmlFor="editManufactureDate">Manufacture Date</Label>
+            <div>
+              <Label htmlFor="editManufactureDate">Manufacture Date</Label>
+              <div className="flex gap-2">
+                <Popover>
+                  <PopoverTrigger asChild>
+                    <Button
+                      variant={"outline"}
+                      className={cn(
+                        "flex-1 justify-start text-left font-normal",
+                        !formData.manufactureDate && "text-muted-foreground"
+                      )}
+                    >
+                      <CalendarIcon className="mr-2 h-4 w-4" />
+                      {formData.manufactureDate ? (
+                        format(new Date(formData.manufactureDate), "PPP")
+                      ) : (
+                        <span>Pick a date (optional)</span>
+                      )}
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-auto p-0">
+                    <Calendar
+                      mode="single"
+                      selected={
+                        formData.manufactureDate
+                          ? new Date(formData.manufactureDate)
+                          : undefined
+                      }
+                      onSelect={(date) => {
+                        if (date) {
+                          const dateStr = format(date, "yyyy-MM-dd");
+                          setFormData({
+                            ...formData,
+                            manufactureDate: dateStr,
+                          });
+                        }
+                      }}
+                      initialFocus
+                    />
+                  </PopoverContent>
+                </Popover>
                 <Input
-                  id="editManufactureDate"
-                  type="date"
-                  value={formData.manufactureDate}
+                  type="time"
+                  value={formTimes.manufactureTime}
                   onChange={(e) =>
-                    setFormData({
-                      ...formData,
-                      manufactureDate: e.target.value,
+                    setFormTimes({
+                      ...formTimes,
+                      manufactureTime: e.target.value,
                     })
                   }
+                  className="w-32"
+                  placeholder="Time (optional)"
                 />
               </div>
-              <div>
-                <Label htmlFor="editExpiryDate">Expiry Date</Label>
+            </div>
+
+            <div>
+              <Label htmlFor="editExpiryDate">Expiry Date</Label>
+              <div className="flex gap-2">
+                <Popover>
+                  <PopoverTrigger asChild>
+                    <Button
+                      variant={"outline"}
+                      className={cn(
+                        "flex-1 justify-start text-left font-normal",
+                        !formData.expiryDate && "text-muted-foreground"
+                      )}
+                    >
+                      <CalendarIcon className="mr-2 h-4 w-4" />
+                      {formData.expiryDate ? (
+                        format(new Date(formData.expiryDate), "PPP")
+                      ) : (
+                        <span>Pick a date (optional)</span>
+                      )}
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-auto p-0">
+                    <Calendar
+                      mode="single"
+                      selected={
+                        formData.expiryDate
+                          ? new Date(formData.expiryDate)
+                          : undefined
+                      }
+                      onSelect={(date) => {
+                        if (date) {
+                          const dateStr = format(date, "yyyy-MM-dd");
+                          setFormData({
+                            ...formData,
+                            expiryDate: dateStr,
+                          });
+                        }
+                      }}
+                      initialFocus
+                    />
+                  </PopoverContent>
+                </Popover>
                 <Input
-                  id="editExpiryDate"
-                  type="date"
-                  value={formData.expiryDate}
+                  type="time"
+                  value={formTimes.expiryTime}
                   onChange={(e) =>
-                    setFormData({ ...formData, expiryDate: e.target.value })
+                    setFormTimes({
+                      ...formTimes,
+                      expiryTime: e.target.value,
+                    })
                   }
+                  className="w-32"
+                  placeholder="Time (optional)"
                 />
               </div>
             </div>
@@ -841,9 +964,7 @@ export function WarehouseStockWithBatches({
             </div>
 
             <div>
-              <Label htmlFor="editSupplierBatchNumber">
-                Supplier Batch Number
-              </Label>
+              <Label htmlFor="editSupplierBatchNumber">Supplier Batch Number</Label>
               <Input
                 id="editSupplierBatchNumber"
                 value={formData.supplierBatchNumber}
