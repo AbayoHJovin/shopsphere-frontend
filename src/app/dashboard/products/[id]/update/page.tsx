@@ -440,6 +440,9 @@ export default function ProductUpdate({ params }: ProductUpdateProps) {
   const [variantWarehouseStocks, setVariantWarehouseStocks] = useState<
     WarehouseStock[]
   >([]);
+  const [variantWarehouseStocksWithBatches, setVariantWarehouseStocksWithBatches] = useState<
+    WarehouseStockWithBatches[]
+  >([]);
   const [editingVariants, setEditingVariants] = useState<
     Record<number, Partial<ProductVariant>>
   >({});
@@ -492,7 +495,6 @@ export default function ProductUpdate({ params }: ProductUpdateProps) {
     productWarehouseStocksWithBatches,
     setProductWarehouseStocksWithBatches,
   ] = useState<WarehouseStockWithBatches[]>([]);
-  const [useBatchManagement, setUseBatchManagement] = useState(true);
   const [isInventoryModalOpen, setIsInventoryModalOpen] = useState(false);
   const [productHasVariants, setProductHasVariants] = useState(false);
   const initialFormData = useRef<any>(null);
@@ -1840,31 +1842,17 @@ export default function ProductUpdate({ params }: ProductUpdateProps) {
     setIsInventoryModalOpen(true);
   };
 
-  const handleSaveProductInventory = async (warehouseStocks: any[]) => {
+  const handleSaveProductInventory = async (warehouseStocks: WarehouseStockWithBatches[]) => {
     try {
       setIsSubmitting(true);
 
-      if (useBatchManagement && productWarehouseStocksWithBatches.length > 0) {
-        // Use batch-based inventory management
-        await productService.assignProductStockWithBatches(
-          productId,
-          productWarehouseStocksWithBatches
-        );
-      } else {
-        // Use regular inventory management
-        const warehouseStockRequests = warehouseStocks.map((stock) => ({
-          warehouseId: parseInt(stock.warehouseId),
-          stockQuantity: stock.stockQuantity,
-          lowStockThreshold: stock.lowStockThreshold,
-        }));
+      // Always use batch-based inventory management
+      await productService.assignProductStockWithBatches(
+        productId,
+        warehouseStocks
+      );
 
-        await productService.assignProductStock(
-          productId,
-          warehouseStockRequests
-        );
-      }
-
-      setProductWarehouseStocks(warehouseStocks);
+      setProductWarehouseStocksWithBatches(warehouseStocks);
       setIsInventoryModalOpen(false);
 
       toast({
@@ -4471,15 +4459,15 @@ export default function ProductUpdate({ params }: ProductUpdateProps) {
           </DialogHeader>
 
           <div className="overflow-y-auto max-h-[60vh]">
-            <WarehouseSelector
-              warehouseStocks={variantWarehouseStocks}
+            <WarehouseSelectorWithBatches
+              warehouseStocks={variantWarehouseStocksWithBatches}
               onWarehouseStocksChange={(stocks) => {
-                setVariantWarehouseStocks(stocks);
+                setVariantWarehouseStocksWithBatches(stocks);
                 // TODO: Update variant warehouse stocks in backend
-                console.log("Updated warehouse stocks:", stocks);
+                console.log("Updated warehouse stocks with batches:", stocks);
               }}
-              title="Warehouse Stock Assignment"
-              description="Assign stock quantities to warehouses for this variant"
+              title="Warehouse Stock Assignment with Batches"
+              description="Assign stock quantities with batch details to warehouses for this variant"
             />
           </div>
 
@@ -4490,21 +4478,55 @@ export default function ProductUpdate({ params }: ProductUpdateProps) {
                 setIsWarehouseModalOpen(false);
                 setSelectedVariantForWarehouse(null);
                 setVariantWarehouseStocks([]);
+                setVariantWarehouseStocksWithBatches([]);
               }}
             >
               Cancel
             </Button>
             <Button
-              onClick={() => {
-                // TODO: Save warehouse stock changes
-                console.log(
-                  "Saving warehouse stocks for variant:",
-                  selectedVariantForWarehouse
-                );
-                setIsWarehouseModalOpen(false);
-                setSelectedVariantForWarehouse(null);
-                setVariantWarehouseStocks([]);
+              onClick={async () => {
+                if (!selectedVariantForWarehouse || variantWarehouseStocksWithBatches.length === 0) {
+                  toast({
+                    title: "No Changes",
+                    description: "Please add warehouse stocks before saving.",
+                    variant: "destructive",
+                  });
+                  return;
+                }
+
+                try {
+                  setIsSubmitting(true);
+                  
+                  await productService.assignVariantStockWithBatches(
+                    productId,
+                    selectedVariantForWarehouse,
+                    variantWarehouseStocksWithBatches
+                  );
+
+                  toast({
+                    title: "Success",
+                    description: "Variant warehouse stocks have been updated successfully.",
+                  });
+
+                  setIsWarehouseModalOpen(false);
+                  setSelectedVariantForWarehouse(null);
+                  setVariantWarehouseStocks([]);
+                  setVariantWarehouseStocksWithBatches([]);
+                  
+                  // Refresh variant data
+                  await fetchProductVariants();
+                } catch (error: any) {
+                  console.error("Error saving variant warehouse stocks:", error);
+                  toast({
+                    title: "Error",
+                    description: error.message || "Failed to save variant warehouse stocks. Please try again.",
+                    variant: "destructive",
+                  });
+                } finally {
+                  setIsSubmitting(false);
+                }
               }}
+              disabled={isSubmitting}
             >
               Save Changes
             </Button>
@@ -5001,41 +5023,12 @@ export default function ProductUpdate({ params }: ProductUpdateProps) {
             </DialogDescription>
           </DialogHeader>
 
-          <WarehouseSelector
-            warehouseStocks={productWarehouseStocks}
-            onWarehouseStocksChange={setProductWarehouseStocks}
-            title="Manage Product Inventory"
-            description="Assign stock levels to different warehouses for this product"
+          <WarehouseSelectorWithBatches
+            warehouseStocks={productWarehouseStocksWithBatches}
+            onWarehouseStocksChange={setProductWarehouseStocksWithBatches}
+            title="Manage Product Inventory with Batches"
+            description="Assign stock levels with batch details to different warehouses for this product"
           />
-
-          <div className="flex items-center space-x-2">
-            <input
-              type="checkbox"
-              id="useBatchManagement"
-              checked={useBatchManagement}
-              onChange={(e) => setUseBatchManagement(e.target.checked)}
-              className="rounded"
-            />
-            <Label htmlFor="useBatchManagement">
-              Use Batch Management (Recommended)
-            </Label>
-          </div>
-
-          {useBatchManagement ? (
-            <WarehouseSelectorWithBatches
-              warehouseStocks={productWarehouseStocksWithBatches}
-              onWarehouseStocksChange={setProductWarehouseStocksWithBatches}
-              title="Manage Product Inventory with Batches"
-              description="Assign stock levels with batch details to different warehouses for this product"
-            />
-          ) : (
-            <WarehouseSelector
-              warehouseStocks={productWarehouseStocks}
-              onWarehouseStocksChange={setProductWarehouseStocks}
-              title="Manage Product Inventory"
-              description="Assign stock levels to different warehouses for this product"
-            />
-          )}
 
           <DialogFooter>
             <Button
@@ -5046,11 +5039,7 @@ export default function ProductUpdate({ params }: ProductUpdateProps) {
             </Button>
             <Button
               onClick={() =>
-                handleSaveProductInventory(
-                  useBatchManagement
-                    ? productWarehouseStocksWithBatches
-                    : productWarehouseStocks
-                )
+                handleSaveProductInventory(productWarehouseStocksWithBatches)
               }
               disabled={isSubmitting}
             >

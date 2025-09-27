@@ -53,22 +53,14 @@ import {
   BarChart4,
 } from "lucide-react";
 
-// Mock user data
-const mockUser = {
-  name: "Admin User",
-  email: "admin@shopsphere.com",
-  role: "Admin",
-  avatar: "",
-  lastLogin: "2023-11-20T08:30:00Z",
-};
 
 export default function SettingsPage() {
   // Theme handling
   const { theme, setTheme } = useTheme();
   
   // State for form inputs
-  const [name, setName] = useState(mockUser.name);
-  const [email, setEmail] = useState(mockUser.email);
+  const [name, setName] = useState("");
+  const [email, setEmail] = useState("");
   const [language, setLanguage] = useState("en");
   const [timezone, setTimezone] = useState("UTC");
   const [dateFormat, setDateFormat] = useState("MM/DD/YYYY");
@@ -334,8 +326,8 @@ export default function SettingsPage() {
                 <div className="flex flex-col md:flex-row gap-6 mb-6">
                   <div className="flex flex-col items-center gap-2">
                     <Avatar className="w-24 h-24 border-2 border-border">
-                      <AvatarImage src={mockUser.avatar} alt={mockUser.name} />
-                      <AvatarFallback className="text-2xl bg-primary/10 text-primary">{mockUser.name.split(' ').map(n => n[0]).join('')}</AvatarFallback>
+                      <AvatarImage src="" alt={name} />
+                      <AvatarFallback className="text-2xl bg-primary/10 text-primary">{name.split(' ').map(n => n[0]).join('')}</AvatarFallback>
                     </Avatar>
                     <Button variant="outline" size="sm" className="mt-2 border-primary/20 hover:bg-primary/5 hover:text-primary">
                       Change Picture
@@ -368,13 +360,13 @@ export default function SettingsPage() {
                   <div>
                     <div className="font-medium mb-1">Role</div>
                     <div className="flex items-center">
-                      <Badge className="bg-primary">{mockUser.role}</Badge>
+                      <Badge className="bg-primary">{"ADMIN"}</Badge>
                     </div>
                   </div>
                   <div>
                     <div className="font-medium mb-1">Last Login</div>
                     <div className="text-sm text-muted-foreground">
-                      {new Date(mockUser.lastLogin).toLocaleString()}
+                      {/* {new Date(mockUser.lastLogin).toLocaleString()} */}
                     </div>
                   </div>
                 </div>

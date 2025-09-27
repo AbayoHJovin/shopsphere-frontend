@@ -111,6 +111,17 @@ export function WarehouseSelectorWithBatches({
     }>
   >([]);
 
+  // Validation errors state
+  const [validationErrors, setValidationErrors] = useState<{
+    warehouse?: string;
+    batches?: Array<{
+      batchNumber?: string;
+      quantity?: string;
+      manufactureDate?: string;
+      expiryDate?: string;
+    }>;
+  }>({});
+
   // Fetch warehouses with pagination and search
   const {
     data: warehousesData,
@@ -142,30 +153,113 @@ export function WarehouseSelectorWithBatches({
     const updatedBatches = [...batches];
     updatedBatches[index] = { ...updatedBatches[index], [field]: value };
     setBatches(updatedBatches);
+    
+    // Clear validation errors for this field
+    if (validationErrors.batches?.[index]) {
+      const updatedErrors = { ...validationErrors };
+      if (updatedErrors.batches) {
+        updatedErrors.batches[index] = {
+          ...updatedErrors.batches[index],
+          [field]: undefined
+        };
+        
+        // Also clear related date validation errors
+        if (field === 'manufactureDate' || field === 'expiryDate') {
+          // Clear both date errors when either date changes as they depend on each other
+          updatedErrors.batches[index].manufactureDate = undefined;
+          updatedErrors.batches[index].expiryDate = undefined;
+        }
+      }
+      setValidationErrors(updatedErrors);
+    }
+  };
+
+  const validateForm = () => {
+    const errors: typeof validationErrors = {};
+    
+    // Validate warehouse selection
+    if (!selectedWarehouse) {
+      errors.warehouse = "Please select a warehouse";
+    }
+    
+    // Validate batches
+    if (batches.length === 0) {
+      errors.warehouse = errors.warehouse || "Please add at least one batch";
+    } else {
+      errors.batches = [];
+      batches.forEach((batch, index) => {
+        const batchErrors: { 
+          batchNumber?: string; 
+          quantity?: string; 
+          manufactureDate?: string; 
+          expiryDate?: string; 
+        } = {};
+        
+        if (!batch.batchNumber.trim()) {
+          batchErrors.batchNumber = "Batch number is required";
+        }
+        
+        if (batch.quantity <= 0) {
+          batchErrors.quantity = "Quantity must be greater than 0";
+        }
+        
+        // Validate manufacture date
+        if (batch.manufactureDate) {
+          const mfgDate = new Date(batch.manufactureDate);
+          const now = new Date();
+          
+          if (mfgDate > now) {
+            batchErrors.manufactureDate = "Manufacture date cannot be in the future";
+          }
+        }
+        
+        // Validate expiry date
+        if (batch.expiryDate) {
+          const expDate = new Date(batch.expiryDate);
+          const now = new Date();
+          
+          if (expDate < now) {
+            batchErrors.expiryDate = "Expiry date cannot be in the past";
+          }
+          
+          // If both dates are provided, ensure expiry is after manufacture
+          if (batch.manufactureDate) {
+            const mfgDate = new Date(batch.manufactureDate);
+            if (expDate <= mfgDate) {
+              batchErrors.expiryDate = "Expiry date must be after manufacture date";
+            }
+          }
+        }
+        
+        errors.batches![index] = batchErrors;
+      });
+    }
+    
+    setValidationErrors(errors);
+    
+    // Check if there are any errors
+    const hasWarehouseError = !!errors.warehouse;
+    const hasBatchErrors = errors.batches?.some(batchError => 
+      batchError.batchNumber || batchError.quantity || batchError.manufactureDate || batchError.expiryDate
+    );
+    
+    return !hasWarehouseError && !hasBatchErrors;
   };
 
   const handleAddWarehouse = () => {
-    if (!selectedWarehouse || batches.length === 0) return;
-
-    // Validate batches
-    const hasInvalidBatch = batches.some(
-      (batch) => !batch.batchNumber.trim() || batch.quantity <= 0
-    );
-
-    if (hasInvalidBatch) {
-      alert("Please ensure all batches have a batch number and quantity > 0");
+    if (!validateForm()) {
       return;
     }
 
-    // Check if warehouse is already added
+    // Check if warehouse is already added (selectedWarehouse is guaranteed to be non-null by validation)
     const existingStock = warehouseStocks.find(
-      (stock) => stock.warehouseId === selectedWarehouse.id
+      (stock) => stock.warehouseId === selectedWarehouse!.id
     );
 
     if (existingStock) {
       // Update existing stock
       const updatedStocks = warehouseStocks.map((stock) =>
-        stock.warehouseId === selectedWarehouse.id
+        stock.warehouseId === selectedWarehouse!.id
           ? {
               ...stock,
               batches,
@@ -181,8 +275,8 @@ export function WarehouseSelectorWithBatches({
     } else {
       // Add new stock
       const newStock: WarehouseStockWithBatches = {
-        warehouseId: selectedWarehouse.id,
-        warehouseName: selectedWarehouse.name,
+        warehouseId: selectedWarehouse!.id,
+        warehouseName: selectedWarehouse!.name,
         batches,
         lowStockThreshold,
         stockQuantity: batches.reduce((sum, batch) => sum + batch.quantity, 0),
@@ -194,6 +288,7 @@ export function WarehouseSelectorWithBatches({
     setSelectedWarehouse(null);
     setBatches([]);
     setLowStockThreshold(5);
+    setValidationErrors({});
     setIsDialogOpen(false);
   };
 
@@ -322,7 +417,16 @@ export function WarehouseSelectorWithBatches({
                                   ? "bg-muted"
                                   : ""
                               }`}
-                              onClick={() => setSelectedWarehouse(warehouse)}
+                              onClick={() => {
+                                setSelectedWarehouse(warehouse);
+                                // Clear warehouse validation error when selecting
+                                if (validationErrors.warehouse) {
+                                  setValidationErrors(prev => ({
+                                    ...prev,
+                                    warehouse: undefined
+                                  }));
+                                }
+                              }}
                             >
                               <TableCell>
                                 <div className="font-medium">
@@ -358,6 +462,13 @@ export function WarehouseSelectorWithBatches({
                                   onClick={(e) => {
                                     e.stopPropagation();
                                     setSelectedWarehouse(warehouse);
+                                    // Clear warehouse validation error when selecting
+                                    if (validationErrors.warehouse) {
+                                      setValidationErrors(prev => ({
+                                        ...prev,
+                                        warehouse: undefined
+                                      }));
+                                    }
                                   }}
                                 >
                                   Select
@@ -369,6 +480,13 @@ export function WarehouseSelectorWithBatches({
                       </Table>
                     )}
                   </div>
+                  
+                  {/* Warehouse validation error */}
+                  {validationErrors.warehouse && (
+                    <div className="text-sm text-destructive mt-2">
+                      {validationErrors.warehouse}
+                    </div>
+                  )}
                 </div>
 
                 {/* Batch Configuration */}
@@ -463,7 +581,13 @@ export function WarehouseSelectorWithBatches({
                                     }
                                     placeholder="Enter batch number"
                                     required
+                                    className={validationErrors.batches?.[index]?.batchNumber ? "border-destructive" : ""}
                                   />
+                                  {validationErrors.batches?.[index]?.batchNumber && (
+                                    <div className="text-sm text-destructive mt-1">
+                                      {validationErrors.batches[index].batchNumber}
+                                    </div>
+                                  )}
                                 </div>
                                 <div>
                                   <Label htmlFor={`quantity-${index}`}>
@@ -483,101 +607,226 @@ export function WarehouseSelectorWithBatches({
                                     }
                                     placeholder="Enter quantity"
                                     required
+                                    className={validationErrors.batches?.[index]?.quantity ? "border-destructive" : ""}
                                   />
+                                  {validationErrors.batches?.[index]?.quantity && (
+                                    <div className="text-sm text-destructive mt-1">
+                                      {validationErrors.batches[index].quantity}
+                                    </div>
+                                  )}
                                 </div>
                                 <div>
                                   <Label htmlFor={`manufactureDate-${index}`}>
-                                    Manufacture Date
+                                    Manufacture Date & Time
                                   </Label>
-                                  <Popover>
-                                    <PopoverTrigger asChild>
-                                      <Button
-                                        variant={"outline"}
-                                        className={cn(
-                                          "w-full justify-start text-left font-normal",
-                                          !batch.manufactureDate &&
-                                            "text-muted-foreground"
-                                        )}
-                                      >
-                                        <CalendarIcon className="mr-2 h-4 w-4" />
-                                        {batch.manufactureDate ? (
-                                          format(
-                                            new Date(batch.manufactureDate),
-                                            "PPP"
-                                          )
-                                        ) : (
-                                          <span>Pick a date (optional)</span>
-                                        )}
-                                      </Button>
-                                    </PopoverTrigger>
-                                    <PopoverContent className="w-auto p-0">
-                                      <Calendar
-                                        mode="single"
-                                        selected={
+                                  <div className="space-y-2">
+                                    <Popover>
+                                      <PopoverTrigger asChild>
+                                        <Button
+                                          variant={"outline"}
+                                          className={cn(
+                                            "w-full justify-start text-left font-normal",
+                                            !batch.manufactureDate &&
+                                              "text-muted-foreground"
+                                          )}
+                                        >
+                                          <CalendarIcon className="mr-2 h-4 w-4" />
+                                          {batch.manufactureDate ? (
+                                            format(
+                                              new Date(batch.manufactureDate),
+                                              "PPP 'at' p"
+                                            )
+                                          ) : (
+                                            <span>Pick a date (optional)</span>
+                                          )}
+                                        </Button>
+                                      </PopoverTrigger>
+                                      <PopoverContent className="w-auto p-0">
+                                        <Calendar
+                                          mode="single"
+                                          selected={
+                                            batch.manufactureDate
+                                              ? new Date(batch.manufactureDate)
+                                              : undefined
+                                          }
+                                          onSelect={(date) => {
+                                            if (date) {
+                                              // Keep existing time if available, otherwise set to current time
+                                              const existingDateTime = batch.manufactureDate ? new Date(batch.manufactureDate) : new Date();
+                                              const newDateTime = new Date(date);
+                                              newDateTime.setHours(existingDateTime.getHours());
+                                              newDateTime.setMinutes(existingDateTime.getMinutes());
+                                              
+                                              handleBatchChange(
+                                                index,
+                                                "manufactureDate",
+                                                newDateTime.toISOString()
+                                              );
+                                            }
+                                          }}
+                                          initialFocus
+                                        />
+                                      </PopoverContent>
+                                    </Popover>
+                                    <div className="flex gap-2">
+                                      <Input
+                                        type="time"
+                                        placeholder="Select time"
+                                        value={
                                           batch.manufactureDate
-                                            ? new Date(batch.manufactureDate)
-                                            : undefined
+                                            ? format(new Date(batch.manufactureDate), "HH:mm")
+                                            : ""
                                         }
-                                        onSelect={(date) => {
-                                          if (date) {
+                                        onChange={(e) => {
+                                          if (e.target.value) {
+                                            // If no date is selected, use today's date
+                                            const date = batch.manufactureDate 
+                                              ? new Date(batch.manufactureDate) 
+                                              : new Date();
+                                            const [hours, minutes] = e.target.value.split(':');
+                                            date.setHours(parseInt(hours), parseInt(minutes));
+                                            
                                             handleBatchChange(
                                               index,
                                               "manufactureDate",
-                                              format(date, "yyyy-MM-dd")
+                                              date.toISOString()
                                             );
                                           }
                                         }}
-                                        initialFocus
+                                        className="flex-1"
                                       />
-                                    </PopoverContent>
-                                  </Popover>
+                                      {batch.manufactureDate && (
+                                        <Button
+                                          type="button"
+                                          variant="outline"
+                                          size="sm"
+                                          onClick={() => {
+                                            handleBatchChange(
+                                              index,
+                                              "manufactureDate",
+                                              undefined
+                                            );
+                                          }}
+                                        >
+                                          Clear
+                                        </Button>
+                                      )}
+                                    </div>
+                                  </div>
+                                  {validationErrors.batches?.[index]?.manufactureDate && (
+                                    <div className="text-sm text-destructive mt-1">
+                                      {validationErrors.batches[index].manufactureDate}
+                                    </div>
+                                  )}
                                 </div>
                                 <div>
                                   <Label htmlFor={`expiryDate-${index}`}>
-                                    Expiry Date
+                                    Expiry Date & Time
                                   </Label>
-                                  <Popover>
-                                    <PopoverTrigger asChild>
-                                      <Button
-                                        variant={"outline"}
-                                        className={cn(
-                                          "w-full justify-start text-left font-normal",
-                                          !batch.expiryDate &&
-                                            "text-muted-foreground"
-                                        )}
-                                      >
-                                        <CalendarIcon className="mr-2 h-4 w-4" />
-                                        {batch.expiryDate ? (
-                                          format(
-                                            new Date(batch.expiryDate),
-                                            "PPP"
-                                          )
-                                        ) : (
-                                          <span>Pick a date (optional)</span>
-                                        )}
-                                      </Button>
-                                    </PopoverTrigger>
-                                    <PopoverContent className="w-auto p-0">
-                                      <Calendar
-                                        mode="single"
-                                        selected={
+                                  <div className="space-y-2">
+                                    <Popover>
+                                      <PopoverTrigger asChild>
+                                        <Button
+                                          variant={"outline"}
+                                          className={cn(
+                                            "w-full justify-start text-left font-normal",
+                                            !batch.expiryDate &&
+                                              "text-muted-foreground"
+                                          )}
+                                        >
+                                          <CalendarIcon className="mr-2 h-4 w-4" />
+                                          {batch.expiryDate ? (
+                                            format(
+                                              new Date(batch.expiryDate),
+                                              "PPP 'at' p"
+                                            )
+                                          ) : (
+                                            <span>Pick a date (optional)</span>
+                                          )}
+                                        </Button>
+                                      </PopoverTrigger>
+                                      <PopoverContent className="w-auto p-0">
+                                        <Calendar
+                                          mode="single"
+                                          selected={
+                                            batch.expiryDate
+                                              ? new Date(batch.expiryDate)
+                                              : undefined
+                                          }
+                                          onSelect={(date) => {
+                                            if (date) {
+                                              // Keep existing time if available, otherwise set to end of day
+                                              const existingDateTime = batch.expiryDate ? new Date(batch.expiryDate) : new Date();
+                                              const newDateTime = new Date(date);
+                                              if (batch.expiryDate) {
+                                                newDateTime.setHours(existingDateTime.getHours());
+                                                newDateTime.setMinutes(existingDateTime.getMinutes());
+                                              } else {
+                                                // Default to end of day for expiry
+                                                newDateTime.setHours(23, 59);
+                                              }
+                                              
+                                              handleBatchChange(
+                                                index,
+                                                "expiryDate",
+                                                newDateTime.toISOString()
+                                              );
+                                            }
+                                          }}
+                                          initialFocus
+                                        />
+                                      </PopoverContent>
+                                    </Popover>
+                                    <div className="flex gap-2">
+                                      <Input
+                                        type="time"
+                                        placeholder="Select time"
+                                        value={
                                           batch.expiryDate
-                                            ? new Date(batch.expiryDate)
-                                            : undefined
+                                            ? format(new Date(batch.expiryDate), "HH:mm")
+                                            : ""
                                         }
-                                        onSelect={(date) => {
-                                          if (date) {
+                                        onChange={(e) => {
+                                          if (e.target.value) {
+                                            // If no date is selected, use today's date
+                                            const date = batch.expiryDate 
+                                              ? new Date(batch.expiryDate) 
+                                              : new Date();
+                                            const [hours, minutes] = e.target.value.split(':');
+                                            date.setHours(parseInt(hours), parseInt(minutes));
+                                            
                                             handleBatchChange(
                                               index,
                                               "expiryDate",
-                                              format(date, "yyyy-MM-dd")
+                                              date.toISOString()
                                             );
                                           }
                                         }}
-                                        initialFocus
+                                        className="flex-1"
                                       />
-                                    </PopoverContent>
-                                  </Popover>
+                                      {batch.expiryDate && (
+                                        <Button
+                                          type="button"
+                                          variant="outline"
+                                          size="sm"
+                                          onClick={() => {
+                                            handleBatchChange(
+                                              index,
+                                              "expiryDate",
+                                              undefined
+                                            );
+                                          }}
+                                        >
+                                          Clear
+                                        </Button>
+                                      )}
+                                    </div>
+                                  </div>
+                                  {validationErrors.batches?.[index]?.expiryDate && (
+                                    <div className="text-sm text-destructive mt-1">
+                                      {validationErrors.batches[index].expiryDate}
+                                    </div>
+                                  )}
                                 </div>
                                 <div>
                                   <Label htmlFor={`supplierName-${index}`}>

@@ -15,6 +15,7 @@ export interface ProductPricing {
   profitMargin?: number;
   profitPercentage?: number;
   currency: string;
+  costPrice:number
 }
 
 export interface ProductPricingUpdate {
@@ -52,6 +53,7 @@ export interface ProductVariant {
   variantBarcode?: string;
   price: number;
   salePrice?: number;
+  costPrice?: number;
   isActive: boolean;
   isInStock: boolean;
   isLowStock: boolean;
@@ -164,6 +166,7 @@ export interface ProductBasicInfoUpdate {
   newArrival?: boolean;
   onSale?: boolean;
   salePercentage?: number;
+  costPrice:number;
 }
 
 export interface ProductBasicInfo {
@@ -191,6 +194,7 @@ export interface ProductBasicInfo {
   newArrival: boolean;
   onSale: boolean;
   salePercentage?: number;
+  costPrice?:number;
 }
 import { handleApiError } from "../utils/error-handler";
 
@@ -357,6 +361,39 @@ class ProductService {
     try {
       const response = await apiClient.post(
         `/v1/products/${productId}/assign-stock-with-batches`,
+        warehouseStocks
+      );
+      return response.data;
+    } catch (error) {
+      throw handleApiError(error);
+    }
+  }
+
+  async assignVariantStockWithBatches(
+    productId: string,
+    variantId: number,
+    warehouseStocks: Array<{
+      warehouseId: number;
+      warehouseName?: string;
+      lowStockThreshold: number;
+      batches: Array<{
+        batchNumber: string;
+        manufactureDate?: string;
+        expiryDate?: string;
+        quantity: number;
+        supplierName?: string;
+        supplierBatchNumber?: string;
+      }>;
+    }>
+  ): Promise<{
+    success: boolean;
+    message: string;
+    assignedWarehouses: number;
+    totalBatchesCreated: number;
+  }> {
+    try {
+      const response = await apiClient.post(
+        `/v1/products/${productId}/variants/${variantId}/assign-stock-with-batches`,
         warehouseStocks
       );
       return response.data;

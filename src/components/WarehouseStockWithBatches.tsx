@@ -518,31 +518,6 @@ export function WarehouseStockWithBatches({
                                 </span>
                               </div>
 
-                              <div className="flex items-center gap-4 text-xs text-muted-foreground">
-                                {batch.manufactureDate && (
-                                  <span className="flex items-center gap-1">
-                                    <Calendar className="w-3 h-3" />
-                                    Mfg:{" "}
-                                    {format(
-                                      new Date(batch.manufactureDate),
-                                      "MMM dd, yyyy"
-                                    )}
-                                  </span>
-                                )}
-                                {batch.expiryDate && (
-                                  <span className="flex items-center gap-1">
-                                    <Calendar className="w-3 h-3" />
-                                    Exp:{" "}
-                                    {format(
-                                      new Date(batch.expiryDate),
-                                      "MMM dd, yyyy"
-                                    )}
-                                  </span>
-                                )}
-                                {batch.supplierName && (
-                                  <span>Supplier: {batch.supplierName}</span>
-                                )}
-                              </div>
                             </div>
 
                             <div className="flex items-center gap-2">
