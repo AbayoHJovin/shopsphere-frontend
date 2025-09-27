@@ -59,6 +59,15 @@ import {
   SheetTitle,
   SheetDescription,
 } from "@/components/ui/sheet";
+import {
+  Pagination,
+  PaginationContent,
+  PaginationItem,
+  PaginationLink,
+  PaginationNext,
+  PaginationPrevious,
+  PaginationEllipsis,
+} from "@/components/ui/pagination";
 import { format } from "date-fns";
 import { useMediaQuery } from "@/hooks/use-media-query";
 import { orderService } from "@/lib/services/order-service";
@@ -94,6 +103,14 @@ export default function OrdersPage() {
   // State for API data
   const [loading, setLoading] = useState(true);
   const [orders, setOrders] = useState<AdminOrderDTO[]>([]);
+  
+  // Pagination state
+  const [currentPage, setCurrentPage] = useState(0);
+  const [totalPages, setTotalPages] = useState(0);
+  const [totalElements, setTotalElements] = useState(0);
+  const [pageSize] = useState(15);
+  const [hasNext, setHasNext] = useState(false);
+  const [hasPrevious, setHasPrevious] = useState(false);
 
   // Delivery group workflow state
   const [deliveryGroupDialogOpen, setDeliveryGroupDialogOpen] = useState(false);
@@ -104,21 +121,30 @@ export default function OrdersPage() {
 
   // Fetch orders from API
   useEffect(() => {
-    const fetchOrders = async () => {
-      try {
-        setLoading(true);
-        const response = await orderService.getAllOrders();
-        setOrders(response);
-      } catch (error) {
-        console.error("Error fetching orders:", error);
-        toast.error("Failed to load orders. Please try again.");
-      } finally {
-        setLoading(false);
-      }
-    };
-
     fetchOrders();
-  }, []);
+  }, [currentPage]);
+
+  const fetchOrders = async () => {
+    try {
+      setLoading(true);
+      const response = await orderService.getAllOrdersPaginated(
+        currentPage,
+        pageSize,
+        "createdAt",
+        "desc"
+      );
+      setOrders(response.data);
+      setTotalPages(response.pagination.totalPages);
+      setTotalElements(response.pagination.totalElements);
+      setHasNext(response.pagination.hasNext);
+      setHasPrevious(response.pagination.hasPrevious);
+    } catch (error) {
+      console.error("Error fetching orders:", error);
+      toast.error("Failed to load orders. Please try again.");
+    } finally {
+      setLoading(false);
+    }
+  };
 
   // Check for existing groups for orders
   useEffect(() => {
@@ -173,24 +199,12 @@ export default function OrdersPage() {
 
   const handleSelectAll = (checked: boolean) => {
     if (checked) {
-      setSelectedOrderIds(filteredOrders.map((order) => parseInt(order.id)));
+      setSelectedOrderIds(orders.map((order) => parseInt(order.id)));
     } else {
       setSelectedOrderIds([]);
     }
   };
 
-  const fetchOrders = async () => {
-    try {
-      setLoading(true);
-      const response = await orderService.getAllOrders();
-      setOrders(response);
-    } catch (error) {
-      console.error("Error fetching orders:", error);
-      toast.error("Failed to load orders. Please try again.");
-    } finally {
-      setLoading(false);
-    }
-  };
 
   const handleDeliveryGroupSuccess = () => {
     // Refresh orders to get updated group information
@@ -198,63 +212,26 @@ export default function OrdersPage() {
     setSelectedOrderIds([]);
   };
 
-  const filteredOrders = useMemo(() => {
-    return orders.filter((order) => {
-      // Search filter
-      const matchesSearch =
-        order.orderNumber.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        order.userId.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        order.customerName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        false ||
-        order.customerEmail?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        false ||
-        order.customerPhone?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        false;
+  // Pagination functions
+  const handlePageChange = (page: number) => {
+    setCurrentPage(page);
+    setSelectedOrderIds([]); // Clear selections when changing pages
+  };
 
-      // Status filters
-      const matchesOrderStatus =
-        !filters.orderStatus ||
-        filters.orderStatus === "all" ||
-        order.status === filters.orderStatus;
-      const matchesPaymentStatus =
-        !filters.paymentStatus ||
-        filters.paymentStatus === "all" ||
-        order.paymentInfo?.paymentStatus === filters.paymentStatus;
+  const handlePreviousPage = () => {
+    if (hasPrevious) {
+      handlePageChange(currentPage - 1);
+    }
+  };
 
-      // Location filters
-      const matchesCity =
-        !filters.city ||
-        order.shippingAddress?.city
-          ?.toLowerCase()
-          .includes(filters.city.toLowerCase()) ||
-        false;
-      const matchesCountry =
-        !filters.country ||
-        order.shippingAddress?.country
-          ?.toLowerCase()
-          .includes(filters.country.toLowerCase()) ||
-        false;
+  const handleNextPage = () => {
+    if (hasNext) {
+      handlePageChange(currentPage + 1);
+    }
+  };
 
-      // Date filters
-      const orderDate = new Date(order.createdAt);
-      const matchesStartDate =
-        !filters.startDate || orderDate >= filters.startDate;
-      const matchesEndDate = !filters.endDate || orderDate <= filters.endDate;
-
-      return (
-        matchesSearch &&
-        matchesOrderStatus &&
-        matchesPaymentStatus &&
-        matchesCity &&
-        matchesCountry &&
-        matchesStartDate &&
-        matchesEndDate
-      );
-    });
-  }, [orders, searchTerm, filters]);
-
-  // For client-side pagination when filtering
-  const paginatedOrders = filteredOrders;
+  // Note: Filtering is now handled server-side through the API
+  // Client-side filtering has been removed in favor of server-side pagination
 
   const handleFilterChange = (key: string, value: any) => {
     setFilters((prev) => ({ ...prev, [key]: value }));
@@ -350,7 +327,7 @@ export default function OrdersPage() {
             <p className="text-sm text-muted-foreground">
               {loading
                 ? "Loading orders..."
-                : `Showing ${filteredOrders.length} orders`}
+                : `Showing ${Math.min(pageSize, orders.length)} of ${totalElements} orders (Page ${currentPage + 1} of ${totalPages})`}
             </p>
             {Object.values(filters).some(
               (value) => value !== "all" && value !== "" && value !== null
@@ -696,8 +673,8 @@ export default function OrdersPage() {
                       <OrderCheckbox
                         orderId={0}
                         checked={
-                          selectedOrderIds.length === filteredOrders.length &&
-                          filteredOrders.length > 0
+                          selectedOrderIds.length === orders.length &&
+                          orders.length > 0
                         }
                         onCheckedChange={handleSelectAll}
                       />
@@ -730,7 +707,7 @@ export default function OrdersPage() {
                       </TableCell>
                     </TableRow>
                   ))
-                ) : paginatedOrders.length === 0 ? (
+                ) : orders.length === 0 ? (
                   // Empty state
                   <TableRow>
                     <TableCell colSpan={10} className="h-24 text-center">
@@ -739,7 +716,7 @@ export default function OrdersPage() {
                   </TableRow>
                 ) : (
                   // Orders data
-                  paginatedOrders.map((order) => {
+                  orders.map((order) => {
                     const orderId = parseInt(order.id);
                     const currentGroup = orderGroups.get(orderId);
 
@@ -885,7 +862,7 @@ export default function OrdersPage() {
           {/* Order count info and bulk actions */}
           <div className="flex justify-between items-center px-4 py-4 border-t">
             <p className="text-sm text-muted-foreground">
-              Total: {filteredOrders.length} orders
+              Total: {totalElements} orders
               {selectedOrderIds.length > 0 && (
                 <span className="ml-2 text-primary">
                   ({selectedOrderIds.length} selected)
@@ -899,6 +876,71 @@ export default function OrdersPage() {
               </Button>
             )}
           </div>
+
+          {/* Pagination Controls */}
+          {totalPages > 1 && (
+            <div className="flex items-center justify-center px-4 py-4 border-t">
+              <Pagination>
+                <PaginationContent>
+                  <PaginationItem>
+                    <PaginationPrevious 
+                      onClick={handlePreviousPage}
+                      className={!hasPrevious ? "pointer-events-none opacity-50" : "cursor-pointer"}
+                    />
+                  </PaginationItem>
+                  
+                  {/* Page numbers */}
+                  {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
+                    let pageNum;
+                    if (totalPages <= 5) {
+                      pageNum = i;
+                    } else if (currentPage <= 2) {
+                      pageNum = i;
+                    } else if (currentPage >= totalPages - 3) {
+                      pageNum = totalPages - 5 + i;
+                    } else {
+                      pageNum = currentPage - 2 + i;
+                    }
+                    
+                    return (
+                      <PaginationItem key={pageNum}>
+                        <PaginationLink
+                          onClick={() => handlePageChange(pageNum)}
+                          isActive={currentPage === pageNum}
+                          className="cursor-pointer"
+                        >
+                          {pageNum + 1}
+                        </PaginationLink>
+                      </PaginationItem>
+                    );
+                  })}
+                  
+                  {totalPages > 5 && currentPage < totalPages - 3 && (
+                    <>
+                      <PaginationItem>
+                        <PaginationEllipsis />
+                      </PaginationItem>
+                      <PaginationItem>
+                        <PaginationLink
+                          onClick={() => handlePageChange(totalPages - 1)}
+                          className="cursor-pointer"
+                        >
+                          {totalPages}
+                        </PaginationLink>
+                      </PaginationItem>
+                    </>
+                  )}
+                  
+                  <PaginationItem>
+                    <PaginationNext 
+                      onClick={handleNextPage}
+                      className={!hasNext ? "pointer-events-none opacity-50" : "cursor-pointer"}
+                    />
+                  </PaginationItem>
+                </PaginationContent>
+              </Pagination>
+            </div>
+          )}
         </CardContent>
       </Card>
 

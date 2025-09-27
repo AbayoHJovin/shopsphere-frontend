@@ -23,6 +23,41 @@ class OrderService {
   }
 
   /**
+   * Get all orders for admin dashboard with pagination
+   */
+  async getAllOrdersPaginated(
+    page: number = 0,
+    size: number = 15,
+    sortBy: string = "createdAt",
+    sortDir: string = "desc"
+  ): Promise<{
+    data: AdminOrderDTO[];
+    pagination: {
+      currentPage: number;
+      totalPages: number;
+      totalElements: number;
+      pageSize: number;
+      hasNext: boolean;
+      hasPrevious: boolean;
+      isFirst: boolean;
+      isLast: boolean;
+    };
+  }> {
+    try {
+      const response = await apiClient.get<any>(
+        `${API_ENDPOINTS.ADMIN_ORDERS.ALL}?page=${page}&size=${size}&sortBy=${sortBy}&sortDir=${sortDir}`
+      );
+      return {
+        data: response.data.data,
+        pagination: response.data.pagination,
+      };
+    } catch (error) {
+      console.error("Error fetching paginated orders:", error);
+      throw error;
+    }
+  }
+
+  /**
    * Get orders by status for admin dashboard
    */
   async getOrdersByStatus(status: string): Promise<AdminOrderDTO[]> {
