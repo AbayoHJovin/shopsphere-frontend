@@ -21,6 +21,7 @@ import {
   Warehouse,
   Truck,
   Percent,
+  RotateCcw,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -94,6 +95,13 @@ export function Sidebar({ className }: SidebarProps) {
             label="Orders"
             collapsed={collapsed}
             isActive={pathname.startsWith("/dashboard/orders")}
+          />
+          <SidebarItem
+            href="/dashboard/returns"
+            icon={RotateCcw}
+            label="Return Requests"
+            collapsed={collapsed}
+            isActive={pathname.startsWith("/dashboard/returns")}
           />
           <SidebarItem
             href="/dashboard/shipping-costs"
