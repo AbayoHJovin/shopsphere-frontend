@@ -2,20 +2,20 @@
 
 export interface ReturnRequestDTO {
   id: string | number;
-  orderId: string;
-  customerId?: string;
+  orderId: string | number;
+  customerId?: string | null;
   reason: string;
   status: ReturnStatus;
   submittedAt: string;
-  decisionAt?: string;
-  decisionNotes?: string;
+  decisionAt?: string | null;
+  decisionNotes?: string | null;
   createdAt: string;
   updatedAt: string;
   
   // Related data
   returnMedia?: ReturnMediaDTO[];
   returnItems: ReturnItemDTO[];
-  returnAppeal?: ReturnAppealDTO;
+  returnAppeal?: ReturnAppealDTO | null;
   customerName?: string;
   customerEmail?: string;
   orderNumber: string;
@@ -23,29 +23,40 @@ export interface ReturnRequestDTO {
   // Helper fields
   canBeAppealed: boolean;
   daysUntilExpiry: number;
-  isEligibleForReturn: boolean;
+  eligibleForReturn: boolean;
 }
 
 export interface ReturnItemDTO {
-  id: string | number;
-  orderItemId: string;
+  id?: string | number;
+  orderItemId: string | number;
   returnQuantity: number;
-  itemReason: string;
+  itemReason?: string;
   productId?: string;
-  variantId?: string;
-  maxQuantity: number;
+  variantId?: string | number;
+  maxQuantity?: number;
   productName: string;
   variantName?: string;
   productImage?: string;
-  unitPrice: number;
-  totalPrice: number;
+  unitPrice?: number;
+  totalPrice?: number;
 }
 
 export interface ReturnMediaDTO {
-  id: string;
+  id: string | number;
+  returnRequestId: string | number;
   fileUrl: string;
+  publicId?: string;
   fileType: string;
+  mimeType?: string;
+  fileSize?: number;
+  width?: number;
+  height?: number;
   uploadedAt: string;
+  createdAt: string;
+  updatedAt: string;
+  fileExtension?: string;
+  image?: boolean;
+  video?: boolean;
 }
 
 export interface ReturnAppealDTO {

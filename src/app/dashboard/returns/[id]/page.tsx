@@ -7,6 +7,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Textarea } from '@/components/ui/textarea';
 import { Separator } from '@/components/ui/separator';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { 
   ArrowLeft,
   CheckCircle, 
@@ -24,7 +25,10 @@ import {
   Download,
   MapPin,
   Phone,
-  Mail
+  Mail,
+  ExternalLink,
+  Play,
+  X
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { ReturnRequestDTO, ReturnDecisionDTO } from '@/types/return';
@@ -41,6 +45,8 @@ export default function ReturnRequestDetailPage() {
   const [loading, setLoading] = useState(true);
   const [processing, setProcessing] = useState(false);
   const [decisionNotes, setDecisionNotes] = useState('');
+  const [selectedMedia, setSelectedMedia] = useState<any>(null);
+  const [showMediaViewer, setShowMediaViewer] = useState(false);
 
   const fetchReturnRequest = async () => {
     try {
@@ -116,10 +122,34 @@ export default function ReturnRequestDetailPage() {
 
   const calculateTotalRefundAmount = () => {
     if (!returnRequest) return 0;
-    return returnRequest.returnItems.reduce((total, item) => total + item.totalPrice, 0);
+    return returnRequest.returnItems.reduce((total, item) => {
+      return total + (item.totalPrice || 0);
+    }, 0);
   };
 
   const canMakeDecision = returnRequest?.status === 'PENDING';
+
+  const openMediaViewer = (media: any) => {
+    setSelectedMedia(media);
+    setShowMediaViewer(true);
+  };
+
+  const closeMediaViewer = () => {
+    setSelectedMedia(null);
+    setShowMediaViewer(false);
+  };
+
+  const isVideoFile = (media: any) => {
+    return media.fileType === 'VIDEO' || media.video || 
+           (media.mimeType && media.mimeType.startsWith('video/')) ||
+           (media.fileExtension && ['mp4', 'webm', 'ogg', 'avi', 'mov'].includes(media.fileExtension.toLowerCase()));
+  };
+
+  const isImageFile = (media: any) => {
+    return media.fileType === 'IMAGE' || media.image || 
+           (media.mimeType && media.mimeType.startsWith('image/')) ||
+           (media.fileExtension && ['jpg', 'jpeg', 'png', 'gif', 'webp', 'svg'].includes(media.fileExtension.toLowerCase()));
+  };
 
   if (loading) {
     return (
@@ -174,6 +204,12 @@ export default function ReturnRequestDetailPage() {
         </div>
         <div className="flex items-center gap-2">
           {getStatusBadge(returnRequest.status)}
+          <Link href={`/dashboard/orders/${returnRequest.orderId}`}>
+            <Button variant="outline" size="sm">
+              <ExternalLink className="h-4 w-4 mr-2" />
+              View Order
+            </Button>
+          </Link>
           <Button onClick={fetchReturnRequest} variant="outline" size="sm">
             <RefreshCw className="h-4 w-4 mr-2" />
             Refresh
@@ -198,7 +234,7 @@ export default function ReturnRequestDetailPage() {
             <CardContent>
               <div className="space-y-4">
                 {returnRequest.returnItems.map((item, index) => (
-                  <div key={item.id} className="border rounded-lg p-4">
+                  <div key={item.orderItemId || index} className="border rounded-lg p-4">
                     <div className="flex items-start gap-4">
                       {item.productImage && (
                         <img
@@ -217,18 +253,20 @@ export default function ReturnRequestDetailPage() {
                               </p>
                             )}
                             <div className="flex items-center gap-4 mt-2 text-sm text-muted-foreground">
-                              <span>Quantity: {item.returnQuantity} of {item.maxQuantity}</span>
-                              <span>Unit Price: {formatCurrency(item.unitPrice)}</span>
+                              <span>Quantity: {item.returnQuantity}{item.maxQuantity ? ` of ${item.maxQuantity}` : ''}</span>
+                              {item.unitPrice && <span>Unit Price: {formatCurrency(item.unitPrice)}</span>}
                             </div>
                           </div>
-                          <div className="text-right">
-                            <div className="font-medium">
-                              {formatCurrency(item.totalPrice)}
+                          {item.totalPrice && (
+                            <div className="text-right">
+                              <div className="font-medium">
+                                {formatCurrency(item.totalPrice)}
+                              </div>
+                              <div className="text-sm text-muted-foreground">
+                                Total Refund
+                              </div>
                             </div>
-                            <div className="text-sm text-muted-foreground">
-                              Total Refund
-                            </div>
-                          </div>
+                          )}
                         </div>
                         {item.itemReason && (
                           <div className="mt-3 p-3 bg-muted rounded-md">
@@ -242,14 +280,18 @@ export default function ReturnRequestDetailPage() {
                 ))}
               </div>
               
-              <Separator className="my-4" />
-              
-              <div className="flex items-center justify-between text-lg font-semibold">
-                <span>Total Refund Amount:</span>
-                <span className="text-green-600">
-                  {formatCurrency(calculateTotalRefundAmount())}
-                </span>
-              </div>
+              {calculateTotalRefundAmount() > 0 && (
+                <>
+                  <Separator className="my-4" />
+                  
+                  <div className="flex items-center justify-between text-lg font-semibold">
+                    <span>Total Refund Amount:</span>
+                    <span className="text-green-600">
+                      {formatCurrency(calculateTotalRefundAmount())}
+                    </span>
+                  </div>
+                </>
+              )}
             </CardContent>
           </Card>
 
@@ -280,33 +322,78 @@ export default function ReturnRequestDetailPage() {
               <CardContent>
                 <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
                   {returnRequest.returnMedia.map((media) => (
-                    <div key={media.id} className="border rounded-lg p-3">
+                    <div key={media.id} className="border rounded-lg p-3 hover:shadow-md transition-shadow">
                       <div className="flex items-center gap-2 mb-2">
-                        {media.fileType.startsWith('image/') ? (
-                          <ImageIcon className="h-4 w-4" />
+                        {isImageFile(media) ? (
+                          <ImageIcon className="h-4 w-4 text-blue-600" />
                         ) : (
-                          <Video className="h-4 w-4" />
+                          <Video className="h-4 w-4 text-purple-600" />
                         )}
                         <span className="text-sm font-medium">
-                          {media.fileType.split('/')[1].toUpperCase()}
+                          {media.fileType || 'UNKNOWN'}
                         </span>
                       </div>
-                      {media.fileType.startsWith('image/') && (
-                        <img
-                          src={media.fileUrl}
-                          alt="Return media"
-                          className="w-full h-24 object-cover rounded-md mb-2"
-                        />
-                      )}
+                      
+                      {/* Media Preview */}
+                      <div 
+                        className="relative cursor-pointer group mb-2"
+                        onClick={() => openMediaViewer(media)}
+                      >
+                        {isImageFile(media) ? (
+                          <img
+                            src={media.fileUrl}
+                            alt="Return media"
+                            className="w-full h-24 object-cover rounded-md group-hover:opacity-80 transition-opacity"
+                          />
+                        ) : isVideoFile(media) ? (
+                          <div className="relative w-full h-24 bg-gray-100 rounded-md flex items-center justify-center group-hover:bg-gray-200 transition-colors">
+                            <Play className="h-8 w-8 text-gray-600" />
+                            <div className="absolute inset-0 bg-black bg-opacity-20 rounded-md opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                              <Play className="h-6 w-6 text-white" />
+                            </div>
+                          </div>
+                        ) : (
+                          <div className="w-full h-24 bg-gray-100 rounded-md flex items-center justify-center">
+                            <FileText className="h-8 w-8 text-gray-600" />
+                          </div>
+                        )}
+                        
+                        {/* Overlay for click indication */}
+                        <div className="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-10 rounded-md transition-all flex items-center justify-center">
+                          <div className="opacity-0 group-hover:opacity-100 transition-opacity">
+                            <div className="bg-white bg-opacity-90 rounded-full p-2">
+                              {isImageFile(media) ? (
+                                <ImageIcon className="h-4 w-4 text-gray-800" />
+                              ) : (
+                                <Play className="h-4 w-4 text-gray-800" />
+                              )}
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+
                       <div className="flex items-center justify-between">
                         <span className="text-xs text-muted-foreground">
                           {format(new Date(media.uploadedAt), 'MMM dd, yyyy')}
                         </span>
-                        <Button variant="outline" size="sm" asChild>
-                          <a href={media.fileUrl} target="_blank" rel="noopener noreferrer">
-                            <Download className="h-3 w-3" />
-                          </a>
-                        </Button>
+                        <div className="flex gap-1">
+                          <Button 
+                            variant="outline" 
+                            size="sm"
+                            onClick={() => openMediaViewer(media)}
+                          >
+                            {isImageFile(media) ? (
+                              <ImageIcon className="h-3 w-3" />
+                            ) : (
+                              <Play className="h-3 w-3" />
+                            )}
+                          </Button>
+                          <Button variant="outline" size="sm" asChild>
+                            <a href={media.fileUrl} target="_blank" rel="noopener noreferrer">
+                              <Download className="h-3 w-3" />
+                            </a>
+                          </Button>
+                        </div>
                       </div>
                     </div>
                   ))}
@@ -466,6 +553,124 @@ export default function ReturnRequestDetailPage() {
           )}
         </div>
       </div>
+
+      {/* Media Viewer Dialog */}
+      <Dialog open={showMediaViewer} onOpenChange={setShowMediaViewer}>
+        <DialogContent className="max-w-4xl max-h-[90vh] p-0">
+          <DialogHeader className="p-6 pb-0">
+            <div className="flex items-center justify-between">
+              <DialogTitle className="flex items-center gap-2">
+                {selectedMedia && isImageFile(selectedMedia) ? (
+                  <ImageIcon className="h-5 w-5" />
+                ) : (
+                  <Video className="h-5 w-5" />
+                )}
+                Media Attachment
+              </DialogTitle>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={closeMediaViewer}
+                className="h-8 w-8 p-0"
+              >
+                <X className="h-4 w-4" />
+              </Button>
+            </div>
+          </DialogHeader>
+          
+          <div className="p-6 pt-0">
+            {selectedMedia && (
+              <div className="space-y-4">
+                {/* Media Display */}
+                <div className="flex justify-center bg-gray-50 rounded-lg p-4">
+                  {isImageFile(selectedMedia) ? (
+                    <img
+                      src={selectedMedia.fileUrl}
+                      alt="Return media"
+                      className="max-w-full max-h-[60vh] object-contain rounded-md"
+                    />
+                  ) : isVideoFile(selectedMedia) ? (
+                    <video
+                      src={selectedMedia.fileUrl}
+                      controls
+                      className="max-w-full max-h-[60vh] rounded-md"
+                      preload="metadata"
+                    >
+                      Your browser does not support the video tag.
+                    </video>
+                  ) : (
+                    <div className="flex flex-col items-center justify-center py-12 text-gray-500">
+                      <FileText className="h-16 w-16 mb-4" />
+                      <p>Preview not available for this file type</p>
+                    </div>
+                  )}
+                </div>
+
+                {/* Media Info */}
+                <div className="grid grid-cols-2 gap-4 text-sm">
+                  <div>
+                    <span className="font-medium text-gray-700">File Type:</span>
+                    <p className="text-gray-600">{selectedMedia.fileType || 'Unknown'}</p>
+                  </div>
+                  {selectedMedia.mimeType && (
+                    <div>
+                      <span className="font-medium text-gray-700">MIME Type:</span>
+                      <p className="text-gray-600">{selectedMedia.mimeType}</p>
+                    </div>
+                  )}
+                  {selectedMedia.fileSize && (
+                    <div>
+                      <span className="font-medium text-gray-700">File Size:</span>
+                      <p className="text-gray-600">
+                        {(selectedMedia.fileSize / 1024 / 1024).toFixed(2)} MB
+                      </p>
+                    </div>
+                  )}
+                  <div>
+                    <span className="font-medium text-gray-700">Uploaded:</span>
+                    <p className="text-gray-600">
+                      {format(new Date(selectedMedia.uploadedAt), 'MMM dd, yyyy HH:mm')}
+                    </p>
+                  </div>
+                  {selectedMedia.width && selectedMedia.height && (
+                    <div>
+                      <span className="font-medium text-gray-700">Dimensions:</span>
+                      <p className="text-gray-600">
+                        {selectedMedia.width} × {selectedMedia.height}
+                      </p>
+                    </div>
+                  )}
+                </div>
+
+                {/* Actions */}
+                <div className="flex justify-center gap-2 pt-4 border-t">
+                  <Button variant="outline" asChild>
+                    <a 
+                      href={selectedMedia.fileUrl} 
+                      target="_blank" 
+                      rel="noopener noreferrer"
+                      className="flex items-center gap-2"
+                    >
+                      <ExternalLink className="h-4 w-4" />
+                      Open in New Tab
+                    </a>
+                  </Button>
+                  <Button variant="outline" asChild>
+                    <a 
+                      href={selectedMedia.fileUrl} 
+                      download
+                      className="flex items-center gap-2"
+                    >
+                      <Download className="h-4 w-4" />
+                      Download
+                    </a>
+                  </Button>
+                </div>
+              </div>
+            )}
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
