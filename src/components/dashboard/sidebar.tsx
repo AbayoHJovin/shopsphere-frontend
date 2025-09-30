@@ -22,10 +22,13 @@ import {
   Truck,
   Percent,
   RotateCcw,
+  MessageSquareX,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Separator } from "@/components/ui/separator";
+import { Badge } from "@/components/ui/badge";
+import { usePendingAppealsCount } from "@/hooks/use-pending-appeals";
 
 interface SidebarProps {
   className?: string;
@@ -34,6 +37,7 @@ interface SidebarProps {
 export function Sidebar({ className }: SidebarProps) {
   const [collapsed, setCollapsed] = useState(false);
   const pathname = usePathname();
+  const { data: pendingAppealsCount, isLoading: isLoadingAppeals } = usePendingAppealsCount();
 
   const toggleSidebar = () => {
     setCollapsed(!collapsed);
@@ -102,6 +106,15 @@ export function Sidebar({ className }: SidebarProps) {
             label="Return Requests"
             collapsed={collapsed}
             isActive={pathname.startsWith("/dashboard/returns")}
+          />
+          <SidebarItemWithBadge
+            href="/dashboard/appeals"
+            icon={MessageSquareX}
+            label="Appeals"
+            collapsed={collapsed}
+            isActive={pathname.startsWith("/dashboard/appeals")}
+            badgeCount={pendingAppealsCount}
+            isLoading={isLoadingAppeals}
           />
           <SidebarItem
             href="/dashboard/shipping-costs"
@@ -173,6 +186,11 @@ interface SidebarItemProps {
   isActive?: boolean;
 }
 
+interface SidebarItemWithBadgeProps extends SidebarItemProps {
+  badgeCount?: number;
+  isLoading?: boolean;
+}
+
 function SidebarItem({
   href,
   icon: Icon,
@@ -194,6 +212,60 @@ function SidebarItem({
       <Icon className={cn("h-5 w-5", collapsed ? "mr-0" : "mr-2")} />
       {!collapsed && <span>{label}</span>}
       {collapsed && <span className="sr-only">{label}</span>}
+    </Link>
+  );
+}
+
+function SidebarItemWithBadge({
+  href,
+  icon: Icon,
+  label,
+  collapsed,
+  isActive,
+  badgeCount,
+  isLoading,
+}: SidebarItemWithBadgeProps) {
+  return (
+    <Link
+      href={href}
+      className={cn(
+        "flex h-10 items-center rounded-md px-3 py-2 transition-colors relative",
+        isActive
+          ? "bg-primary text-primary-foreground"
+          : "text-muted-foreground hover:bg-primary hover:text-primary-foreground",
+        collapsed ? "justify-center" : "justify-start"
+      )}
+    >
+      <Icon className={cn("h-5 w-5", collapsed ? "mr-0" : "mr-2")} />
+      {!collapsed && (
+        <>
+          <span className="flex-1">{label}</span>
+          {!isLoading && badgeCount !== undefined && badgeCount > 0 && (
+            <Badge 
+              variant="secondary" 
+              className="ml-2 bg-red-500 text-white text-xs px-2 py-0.5 min-w-[20px] h-5 flex items-center justify-center"
+            >
+              {badgeCount > 99 ? "99+" : badgeCount}
+            </Badge>
+          )}
+          {isLoading && (
+            <div className="ml-2 w-5 h-5 border-2 border-gray-300 border-t-transparent rounded-full animate-spin" />
+          )}
+        </>
+      )}
+      {collapsed && (
+        <>
+          <span className="sr-only">{label}</span>
+          {!isLoading && badgeCount !== undefined && badgeCount > 0 && (
+            <Badge 
+              variant="secondary" 
+              className="absolute -top-1 -right-1 bg-red-500 text-white text-xs px-1.5 py-0.5 min-w-[18px] h-4 flex items-center justify-center text-[10px]"
+            >
+              {badgeCount > 9 ? "9+" : badgeCount}
+            </Badge>
+          )}
+        </>
+      )}
     </Link>
   );
 }
