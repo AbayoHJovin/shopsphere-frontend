@@ -34,18 +34,21 @@ import {
   Image,
   Video,
   File,
+  Truck,
 } from "lucide-react";
 import { format } from "date-fns";
 import { DateRange } from "react-day-picker";
 import { cn } from "@/lib/utils";
 import appealService, { AppealDTO, AppealFilterParams, AppealDecisionDTO } from "@/lib/services/appeal-service";
+import DeliveryAgentAssignmentModal from "@/components/DeliveryAgentAssignmentModal";
 
 export default function AppealsPage() {
   const [filters, setFilters] = useState<AppealFilterParams>({
     page: 0,
     size: 10,
     sortBy: "submittedAt",
-    sortDirection: "DESC"
+    sortDirection: "DESC",
+    status: "PENDING"
   });
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedAppeal, setSelectedAppeal] = useState<AppealDTO | null>(null);
@@ -55,6 +58,17 @@ export default function AppealsPage() {
   });
   const [decisionNotes, setDecisionNotes] = useState("");
   const [dateRange, setDateRange] = useState<DateRange | undefined>();
+  const [statsModalOpen, setStatsModalOpen] = useState(false);
+  const [deliveryAssignmentModal, setDeliveryAssignmentModal] = useState<{
+    open: boolean;
+    returnRequestId: number | null;
+    returnRequestDetails?: {
+      customerName?: string;
+      orderNumber?: string;
+      submittedAt?: string;
+      reason?: string;
+    };
+  }>({ open: false, returnRequestId: null });
 
   const queryClient = useQueryClient();
 
@@ -128,6 +142,25 @@ export default function AppealsPage() {
     });
   };
 
+  const handleAssignDeliveryAgent = (appeal: AppealDTO) => {
+    setDeliveryAssignmentModal({
+      open: true,
+      returnRequestId: appeal.returnRequestId,
+      returnRequestDetails: {
+        customerName: appeal.returnRequest?.customerName,
+        orderNumber: appeal.returnRequest?.orderCode,
+        submittedAt: appeal.submittedAt,
+        reason: appeal.reason,
+      },
+    });
+  };
+
+  const handleAssignmentComplete = () => {
+    // Refresh appeals data after successful assignment
+    queryClient.invalidateQueries({ queryKey: ["appeals"] });
+    queryClient.invalidateQueries({ queryKey: ["appeal-stats"] });
+  };
+
   const getStatusBadge = (status: string) => {
     switch (status) {
       case "PENDING":
@@ -197,55 +230,26 @@ export default function AppealsPage() {
         </Button>
       </div>
 
-      {/* Stats Cards */}
+      {/* Quick Stats Summary */}
       {stats && (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Total Appeals</CardTitle>
-              <FileText className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">{stats.totalAppeals}</div>
-            </CardContent>
-          </Card>
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Pending</CardTitle>
-              <Clock className="h-4 w-4 text-yellow-500" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold text-yellow-600">{stats.pendingAppeals}</div>
-            </CardContent>
-          </Card>
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Approved</CardTitle>
-              <CheckCircle className="h-4 w-4 text-green-500" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold text-green-600">{stats.approvedAppeals}</div>
-            </CardContent>
-          </Card>
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Denied</CardTitle>
-              <XCircle className="h-4 w-4 text-red-500" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold text-red-600">{stats.deniedAppeals}</div>
-            </CardContent>
-          </Card>
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Avg Processing</CardTitle>
-              <CalendarIcon className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">{stats.avgProcessingDays}d</div>
-            </CardContent>
-          </Card>
-        </div>
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <div>
+              <CardTitle className="text-lg font-semibold">Appeals Overview</CardTitle>
+              <CardDescription>
+                {stats.pendingCount} pending • {stats.approvedCount} approved • {stats.deniedCount} denied
+              </CardDescription>
+            </div>
+            <Button 
+              variant="outline" 
+              onClick={() => setStatsModalOpen(true)}
+              className="flex items-center gap-2"
+            >
+              <FileText className="h-4 w-4" />
+              View Stats
+            </Button>
+          </CardHeader>
+        </Card>
       )}
 
       {/* Filters */}
@@ -278,11 +282,11 @@ export default function AppealsPage() {
             <div className="space-y-2">
               <Label>Status</Label>
               <Select
-                value={filters.status || "all"}
+                value={filters.status || "PENDING"}
                 onValueChange={(value) => handleFilterChange("status", value === "all" ? undefined : value)}
               >
                 <SelectTrigger>
-                  <SelectValue placeholder="All statuses" />
+                  <SelectValue placeholder="Pending" />
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="all">All Statuses</SelectItem>
@@ -344,7 +348,8 @@ export default function AppealsPage() {
                   page: 0,
                   size: 10,
                   sortBy: "submittedAt",
-                  sortDirection: "DESC"
+                  sortDirection: "DESC",
+                  status: "PENDING"
                 });
                 setSearchTerm("");
                 setDateRange(undefined);
@@ -443,6 +448,17 @@ export default function AppealsPage() {
                               onClick={() => setDecisionDialog({ open: true, appeal })}
                             >
                               <MoreHorizontal className="h-4 w-4" />
+                            </Button>
+                          )}
+                          {appeal.status === "APPROVED" && (
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => handleAssignDeliveryAgent(appeal)}
+                              className="flex items-center gap-1"
+                            >
+                              <Truck className="h-4 w-4" />
+                              <span className="hidden sm:inline">Assign Agent</span>
                             </Button>
                           )}
                         </div>
@@ -713,6 +729,166 @@ export default function AppealsPage() {
               </Button>
             </div>
           </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Delivery Agent Assignment Modal */}
+      <DeliveryAgentAssignmentModal
+        open={deliveryAssignmentModal.open}
+        onOpenChange={(open) => setDeliveryAssignmentModal({ open, returnRequestId: null })}
+        returnRequestId={deliveryAssignmentModal.returnRequestId!}
+        returnRequestDetails={deliveryAssignmentModal.returnRequestDetails}
+        onAssignmentComplete={handleAssignmentComplete}
+      />
+
+      {/* Statistics Modal */}
+      <Dialog open={statsModalOpen} onOpenChange={setStatsModalOpen}>
+        <DialogContent className="max-w-4xl">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <FileText className="h-5 w-5" />
+              Appeals Statistics
+            </DialogTitle>
+            <DialogDescription>
+              Comprehensive overview of appeal metrics and performance indicators
+            </DialogDescription>
+          </DialogHeader>
+          {stats && (
+            <div className="space-y-6">
+              {/* Main Statistics Grid */}
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                <Card>
+                  <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                    <CardTitle className="text-sm font-medium">Pending Appeals</CardTitle>
+                    <Clock className="h-4 w-4 text-yellow-500" />
+                  </CardHeader>
+                  <CardContent>
+                    <div className="text-2xl font-bold text-yellow-600">{stats.pendingCount}</div>
+                    <p className="text-xs text-muted-foreground">
+                      Appeals awaiting review
+                    </p>
+                  </CardContent>
+                </Card>
+
+                <Card>
+                  <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                    <CardTitle className="text-sm font-medium">Approved Appeals</CardTitle>
+                    <CheckCircle className="h-4 w-4 text-green-500" />
+                  </CardHeader>
+                  <CardContent>
+                    <div className="text-2xl font-bold text-green-600">{stats.approvedCount}</div>
+                    <p className="text-xs text-muted-foreground">
+                      Successfully approved
+                    </p>
+                  </CardContent>
+                </Card>
+
+                <Card>
+                  <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                    <CardTitle className="text-sm font-medium">Denied Appeals</CardTitle>
+                    <XCircle className="h-4 w-4 text-red-500" />
+                  </CardHeader>
+                  <CardContent>
+                    <div className="text-2xl font-bold text-red-600">{stats.deniedCount}</div>
+                    <p className="text-xs text-muted-foreground">
+                      Appeals denied
+                    </p>
+                  </CardContent>
+                </Card>
+
+                <Card>
+                  <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                    <CardTitle className="text-sm font-medium">Recent Appeals</CardTitle>
+                    <FileText className="h-4 w-4 text-blue-500" />
+                  </CardHeader>
+                  <CardContent>
+                    <div className="text-2xl font-bold text-blue-600">{stats.recentCount}</div>
+                    <p className="text-xs text-muted-foreground">
+                      Last 30 days
+                    </p>
+                  </CardContent>
+                </Card>
+
+                <Card>
+                  <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                    <CardTitle className="text-sm font-medium">Urgent Appeals</CardTitle>
+                    <AlertCircle className="h-4 w-4 text-orange-500" />
+                  </CardHeader>
+                  <CardContent>
+                    <div className="text-2xl font-bold text-orange-600">{stats.urgentCount}</div>
+                    <p className="text-xs text-muted-foreground">
+                      Pending &gt; 7 days
+                    </p>
+                  </CardContent>
+                </Card>
+
+                <Card>
+                  <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                    <CardTitle className="text-sm font-medium">Approval Rate</CardTitle>
+                    <CheckCircle className="h-4 w-4 text-emerald-500" />
+                  </CardHeader>
+                  <CardContent>
+                    <div className="text-2xl font-bold text-emerald-600">{stats.approvalRate.toFixed(1)}%</div>
+                    <p className="text-xs text-muted-foreground">
+                      Success rate
+                    </p>
+                  </CardContent>
+                </Card>
+              </div>
+
+              {/* Performance Insights */}
+              <div className="space-y-4">
+                <h3 className="text-lg font-semibold">Performance Insights</h3>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <Card className="p-4">
+                    <div className="flex items-center gap-3">
+                      <div className="p-2 bg-blue-100 rounded-lg">
+                        <FileText className="h-5 w-5 text-blue-600" />
+                      </div>
+                      <div>
+                        <h4 className="font-medium">Total Appeals</h4>
+                        <p className="text-2xl font-bold">{stats.pendingCount + stats.approvedCount + stats.deniedCount}</p>
+                        <p className="text-sm text-muted-foreground">All time</p>
+                      </div>
+                    </div>
+                  </Card>
+
+                  <Card className="p-4">
+                    <div className="flex items-center gap-3">
+                      <div className="p-2 bg-purple-100 rounded-lg">
+                        <Clock className="h-5 w-5 text-purple-600" />
+                      </div>
+                      <div>
+                        <h4 className="font-medium">Processing Status</h4>
+                        <p className="text-2xl font-bold">
+                          {stats.pendingCount > 0 ? `${stats.pendingCount} pending` : 'Up to date'}
+                        </p>
+                        <p className="text-sm text-muted-foreground">
+                          {stats.urgentCount > 0 ? `${stats.urgentCount} need urgent attention` : 'No urgent appeals'}
+                        </p>
+                      </div>
+                    </div>
+                  </Card>
+                </div>
+              </div>
+
+              {/* Quick Actions */}
+              <div className="flex justify-between items-center pt-4 border-t">
+                <div className="text-sm text-muted-foreground">
+                  Statistics updated in real-time
+                </div>
+                <div className="flex gap-2">
+                  <Button variant="outline" onClick={() => setStatsModalOpen(false)}>
+                    Close
+                  </Button>
+                  <Button onClick={exportAppeals} className="flex items-center gap-2">
+                    <Download className="h-4 w-4" />
+                    Export Data
+                  </Button>
+                </div>
+              </div>
+            </div>
+          )}
         </DialogContent>
       </Dialog>
     </div>
