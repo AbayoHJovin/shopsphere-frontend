@@ -11,6 +11,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Separator } from "@/components/ui/separator";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { toast } from "sonner";
 import {
   Search,
@@ -52,6 +53,11 @@ export default function DeliveryAgentAssignmentModal({
   returnRequestDetails,
   onAssignmentComplete,
 }: DeliveryAgentAssignmentModalProps) {
+  console.log("DeliveryAgentAssignmentModal rendered with:", {
+    open,
+    returnRequestId,
+    returnRequestDetails
+  });
   const [selectedAgentId, setSelectedAgentId] = useState<string>("");
   const [searchTerm, setSearchTerm] = useState("");
   const [notes, setNotes] = useState("");
@@ -107,12 +113,21 @@ export default function DeliveryAgentAssignmentModal({
 
   // Assignment mutation
   const assignmentMutation = useMutation({
-    mutationFn: (agentId: string) => deliveryAssignmentService.assignDeliveryAgent({
-      returnRequestId,
-      deliveryAgentId: agentId,
-      notes: notes.trim() || undefined,
-    }),
-    onSuccess: () => {
+    mutationFn: (agentId: string) => {
+      console.log("Starting assignment mutation for agent:", agentId);
+      console.log("Request payload:", {
+        returnRequestId,
+        deliveryAgentId: agentId,
+        notes: notes.trim() || undefined,
+      });
+      return deliveryAssignmentService.assignDeliveryAgent({
+        returnRequestId,
+        deliveryAgentId: agentId,
+        notes: notes.trim() || undefined,
+      });
+    },
+    onSuccess: (data) => {
+      console.log("Assignment successful:", data);
       queryClient.invalidateQueries({ queryKey: ["return-requests"] });
       queryClient.invalidateQueries({ queryKey: ["appeals"] });
       queryClient.invalidateQueries({ queryKey: ["delivery-stats"] });
@@ -122,7 +137,81 @@ export default function DeliveryAgentAssignmentModal({
       resetForm();
     },
     onError: (error: any) => {
-      toast.error(error.response?.data?.message || "Failed to assign delivery agent");
+      console.error("=== ASSIGNMENT ERROR HANDLER TRIGGERED ===");
+      console.error("Assignment error:", error);
+      console.error("Error response data:", error.response?.data);
+      console.error("Error response status:", error.response?.status);
+      
+      // Test if toast is working at all
+      console.log("Testing toast functionality...");
+      toast.error("TEST: Error handler was triggered!");
+      
+      // Try to extract error message from different response formats
+      let errorMessage = "Failed to assign delivery agent";
+      
+      if (error.response?.data) {
+        if (typeof error.response.data === 'string') {
+          // Backend returns plain string error message (legacy)
+          errorMessage = error.response.data.trim();
+          console.log("Extracted string error message:", errorMessage);
+        } else if (error.response.data.message) {
+          // Backend returns JSON with message field (Spring Boot format)
+          errorMessage = error.response.data.message;
+          console.log("Extracted JSON message:", errorMessage);
+        } else if (error.response.data.error && typeof error.response.data.error === 'string' && error.response.data.error !== 'Bad Request') {
+          // Backend returns JSON with error field (custom format)
+          errorMessage = error.response.data.error;
+          console.log("Extracted JSON error:", errorMessage);
+        } else if (typeof error.response.data === 'object') {
+          // Fallback for other JSON formats - try message first, then error
+          if (error.response.data.message) {
+            errorMessage = error.response.data.message;
+          } else if (error.response.data.error && error.response.data.error !== 'Bad Request') {
+            errorMessage = error.response.data.error;
+          } else {
+            errorMessage = JSON.stringify(error.response.data);
+          }
+          console.log("Extracted JSON object:", errorMessage);
+        }
+      } else if (error.message) {
+        // Network or other error
+        errorMessage = error.message;
+        console.log("Using error.message:", errorMessage);
+      }
+      
+      console.log("Final error message to process:", errorMessage);
+      
+      // Handle specific error cases with user-friendly messages
+      if (errorMessage.toLowerCase().includes("cannot be assigned to delivery agent")) {
+        if (errorMessage.includes("Delivery Status: ASSIGNED")) {
+          console.log("Showing already assigned error");
+          toast.error("This return request has already been assigned to a delivery agent.");
+        } else if (errorMessage.includes("Status: PENDING")) {
+          console.log("Showing pending status error");
+          toast.error("Return request must be approved before assigning a delivery agent.");
+        } else if (errorMessage.includes("Status: DENIED")) {
+          console.log("Showing denied status error");
+          toast.error("Cannot assign delivery agent to a denied return request.");
+        } else if (errorMessage.includes("Status: COMPLETED")) {
+          console.log("Showing completed status error");
+          toast.error("Cannot assign delivery agent to a completed return request.");
+        } else {
+          console.log("Showing generic assignment error");
+          toast.error("Return request cannot be assigned to delivery agent. Please check the request status.");
+        }
+      } else if (error.response?.status === 404) {
+        console.log("Showing 404 error");
+        toast.error("Return request or delivery agent not found.");
+      } else if (error.response?.status === 403) {
+        console.log("Showing 403 error");
+        toast.error("You do not have permission to assign delivery agents.");
+      } else if (error.response?.status === 400) {
+        console.log("Showing 400 error with message:", errorMessage);
+        toast.error(errorMessage);
+      } else {
+        console.log("Showing generic error:", errorMessage);
+        toast.error(errorMessage);
+      }
     },
   });
 
@@ -136,10 +225,17 @@ export default function DeliveryAgentAssignmentModal({
   };
 
   const handleAssign = () => {
+    console.log("handleAssign called");
+    console.log("selectedAgentId:", selectedAgentId);
+    console.log("returnRequestId:", returnRequestId);
+    
     if (!selectedAgentId) {
+      console.log("No agent selected, showing error toast");
       toast.error("Please select a delivery agent");
       return;
     }
+    
+    console.log("Triggering assignment mutation");
     assignmentMutation.mutate(selectedAgentId);
   };
 
@@ -419,17 +515,42 @@ export default function DeliveryAgentAssignmentModal({
                         </TableCell>
                         <TableCell>
                           {workload ? (
-                            <div className="flex gap-1">
-                              <Badge variant="outline" className="text-xs">
-                                P: {workload.pendingPickups}
-                              </Badge>
-                              <Badge variant="outline" className="text-xs">
-                                S: {workload.scheduledPickups}
-                              </Badge>
-                              <Badge variant="outline" className="text-xs">
-                                I: {workload.inProgressPickups}
-                              </Badge>
-                            </div>
+                            <TooltipProvider>
+                              <div className="flex gap-1">
+                                <Tooltip>
+                                  <TooltipTrigger asChild>
+                                    <Badge variant="outline" className="text-xs cursor-help">
+                                      P: {workload.pendingPickups}
+                                    </Badge>
+                                  </TooltipTrigger>
+                                  <TooltipContent>
+                                    <p>Pending Pickups</p>
+                                  </TooltipContent>
+                                </Tooltip>
+                                
+                                <Tooltip>
+                                  <TooltipTrigger asChild>
+                                    <Badge variant="outline" className="text-xs cursor-help">
+                                      S: {workload.scheduledPickups}
+                                    </Badge>
+                                  </TooltipTrigger>
+                                  <TooltipContent>
+                                    <p>Scheduled Pickups</p>
+                                  </TooltipContent>
+                                </Tooltip>
+                                
+                                <Tooltip>
+                                  <TooltipTrigger asChild>
+                                    <Badge variant="outline" className="text-xs cursor-help">
+                                      I: {workload.inProgressPickups}
+                                    </Badge>
+                                  </TooltipTrigger>
+                                  <TooltipContent>
+                                    <p>In Progress Pickups</p>
+                                  </TooltipContent>
+                                </Tooltip>
+                              </div>
+                            </TooltipProvider>
                           ) : (
                             <div className="text-xs text-muted-foreground">Loading...</div>
                           )}

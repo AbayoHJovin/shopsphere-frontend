@@ -81,13 +81,8 @@ class DeliveryAssignmentService {
    * Assign a delivery agent to a return request
    */
   async assignDeliveryAgent(request: AssignDeliveryAgentRequest): Promise<ReturnDeliveryAssignment> {
-    try {
-      const response = await apiClient.post(`${this.baseUrl}/assign`, request);
-      return response.data;
-    } catch (error) {
-      console.error('Error assigning delivery agent:', error);
-      throw error;
-    }
+    const response = await apiClient.post(`${this.baseUrl}/assign`, request);
+    return response.data;
   }
 
   /**

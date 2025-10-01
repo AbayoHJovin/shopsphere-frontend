@@ -21,13 +21,16 @@ import {
   Calendar,
   DollarSign,
   AlertCircle,
-  RefreshCw
+  RefreshCw,
+  Truck
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { ReturnRequestDTO, ReturnStatus, ReturnRequestSearchParams, ReturnRequestFilters } from '@/types/return';
 import returnService from '@/services/returnService';
 import { formatDistanceToNow, format } from 'date-fns';
 import Link from 'next/link';
+import DeliveryAgentAssignmentModal from '@/components/DeliveryAgentAssignmentModal';
+import deliveryAssignmentService from '@/lib/services/delivery-assignment-service';
 
 export default function ReturnRequestsPage() {
   const [returnRequests, setReturnRequests] = useState<ReturnRequestDTO[]>([]);
@@ -46,6 +49,8 @@ export default function ReturnRequestsPage() {
     denied: 0,
     completed: 0,
   });
+  const [assignmentModalOpen, setAssignmentModalOpen] = useState(false);
+  const [selectedReturnRequest, setSelectedReturnRequest] = useState<ReturnRequestDTO | null>(null);
 
   // Create filters object from current state
   const getCurrentFilters = (): ReturnRequestFilters => ({
@@ -145,6 +150,31 @@ export default function ReturnRequestsPage() {
 
   const calculateTotalRefundAmount = (returnRequest: ReturnRequestDTO) => {
     return returnRequest.returnItems.reduce((total, item) => total + item.totalPrice, 0);
+  };
+
+  const handleAssignAgent = (returnRequest: ReturnRequestDTO) => {
+    setSelectedReturnRequest(returnRequest);
+    setAssignmentModalOpen(true);
+  };
+
+  const handleAssignmentComplete = async () => {
+    try {
+      toast.success(`Delivery agent assigned successfully to return request #${selectedReturnRequest!.id}`);
+      
+      // Refresh the return requests list
+      await fetchReturnRequests();
+      
+      // Close modal
+      setAssignmentModalOpen(false);
+      setSelectedReturnRequest(null);
+    } catch (error: any) {
+      console.error('Error refreshing return requests:', error);
+      toast.error('Assignment successful, but failed to refresh the list. Please refresh manually.');
+    }
+  };
+
+  const canAssignAgent = (returnRequest: ReturnRequestDTO) => {
+    return returnRequest.status === 'APPROVED';
   };
 
   return (
@@ -421,12 +451,24 @@ export default function ReturnRequestsPage() {
                         </div>
                       </TableCell>
                       <TableCell>
-                        <Link href={`/dashboard/returns/${returnRequest.id}`}>
-                          <Button variant="outline" size="sm">
-                            <Eye className="h-4 w-4 mr-2" />
-                            View Details
-                          </Button>
-                        </Link>
+                        <div className="flex items-center gap-2">
+                          <Link href={`/dashboard/returns/${returnRequest.id}`}>
+                            <Button variant="outline" size="sm">
+                              <Eye className="h-4 w-4 mr-2" />
+                              View Details
+                            </Button>
+                          </Link>
+                          {canAssignAgent(returnRequest) && (
+                            <Button
+                              variant="default"
+                              size="sm"
+                              onClick={() => handleAssignAgent(returnRequest)}
+                            >
+                              <Truck className="h-4 w-4 mr-2" />
+                              Assign Agent
+                            </Button>
+                          )}
+                        </div>
                       </TableCell>
                     </TableRow>
                   ))}
@@ -477,12 +519,25 @@ export default function ReturnRequestsPage() {
                         </div>
                       </div>
                       
-                      <Link href={`/dashboard/returns/${returnRequest.id}`} className="block">
-                        <Button variant="outline" size="sm" className="w-full">
-                          <Eye className="h-4 w-4 mr-2" />
-                          View Details
-                        </Button>
-                      </Link>
+                      <div className="flex gap-2">
+                        <Link href={`/dashboard/returns/${returnRequest.id}`} className="flex-1">
+                          <Button variant="outline" size="sm" className="w-full">
+                            <Eye className="h-4 w-4 mr-2" />
+                            View Details
+                          </Button>
+                        </Link>
+                        {canAssignAgent(returnRequest) && (
+                          <Button
+                            variant="default"
+                            size="sm"
+                            onClick={() => handleAssignAgent(returnRequest)}
+                            className="flex-1"
+                          >
+                            <Truck className="h-4 w-4 mr-2" />
+                            Assign Agent
+                          </Button>
+                        )}
+                      </div>
                     </div>
                   </Card>
                 ))}
@@ -521,6 +576,25 @@ export default function ReturnRequestsPage() {
           )}
         </CardContent>
       </Card>
+
+      {/* Delivery Agent Assignment Modal */}
+      <DeliveryAgentAssignmentModal
+        open={assignmentModalOpen}
+        onOpenChange={(open) => {
+          setAssignmentModalOpen(open);
+          if (!open) {
+            setSelectedReturnRequest(null);
+          }
+        }}
+        returnRequestId={selectedReturnRequest?.id || 0}
+        returnRequestDetails={selectedReturnRequest ? {
+          customerName: selectedReturnRequest.customerName || 'Guest User',
+          orderNumber: selectedReturnRequest.orderNumber,
+          submittedAt: selectedReturnRequest.submittedAt,
+          reason: selectedReturnRequest.reason || 'Return request',
+        } : undefined}
+        onAssignmentComplete={handleAssignmentComplete}
+      />
     </div>
   );
 }

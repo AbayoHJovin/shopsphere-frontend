@@ -11,6 +11,8 @@ import {
   ChevronLeft,
   Truck,
   Package,
+  ShoppingCart,
+  RotateCcw,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -72,6 +74,20 @@ export function DeliveryAgentSidebar({ className }: DeliveryAgentSidebarProps) {
             label="Dashboard"
             collapsed={collapsed}
             isActive={pathname === "/delivery-agent/dashboard"}
+          />
+          <SidebarItem
+            href="/delivery-agent/orders"
+            icon={ShoppingCart}
+            label="Orders"
+            collapsed={collapsed}
+            isActive={pathname.startsWith("/delivery-agent/orders")}
+          />
+          <SidebarItem
+            href="/delivery-agent/returns"
+            icon={RotateCcw}
+            label="Returns"
+            collapsed={collapsed}
+            isActive={pathname.startsWith("/delivery-agent/returns")}
           />
           <Separator className="my-2" />
           <SidebarItem
