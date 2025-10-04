@@ -1,18 +1,26 @@
 "use client";
 
 import { useState } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useParams, useRouter } from "next/navigation";
 import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
 import {
   ArrowLeft,
   MapPin,
@@ -27,6 +35,8 @@ import {
   Image as ImageIcon,
   ExternalLink,
   Loader2,
+  CheckCircle,
+  Truck,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import {
@@ -34,11 +44,92 @@ import {
   DeliveryAgentReturnDetails,
   DeliveryStatus,
 } from "@/lib/services/delivery-agent-returns-service";
+import {
+  returnPickupService,
+  ReturnPickupRequest,
+  ReturnItemPickup,
+  ReturnItemPickupStatus,
+} from "@/lib/services/return-pickup-service";
+import { toast } from "sonner";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
 
 export default function ReturnRequestDetailsPage() {
   const params = useParams();
   const router = useRouter();
+  const queryClient = useQueryClient();
   const returnRequestId = params.id as string;
+
+  // Pickup state management
+  const [showPickupModal, setShowPickupModal] = useState(false);
+  const [pickupItems, setPickupItems] = useState<{[key: number]: ReturnItemPickupStatus}>({});
+
+  // Pickup mutation
+  const pickupMutation = useMutation({
+    mutationFn: (pickupRequest: ReturnPickupRequest) => 
+      returnPickupService.processReturnPickup(pickupRequest),
+    onSuccess: (response) => {
+      toast.success("Return pickup completed successfully!");
+      setShowPickupModal(false);
+      queryClient.invalidateQueries({ queryKey: ["delivery-agent-return-details", returnRequestId] });
+      // Optionally navigate back to returns list
+      // router.push("/delivery-agent/returns");
+    },
+    onError: (error: any) => {
+      console.error("Pickup error:", error);
+      let errorMessage = "Failed to process pickup";
+      
+      if (error.response?.data) {
+        if (typeof error.response.data === 'string') {
+          errorMessage = error.response.data;
+        } else if (error.response.data.message) {
+          errorMessage = error.response.data.message;
+        }
+      }
+      
+      toast.error(errorMessage);
+    }
+  });
+
+  // Handle pickup initiation
+  const handleStartPickup = () => {
+    if (!returnDetails?.returnItems) return;
+    
+    // Initialize pickup items with default status
+    const initialPickupItems: {[key: number]: ReturnItemPickupStatus} = {};
+    returnDetails.returnItems.forEach(item => {
+      initialPickupItems[item.id] = ReturnItemPickupStatus.UNDAMAGED;
+    });
+    setPickupItems(initialPickupItems);
+    setShowPickupModal(true);
+  };
+
+  // Handle pickup status change for an item
+  const handlePickupStatusChange = (itemId: number, status: ReturnItemPickupStatus) => {
+    setPickupItems(prev => ({
+      ...prev,
+      [itemId]: status
+    }));
+  };
+
+  // Handle pickup submission
+  const handleSubmitPickup = () => {
+    if (!returnDetails?.returnItems) return;
+
+    const returnItems: ReturnItemPickup[] = returnDetails.returnItems.map(item => ({
+      returnItemId: item.id,
+      pickupStatus: pickupItems[item.id] || ReturnItemPickupStatus.UNDAMAGED,
+      notes: undefined
+    }));
+
+    const pickupRequest: ReturnPickupRequest = {
+      returnRequestId: parseInt(returnRequestId),
+      returnItems
+    };
+
+    pickupMutation.mutate(pickupRequest);
+  };
 
   // Fetch return request details
   const {
@@ -447,6 +538,142 @@ export default function ReturnRequestDetailsPage() {
         </CardContent>
       </Card>
 
+      {/* Pickup Actions */}
+      {returnDetails && returnDetails.status === "APPROVED" && returnDetails.deliveryStatus === "ASSIGNED" && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Truck className="h-5 w-5" />
+              Pickup Actions
+            </CardTitle>
+            <CardDescription>
+              Process the pickup of returned items
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <Button 
+              onClick={handleStartPickup}
+              disabled={pickupMutation.isPending}
+              className="w-full"
+              size="lg"
+            >
+              {pickupMutation.isPending ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Processing Pickup...
+                </>
+              ) : (
+                <>
+                  <CheckCircle className="mr-2 h-4 w-4" />
+                  Start Pickup Process
+                </>
+              )}
+            </Button>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Pickup Modal */}
+      <Dialog open={showPickupModal} onOpenChange={setShowPickupModal}>
+        <DialogContent className="max-w-4xl max-h-[80vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Process Return Pickup</DialogTitle>
+            <DialogDescription>
+              Inspect each item and select its condition for proper inventory handling
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-6">
+            {returnDetails?.returnItems?.map((item, index) => (
+              <Card key={item.id} className="p-4">
+                <div className="flex gap-4">
+                  {/* Product Images */}
+                  <div className="flex-shrink-0">
+                    {(() => {
+                      const imageUrls = (item.variant?.variantImageUrls?.length || 0) > 0 
+                        ? item.variant?.variantImageUrls || []
+                        : item.product?.imageUrls || [];
+                      
+                      return imageUrls.length > 0 ? (
+                        <img
+                          src={imageUrls[0]}
+                          alt={item.product?.name || "Product"}
+                          className="w-20 h-20 object-cover rounded-lg border"
+                        />
+                      ) : (
+                        <div className="w-20 h-20 bg-muted rounded-lg border flex items-center justify-center">
+                          <ImageIcon className="h-8 w-8 text-muted-foreground" />
+                        </div>
+                      );
+                    })()}
+                  </div>
+
+                  {/* Product Details */}
+                  <div className="flex-1 space-y-3">
+                    <div>
+                      <h4 className="font-semibold">{item.product?.name || "Product name not available"}</h4>
+                      {item.variant && (
+                        <p className="text-sm text-muted-foreground">{item.variant.variantName}</p>
+                      )}
+                      <p className="text-sm text-muted-foreground">
+                        Quantity to pickup: <span className="font-medium">{item.returnQuantity}</span>
+                      </p>
+                    </div>
+
+                    {/* Pickup Status Selection */}
+                    <div className="space-y-2">
+                      <Label className="text-sm font-medium">Item Condition:</Label>
+                      <Select
+                        value={pickupItems[item.id] || ReturnItemPickupStatus.UNDAMAGED}
+                        onValueChange={(value) => handlePickupStatusChange(item.id, value as ReturnItemPickupStatus)}
+                      >
+                        <SelectTrigger className="w-full">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {returnPickupService.getPickupStatusOptions().map((option) => (
+                            <SelectItem key={option.value} value={option.value}>
+                              <div className="flex items-center gap-2">
+                                <div className={`w-3 h-3 rounded-full ${option.color.replace('bg-', 'bg-').replace('text-', 'border-')}`} />
+                                <div>
+                                  <div className="font-medium">{option.label}</div>
+                                  <div className="text-xs text-muted-foreground">{option.description}</div>
+                                </div>
+                              </div>
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  </div>
+                </div>
+              </Card>
+            ))}
+          </div>
+
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowPickupModal(false)}>
+              Cancel
+            </Button>
+            <Button 
+              onClick={handleSubmitPickup}
+              disabled={pickupMutation.isPending}
+            >
+              {pickupMutation.isPending ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Processing...
+                </>
+              ) : (
+                <>
+                  <CheckCircle className="mr-2 h-4 w-4" />
+                  Complete Pickup
+                </>
+              )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       {/* Pickup Timeline */}
       <Card>
