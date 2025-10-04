@@ -24,6 +24,91 @@ export interface DeliveryAgentReturnRequest {
   deliveryAgentName: string;
 }
 
+// Comprehensive interface for return request details page
+export interface DeliveryAgentReturnDetails {
+  id: number;
+  reason: string;
+  status: ReturnStatus;
+  deliveryStatus: DeliveryStatus;
+  createdAt: string;
+  updatedAt: string;
+  submittedAt?: string;
+  decisionAt?: string;
+  decisionNotes?: string;
+  
+  // Order information
+  orderId: number;
+  orderNumber: string;
+  orderDate: string;
+  orderTotal: number;
+  
+  // Customer information
+  customer: {
+    name: string;
+    email: string;
+    phone: string;
+  };
+  
+  // Pickup address with coordinates
+  pickupAddress: {
+    street: string;
+    country: string;
+    regions: string;
+    roadName?: string;
+    latitude?: number;
+    longitude?: number;
+    fullAddress: string;
+  };
+  
+  // Return items with product details
+  returnItems: ReturnItemDetails[];
+  
+  // Delivery agent information
+  deliveryAgentId: string;
+  deliveryAgentName: string;
+  assignedAt?: string;
+  
+  // Pickup tracking
+  pickupScheduledAt?: string;
+  pickupStartedAt?: string;
+  pickupCompletedAt?: string;
+}
+
+export interface ReturnItemDetails {
+  id: number;
+  returnQuantity: number;
+  itemReason?: string;
+  returnable: boolean;
+  
+  // Product information
+  product: {
+    productId: string;
+    name: string;
+    description?: string;
+    brand?: string;
+    category?: string;
+    imageUrls: string[];
+    returnable: boolean;
+    returnWindowDays?: number;
+  };
+  
+  // Variant information (if applicable)
+  variant?: {
+    variantId: number;
+    variantName?: string;
+    color?: string;
+    size?: string;
+    material?: string;
+    variantImageUrls: string[];
+    variantPrice: number;
+  };
+  
+  // Order item reference
+  orderQuantity: number;
+  unitPrice: number;
+  totalPrice: number;
+}
+
 export enum ReturnStatus {
   PENDING = "PENDING",
   APPROVED = "APPROVED",
@@ -106,6 +191,14 @@ class DeliveryAgentReturnsService {
    */
   async getReturnRequestById(returnRequestId: string): Promise<DeliveryAgentReturnRequest> {
     const response = await apiClient.get(`${this.baseUrl}/${returnRequestId}`);
+    return response.data;
+  }
+
+  /**
+   * Get comprehensive return request details for delivery agent
+   */
+  async getReturnRequestDetails(returnRequestId: string): Promise<DeliveryAgentReturnDetails> {
+    const response = await apiClient.get(`${this.baseUrl}/${returnRequestId}/details`);
     return response.data;
   }
 
