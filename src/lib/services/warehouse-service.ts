@@ -65,16 +65,35 @@ export interface UpdateWarehouseDTO {
 }
 
 export interface WarehouseProductDTO {
-  stockId: number;
   productId: string;
   productName: string;
   productSku?: string;
-  variantId?: number;
-  variantSku?: string;
-  quantity: number;
-  lowStockThreshold: number;
-  isVariant: boolean;
+  productDescription?: string;
+  productPrice?: number;
+  totalQuantity: number; // Total quantity from all active batches for this product
+  activeBatchCount: number; // Number of active batches for this product
+  expiredBatchCount: number; // Number of expired batches for this product
+  recalledBatchCount: number; // Number of recalled batches for this product
+  lowStockThreshold: number; // Minimum threshold across all stock entries
+  isLowStock: boolean; // Whether the product is below threshold
+  isOutOfStock: boolean; // Whether the product has no active stock
   productImages: string[];
+}
+
+export interface ProductVariantWarehouseDTO {
+  variantId: number;
+  variantName: string;
+  variantSku?: string;
+  totalQuantity: number;
+  activeBatchCount: number;
+  expiredBatchCount: number;
+  recalledBatchCount: number;
+  lowStockThreshold: number;
+  isLowStock: boolean;
+  isOutOfStock: boolean;
+  variantImages: string[];
+  variantPrice?: number;
+  stockId: number;
 }
 
 export interface PaginatedResponse<T> {
@@ -172,6 +191,16 @@ class WarehouseService {
   ): Promise<PaginatedResponse<WarehouseProductDTO>> {
     const response = await apiClient.get(
       `${this.baseUrl}/${id}/products?page=${page}&size=${size}`
+    );
+    return response.data;
+  }
+
+  async getProductVariantsInWarehouse(
+    warehouseId: number,
+    productId: string
+  ): Promise<ProductVariantWarehouseDTO[]> {
+    const response = await apiClient.get(
+      `${this.baseUrl}/${warehouseId}/products/${productId}/variants`
     );
     return response.data;
   }

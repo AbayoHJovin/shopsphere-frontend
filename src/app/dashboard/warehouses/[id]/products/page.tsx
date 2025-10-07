@@ -7,6 +7,7 @@ import {
   warehouseService,
   WarehouseProductDTO,
 } from "@/lib/services/warehouse-service";
+import VariantSelectionDialog from "@/components/VariantSelectionDialog";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -60,6 +61,9 @@ export default function WarehouseProductsPage() {
   const [searchTerm, setSearchTerm] = useState("");
   const [productToRemove, setProductToRemove] =
     useState<WarehouseProductDTO | null>(null);
+  const [showVariantDialog, setShowVariantDialog] = useState(false);
+  const [selectedProductForVariants, setSelectedProductForVariants] =
+    useState<WarehouseProductDTO | null>(null);
 
   // Fetch warehouse products
   const {
@@ -90,6 +94,8 @@ export default function WarehouseProductsPage() {
         queryKey: ["warehouses"],
       });
       setProductToRemove(null);
+      setShowVariantDialog(false);
+      setSelectedProductForVariants(null);
     },
     onError: (error: any) => {
       toast({
@@ -101,8 +107,35 @@ export default function WarehouseProductsPage() {
     },
   });
 
+  // Check if product has variants mutation
+  const checkVariantsMutation = useMutation({
+    mutationFn: (productId: string) =>
+      warehouseService.getProductVariantsInWarehouse(warehouseId, productId),
+    onSuccess: (variants, productId) => {
+      const product = filteredProducts.find(p => p.productId === productId);
+      if (!product) return;
+
+      if (variants && variants.length > 0) {
+        // Product has variants, show selection dialog
+        setSelectedProductForVariants(product);
+        setShowVariantDialog(true);
+      } else {
+        // No variants, proceed with direct removal
+        setProductToRemove(product);
+      }
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Error",
+        description: "Failed to check product variants",
+        variant: "destructive",
+      });
+    },
+  });
+
   const handleRemoveProduct = (product: WarehouseProductDTO) => {
-    setProductToRemove(product);
+    // First check if product has variants
+    checkVariantsMutation.mutate(product.productId);
   };
 
   const confirmRemoveProduct = () => {
@@ -111,12 +144,24 @@ export default function WarehouseProductsPage() {
     }
   };
 
+  const handleVariantSelectionConfirm = (selectedVariantIds: number[]) => {
+    if (selectedProductForVariants && selectedVariantIds.length > 0) {
+      // For now, we'll remove the entire product if any variants are selected
+      // In a more sophisticated implementation, you might want to remove only selected variants
+      removeProductMutation.mutate(selectedProductForVariants.productId);
+    }
+  };
+
+  const handleVariantDialogClose = () => {
+    setShowVariantDialog(false);
+    setSelectedProductForVariants(null);
+  };
+
   const filteredProducts =
     productsData?.content?.filter(
       (product) =>
         product.productName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        product.productSku?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        product.variantSku?.toLowerCase().includes(searchTerm.toLowerCase())
+        product.productSku?.toLowerCase().includes(searchTerm.toLowerCase())
     ) || [];
 
   const totalPages = productsData
@@ -207,9 +252,7 @@ export default function WarehouseProductsPage() {
           <CardContent>
             <div className="text-2xl font-bold">
               {
-                filteredProducts.filter(
-                  (p) => p.quantity <= p.lowStockThreshold
-                ).length
+                filteredProducts.filter((p) => p.isLowStock).length
               }
             </div>
           </CardContent>
@@ -221,7 +264,7 @@ export default function WarehouseProductsPage() {
         <CardHeader>
           <CardTitle>Search Products</CardTitle>
           <CardDescription>
-            Search by product name, SKU, or variant SKU
+            Search by product name or SKU
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -234,20 +277,6 @@ export default function WarehouseProductsPage() {
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
               />
-            </div>
-            <div className="w-32">
-              <Label htmlFor="pageSize">Page Size</Label>
-              <select
-                id="pageSize"
-                value={pageSize}
-                onChange={(e) => handlePageSizeChange(Number(e.target.value))}
-                className="w-full h-10 px-3 py-2 border border-input bg-background rounded-md"
-              >
-                <option value={10}>10</option>
-                <option value={20}>20</option>
-                <option value={50}>50</option>
-                <option value={100}>100</option>
-              </select>
             </div>
           </div>
         </CardContent>
@@ -285,20 +314,16 @@ export default function WarehouseProductsPage() {
                     <TableHead>Image</TableHead>
                     <TableHead>Product</TableHead>
                     <TableHead>SKU</TableHead>
-                    <TableHead>Type</TableHead>
-                    <TableHead>Stock</TableHead>
-                    <TableHead>Low Stock Threshold</TableHead>
+                    <TableHead>Price</TableHead>
+                    <TableHead>Total Stock</TableHead>
+                    <TableHead>Batches</TableHead>
                     <TableHead>Status</TableHead>
                     <TableHead className="text-right">Actions</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {filteredProducts.map((product) => (
-                    <TableRow
-                      key={`${product.productId}-${
-                        product.variantId || "main"
-                      }`}
-                    >
+                    <TableRow key={product.productId}>
                       <TableCell>
                         <div className="flex items-center">
                           {product.productImages &&
@@ -322,52 +347,66 @@ export default function WarehouseProductsPage() {
                           <div className="font-medium">
                             {product.productName}
                           </div>
-                          {product.isVariant && product.variantSku && (
+                          {product.productDescription && (
                             <div className="text-sm text-muted-foreground">
-                              Variant: {product.variantSku}
+                              {product.productDescription.length > 50
+                                ? product.productDescription.substring(0, 50) + "..."
+                                : product.productDescription}
                             </div>
                           )}
                         </div>
                       </TableCell>
                       <TableCell>
                         <div className="font-mono text-sm">
-                          {product.isVariant
-                            ? product.variantSku
-                            : product.productSku}
+                          {product.productSku || 'N/A'}
                         </div>
                       </TableCell>
                       <TableCell>
-                        <Badge
-                          variant={product.isVariant ? "secondary" : "default"}
-                        >
-                          {product.isVariant ? "Variant" : "Product"}
-                        </Badge>
+                        <div className="font-medium">
+                          {product.productPrice ? `$${product.productPrice.toFixed(2)}` : 'N/A'}
+                        </div>
                       </TableCell>
                       <TableCell>
-                        <div className="font-medium">{product.quantity}</div>
+                        <div className="font-medium">{product.totalQuantity}</div>
                       </TableCell>
                       <TableCell>
-                        <div className="text-sm">
-                          {product.lowStockThreshold}
+                        <div className="space-y-1">
+                          <div className="flex items-center gap-2">
+                            <Badge variant="secondary" className="bg-green-100 text-green-800">
+                              {product.activeBatchCount} Active
+                            </Badge>
+                          </div>
+                          {product.expiredBatchCount > 0 && (
+                            <Badge variant="secondary" className="bg-red-100 text-red-800">
+                              {product.expiredBatchCount} Expired
+                            </Badge>
+                          )}
+                          {product.recalledBatchCount > 0 && (
+                            <Badge variant="secondary" className="bg-orange-100 text-orange-800">
+                              {product.recalledBatchCount} Recalled
+                            </Badge>
+                          )}
                         </div>
                       </TableCell>
                       <TableCell>
                         <Badge
                           variant={
-                            product.quantity <= product.lowStockThreshold
+                            product.isOutOfStock
                               ? "destructive"
-                              : product.quantity <=
-                                product.lowStockThreshold * 2
+                              : product.isLowStock
                               ? "secondary"
                               : "default"
                           }
                         >
-                          {product.quantity <= product.lowStockThreshold
+                          {product.isOutOfStock
+                            ? "Out of Stock"
+                            : product.isLowStock
                             ? "Low Stock"
-                            : product.quantity <= product.lowStockThreshold * 2
-                            ? "Medium Stock"
                             : "In Stock"}
                         </Badge>
+                        <div className="text-xs text-muted-foreground mt-1">
+                          Threshold: {product.lowStockThreshold}
+                        </div>
                       </TableCell>
                       <TableCell className="text-right">
                         <AlertDialog>
@@ -419,17 +458,39 @@ export default function WarehouseProductsPage() {
               </Table>
             </div>
           )}
+        </CardContent>
+      </Card>
 
-          {/* Pagination */}
-          {totalPages > 1 && (
-            <div className="flex items-center justify-between mt-6">
-              <div className="text-sm text-muted-foreground">
-                Showing {currentPage * pageSize + 1} to{" "}
-                {Math.min(
-                  (currentPage + 1) * pageSize,
-                  productsData?.totalElements || 0
-                )}{" "}
-                of {productsData?.totalElements || 0} products
+      {/* Pagination */}
+      {totalPages > 1 && (
+        <Card>
+          <CardContent className="pt-6">
+            <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
+              <div className="flex items-center gap-4">
+                <div className="text-sm text-muted-foreground">
+                  Showing {currentPage * pageSize + 1} to{" "}
+                  {Math.min(
+                    (currentPage + 1) * pageSize,
+                    productsData?.totalElements || 0
+                  )}{" "}
+                  of {productsData?.totalElements || 0} products
+                </div>
+                <div className="flex items-center gap-2">
+                  <Label htmlFor="pageSize" className="text-sm">
+                    Per page:
+                  </Label>
+                  <select
+                    id="pageSize"
+                    value={pageSize}
+                    onChange={(e) => handlePageSizeChange(Number(e.target.value))}
+                    className="h-8 px-2 py-1 border border-input bg-background rounded-md text-sm"
+                  >
+                    <option value={10}>10</option>
+                    <option value={20}>20</option>
+                    <option value={50}>50</option>
+                    <option value={100}>100</option>
+                  </select>
+                </div>
               </div>
               <div className="flex items-center gap-2">
                 <Button
@@ -469,9 +530,20 @@ export default function WarehouseProductsPage() {
                 </Button>
               </div>
             </div>
-          )}
-        </CardContent>
-      </Card>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Variant Selection Dialog */}
+      <VariantSelectionDialog
+        isOpen={showVariantDialog}
+        onClose={handleVariantDialogClose}
+        onConfirm={handleVariantSelectionConfirm}
+        productId={selectedProductForVariants?.productId || ""}
+        productName={selectedProductForVariants?.productName || ""}
+        warehouseId={warehouseId}
+        isRemoving={removeProductMutation.isPending}
+      />
     </div>
   );
 }
