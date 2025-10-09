@@ -336,12 +336,10 @@ class ProductService {
       throw handleApiError(error);
     }
   }
-
   async assignProductStockWithBatches(
     productId: string,
     warehouseStocks: Array<{
       warehouseId: number;
-      warehouseName?: string;
       lowStockThreshold: number;
       batches: Array<{
         batchNumber: string;
@@ -352,20 +350,31 @@ class ProductService {
         supplierBatchNumber?: string;
       }>;
     }>
-  ): Promise<{
-    success: boolean;
-    message: string;
-    assignedWarehouses: number;
-    totalBatchesCreated: number;
-  }> {
+  ): Promise<any> {
     try {
       const response = await apiClient.post(
-        `/v1/products/${productId}/assign-stock-with-batches`,
+        `/api/v1/products/${productId}/assign-stock-with-batches`,
         warehouseStocks
       );
       return response.data;
     } catch (error) {
-      throw handleApiError(error);
+      console.error("Error assigning product stock with batches:", error);
+      throw error;
+    }
+  }
+
+  async unassignWarehouseFromProduct(
+    productId: string,
+    warehouseId: number
+  ): Promise<any> {
+    try {
+      const response = await apiClient.delete(
+        `/v1/products/${productId}/unassign-warehouse/${warehouseId}`
+      );
+      return response.data;
+    } catch (error) {
+      console.error("Error unassigning warehouse from product:", error);
+      throw error;
     }
   }
 
@@ -843,6 +852,7 @@ class ProductService {
       variantBarcode?: string;
       price: number;
       salePrice?: number;
+      costPrice?: number;
       isActive: boolean;
       attributes: Array<{ attributeTypeName: string; attributeValue: string }>;
       images: File[];
@@ -891,7 +901,6 @@ class ProductService {
       );
       return response.data;
     } catch (error) {
-      // Don't convert to string - we need the original error object for proper error handling
       throw error;
     }
   }
@@ -932,6 +941,7 @@ class ProductService {
       warehouseName: string;
       stockQuantity: number;
       lowStockThreshold: number;
+      stockId?: string;
     }>;
     totalElements: number;
     totalPages: number;

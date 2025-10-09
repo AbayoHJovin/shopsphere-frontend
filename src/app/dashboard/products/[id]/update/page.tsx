@@ -470,24 +470,18 @@ export default function ProductUpdate({ params }: ProductUpdateProps) {
     discountId: null as string | null,
     attributes: [] as Array<{
       attributeTypeId: string;
-      attributeValue: string;
+      attributeValueId: string;
     }>,
     images: [] as File[],
   });
-  const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
   const [attributeTypeName, setAttributeTypeName] = useState("");
-  const [attributeValue, setAttributeValue] = useState("");
-  const [isUnsavedChangesModalOpen, setIsUnsavedChangesModalOpen] =
-    useState(false);
-  const [pendingAction, setPendingAction] = useState<(() => void) | null>(null);
-  const [isDeleteVariantModalOpen, setIsDeleteVariantModalOpen] =
-    useState(false);
-  const [variantToDelete, setVariantToDelete] = useState<number | null>(null);
-  const [productDetails, setProductDetails] = useState<ProductDetails>({});
-  const [initialProductDetails, setInitialProductDetails] =
-    useState<ProductDetails>({});
-  const [hasProductDetailsChanges, setHasProductDetailsChanges] =
-    useState(false);
+  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
+  const [variantToDelete, setVariantToDelete] = useState<ProductVariant | null>(null);
+  const [isUnassignWarehouseDialogOpen, setIsUnassignWarehouseDialogOpen] = useState(false);
+  const [warehouseToUnassign, setWarehouseToUnassign] = useState<{
+    warehouseId: number;
+    warehouseName: string;
+  } | null>(null);
   const [productWarehouseStocks, setProductWarehouseStocks] = useState<any[]>(
     []
   );
@@ -497,6 +491,26 @@ export default function ProductUpdate({ params }: ProductUpdateProps) {
   ] = useState<WarehouseStockWithBatches[]>([]);
   const [isInventoryModalOpen, setIsInventoryModalOpen] = useState(false);
   const [productHasVariants, setProductHasVariants] = useState(false);
+  const [productDetails, setProductDetails] = useState<{
+    metaTitle?: string;
+    metaDescription?: string;
+    metaKeywords?: string;
+    tags?: string;
+    [key: string]: any;
+  }>({});
+  const [initialProductDetails, setInitialProductDetails] = useState<{
+    metaTitle?: string;
+    metaDescription?: string;
+    metaKeywords?: string;
+    tags?: string;
+    [key: string]: any;
+  }>({});
+  const [hasProductDetailsChanges, setHasProductDetailsChanges] = useState(false);
+  const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
+  const [isUnsavedChangesModalOpen, setIsUnsavedChangesModalOpen] = useState(false);
+  const [isDeleteVariantModalOpen, setIsDeleteVariantModalOpen] = useState(false);
+  const [attributeValue, setAttributeValue] = useState("");
+  const [pendingAction, setPendingAction] = useState<(() => void) | null>(null);
   const initialFormData = useRef<any>(null);
 
   // Form setup
@@ -971,7 +985,6 @@ export default function ProductUpdate({ params }: ProductUpdateProps) {
         setActiveTab(tab);
       }
     } else if (!tab && activeTab !== "basic") {
-      // If no tab in URL but we're not on basic, update URL to reflect current tab
       updateUrlTab(activeTab);
     }
   }, [searchParams, activeTab]);
@@ -1666,7 +1679,7 @@ export default function ProductUpdate({ params }: ProductUpdateProps) {
       });
     }
   };
-
+  
   const fetchProductDetails = async () => {
     try {
       const details = await productService.getProductDetails(productId);
@@ -1695,37 +1708,6 @@ export default function ProductUpdate({ params }: ProductUpdateProps) {
       toast({
         title: "Error",
         description: "Failed to fetch product stock data",
-        variant: "destructive",
-      });
-    }
-  };
-
-  const updateProductStock = async (warehouseStocks: any[]) => {
-    try {
-      setIsSubmitting(true);
-
-      const stockRequests = warehouseStocks.map((stock) => ({
-        warehouseId: stock.warehouseId,
-        stockQuantity: stock.stockQuantity,
-        lowStockThreshold: stock.lowStockThreshold,
-      }));
-
-      await productService.assignProductStock(productId, stockRequests);
-
-      // Refresh stock data after update
-      await fetchProductStockData();
-
-      toast({
-        title: "Stock Updated",
-        description: "Product stock has been updated successfully",
-      });
-    } catch (error: any) {
-      console.error("Error updating product stock:", error);
-      toast({
-        title: "Update Failed",
-        description:
-          error?.response?.data?.message ||
-          "Failed to update product stock. Please try again.",
         variant: "destructive",
       });
     } finally {
@@ -1825,6 +1807,33 @@ export default function ProductUpdate({ params }: ProductUpdateProps) {
       setProductHasVariants(response.hasVariants);
     } catch (error) {
       console.error("Error checking product variants:", error);
+    }
+  };
+
+  const handleUnassignWarehouse = async (warehouseId: number, warehouseName: string) => {
+    try {
+      setIsSubmitting(true);
+
+      await productService.unassignWarehouseFromProduct(productId, warehouseId);
+
+      // Refresh stock data after unassignment
+      await fetchProductStockData();
+
+      toast({
+        title: "Warehouse Unassigned",
+        description: `Successfully unassigned warehouse "${warehouseName}" from this product. All associated batches have been handled safely.`,
+      });
+    } catch (error: any) {
+      console.error("Error unassigning warehouse:", error);
+      toast({
+        title: "Unassignment Failed",
+        description:
+          error?.response?.data?.message ||
+          "Failed to unassign warehouse. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -1994,7 +2003,7 @@ export default function ProductUpdate({ params }: ProductUpdateProps) {
     const formattedAttributes = attributes.flatMap((attr) =>
       attr.values.map((value) => ({
         attributeTypeId: attr.name,
-        attributeValue: value,
+        attributeValueId: value,
       }))
     );
 
@@ -3064,7 +3073,7 @@ export default function ProductUpdate({ params }: ProductUpdateProps) {
                                     onClick={(e) => {
                                       e.stopPropagation();
                                       setIsDeleteVariantModalOpen(true);
-                                      setVariantToDelete(variant.variantId);
+                                      setVariantToDelete(variant);
                                     }}
                                   >
                                     <Trash2 className="w-4 h-4 mr-2" />
@@ -3693,11 +3702,11 @@ export default function ProductUpdate({ params }: ProductUpdateProps) {
                                 variant="outline"
                                 size="sm"
                                 onClick={() => {
-                                  const updatedStocks =
-                                    productWarehouseStocks.filter(
-                                      (_, i) => i !== index
-                                    );
-                                  updateProductStock(updatedStocks);
+                                  setWarehouseToUnassign({
+                                    warehouseId: stock.warehouseId,
+                                    warehouseName: stock.warehouseName
+                                  });
+                                  setIsUnassignWarehouseDialogOpen(true);
                                 }}
                                 className="text-red-600 hover:text-red-700 hover:bg-red-50"
                               >
@@ -3708,7 +3717,7 @@ export default function ProductUpdate({ params }: ProductUpdateProps) {
                             <BatchManagement
                               stockId={stock.stockId}
                               warehouseName={stock.warehouseName}
-                              productName={form.productName || "Product"}
+                              productName={form.getValues("name") || "Product"}
                               onBatchUpdate={fetchProductStockData}
                             />
                           </div>
@@ -4838,7 +4847,7 @@ export default function ProductUpdate({ params }: ProductUpdateProps) {
                         className="flex items-center justify-between p-2 bg-muted/30 rounded"
                       >
                         <span className="text-sm">
-                          {attr.attributeTypeId}: {attr.attributeValue}
+                          {attr.attributeTypeId}: {attr.attributeValueId}
                         </span>
                         <Button
                           type="button"
@@ -4993,7 +5002,7 @@ export default function ProductUpdate({ params }: ProductUpdateProps) {
             <AlertDialogAction
               onClick={() => {
                 if (variantToDelete) {
-                  handleDeleteVariant(variantToDelete);
+                  handleDeleteVariant(variantToDelete.variantId);
                   setIsDeleteVariantModalOpen(false);
                   setVariantToDelete(null);
                 }
@@ -5002,6 +5011,67 @@ export default function ProductUpdate({ params }: ProductUpdateProps) {
             >
               <Trash2 className="w-4 h-4 mr-2" />
               Delete Variant
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Unassign Warehouse Confirmation Dialog */}
+      <AlertDialog
+        open={isUnassignWarehouseDialogOpen}
+        onOpenChange={setIsUnassignWarehouseDialogOpen}
+      >
+        <AlertDialogContent className="max-w-md">
+          <AlertDialogHeader>
+            <AlertDialogTitle className="flex items-center gap-3">
+              <div className="flex h-10 w-10 items-center justify-center rounded-full bg-amber-100">
+                <AlertTriangle className="h-5 w-5 text-amber-600" />
+              </div>
+              <span className="text-lg font-semibold text-gray-900">
+                Unassign Warehouse
+              </span>
+            </AlertDialogTitle>
+            <AlertDialogDescription className="mt-4 space-y-3">
+              <div className="rounded-lg bg-amber-50 border border-amber-200 p-4">
+                <p className="text-sm font-medium text-amber-800 mb-2">
+                  ⚠️ Warning: This action will permanently:
+                </p>
+                <ul className="text-sm text-amber-700 space-y-1 ml-4">
+                  <li>• Remove all stock assignments for warehouse "{warehouseToUnassign?.warehouseName}"</li>
+                  <li>• Delete all batches stored in this warehouse for this product</li>
+                  <li>• This action cannot be undone</li>
+                </ul>
+              </div>
+              <p className="text-sm text-gray-600">
+                Are you sure you want to continue with unassigning this warehouse?
+              </p>
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter className="gap-3 mt-6">
+            <AlertDialogCancel
+              onClick={() => {
+                setIsUnassignWarehouseDialogOpen(false);
+                setWarehouseToUnassign(null);
+              }}
+              className="flex-1 bg-gray-100 hover:bg-gray-200 text-gray-700 border-gray-300"
+            >
+              Cancel
+            </AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => {
+                if (warehouseToUnassign) {
+                  handleUnassignWarehouse(
+                    warehouseToUnassign.warehouseId,
+                    warehouseToUnassign.warehouseName
+                  );
+                  setIsUnassignWarehouseDialogOpen(false);
+                  setWarehouseToUnassign(null);
+                }
+              }}
+              className="flex-1 bg-gradient-to-r from-red-500 to-red-600 hover:from-red-600 hover:to-red-700 text-white shadow-lg hover:shadow-xl transition-all duration-200"
+            >
+              <X className="w-4 h-4 mr-2" />
+              Unassign Warehouse
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

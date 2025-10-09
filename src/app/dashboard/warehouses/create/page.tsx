@@ -22,14 +22,13 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 import { ArrowLeft, Upload, X, MapPin, AlertTriangle } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
 import { useRouter } from "next/navigation";
+import { GoogleMapsWarehousePicker } from "@/components/GoogleMapsWarehousePicker";
 
 export default function CreateWarehousePage() {
   const router = useRouter();
   const queryClient = useQueryClient();
   const [images, setImages] = useState<File[]>([]);
-  const [isGeocoding, setIsGeocoding] = useState(false);
-  const [geocodingError, setGeocodingError] = useState<string | null>(null);
-  const [coordinatesLocked, setCoordinatesLocked] = useState(false);
+  const [addressSelected, setAddressSelected] = useState(false);
   const [formData, setFormData] = useState<CreateWarehouseDTO>({
     name: "",
     description: "",
@@ -67,81 +66,25 @@ export default function CreateWarehousePage() {
     },
   });
 
-  // Geocoding function
-  const fetchCoordinates = async (
-    address: string,
-    city: string,
-    country: string
-  ) => {
-    if (!address || !city || !country) return;
-
-    setIsGeocoding(true);
-    setGeocodingError(null);
-
-    try {
-      // Clean and encode the address components
-      const cleanAddress = address.replace(/\s+/g, "+");
-      const cleanCity = city.replace(/\s+/g, "+");
-      const cleanCountry = country.replace(/\s+/g, "+");
-
-      const response = await fetch(
-        `https://nominatim.openstreetmap.org/search?street=${cleanAddress}&city=${cleanCity}&country=${cleanCountry}&format=json&limit=1`
-      );
-
-      if (!response.ok) {
-        throw new Error("Failed to fetch coordinates");
-      }
-
-      const data = await response.json();
-
-      if (data && data.length > 0 && data[0].lat && data[0].lon) {
-        const lat = parseFloat(data[0].lat);
-        const lon = parseFloat(data[0].lon);
-
-        // Validate coordinates (basic sanity check)
-        if (lat >= -90 && lat <= 90 && lon >= -180 && lon <= 180) {
-          setFormData((prev) => ({
-            ...prev,
-            latitude: lat,
-            longitude: lon,
-          }));
-          setCoordinatesLocked(true);
-          toast({
-            title: "Coordinates Found",
-            description: `Location coordinates automatically set: ${lat.toFixed(
-              6
-            )}, ${lon.toFixed(6)}`,
-          });
-        } else {
-          throw new Error("Invalid coordinates received");
-        }
-      } else {
-        throw new Error("No coordinates found for this address");
-      }
-    } catch (error) {
-      console.error("Geocoding error:", error);
-      setGeocodingError(
-        "Unable to find coordinates for this address. Please verify the address details."
-      );
-      setCoordinatesLocked(false);
-    } finally {
-      setIsGeocoding(false);
-    }
+  // Handle Google Maps address selection
+  const handleGoogleMapsAddressSelect = (address: any) => {
+    setFormData(prev => ({
+      ...prev,
+      address: address.streetAddress,
+      city: address.city,
+      state: address.state,
+      zipCode: address.zipCode,
+      country: address.country,
+      latitude: address.latitude,
+      longitude: address.longitude,
+    }));
+    setAddressSelected(true);
+    
+    toast({
+      title: "Location Selected",
+      description: "Address details have been automatically filled from the map selection.",
+    });
   };
-
-  // Effect to trigger geocoding when address fields change
-  useEffect(() => {
-    const { address, city, country } = formData;
-
-    // Only trigger if all three fields are filled and coordinates are not locked
-    if (address && city && country && !coordinatesLocked) {
-      const timeoutId = setTimeout(() => {
-        fetchCoordinates(address, city, country);
-      }, 1000); // Debounce for 1 second
-
-      return () => clearTimeout(timeoutId);
-    }
-  }, [formData.address, formData.city, formData.country, coordinatesLocked]);
 
   const handleInputChange = (
     field: keyof CreateWarehouseDTO,
@@ -152,17 +95,9 @@ export default function CreateWarehousePage() {
       [field]: value,
     }));
 
-    // Reset coordinates when address fields change
-    if (field === "address" || field === "city" || field === "country") {
-      setCoordinatesLocked(false);
-      setGeocodingError(null);
-      if (coordinatesLocked) {
-        setFormData((prev) => ({
-          ...prev,
-          latitude: undefined,
-          longitude: undefined,
-        }));
-      }
+    // Reset address selection when address fields are manually changed
+    if (field === "address" || field === "city" || field === "state" || field === "zipCode" || field === "country") {
+      setAddressSelected(false);
     }
   };
 
@@ -283,18 +218,30 @@ export default function CreateWarehousePage() {
           <CardHeader>
             <CardTitle>Address Information</CardTitle>
             <CardDescription>
-              Provide the complete address for your warehouse
+              {addressSelected 
+                ? "Address automatically filled from map selection" 
+                : "Address will be automatically filled when you select a location on the map below"}
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
+            {addressSelected && (
+              <Alert>
+                <MapPin className="h-4 w-4" />
+                <AlertDescription>
+                  Address details have been automatically filled from your map selection. You can manually edit them if needed.
+                </AlertDescription>
+              </Alert>
+            )}
+            
             <div className="space-y-2">
               <Label htmlFor="address">Address *</Label>
               <Input
                 id="address"
                 value={formData.address}
                 onChange={(e) => handleInputChange("address", e.target.value)}
-                placeholder="Enter street address"
+                placeholder={addressSelected ? "Auto-filled from map" : "Will be filled from map selection"}
                 required
+                className={addressSelected ? "bg-green-50 border-green-200" : ""}
               />
             </div>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -304,8 +251,9 @@ export default function CreateWarehousePage() {
                   id="city"
                   value={formData.city}
                   onChange={(e) => handleInputChange("city", e.target.value)}
-                  placeholder="Enter city"
+                  placeholder={addressSelected ? "Auto-filled from map" : "Will be filled from map"}
                   required
+                  className={addressSelected ? "bg-green-50 border-green-200" : ""}
                 />
               </div>
               <div className="space-y-2">
@@ -314,8 +262,9 @@ export default function CreateWarehousePage() {
                   id="state"
                   value={formData.state}
                   onChange={(e) => handleInputChange("state", e.target.value)}
-                  placeholder="Enter state"
+                  placeholder={addressSelected ? "Auto-filled from map" : "Will be filled from map"}
                   required
+                  className={addressSelected ? "bg-green-50 border-green-200" : ""}
                 />
               </div>
               <div className="space-y-2">
@@ -324,8 +273,9 @@ export default function CreateWarehousePage() {
                   id="zipCode"
                   value={formData.zipCode}
                   onChange={(e) => handleInputChange("zipCode", e.target.value)}
-                  placeholder="Enter zip code"
+                  placeholder={addressSelected ? "Auto-filled from map" : "Will be filled from map"}
                   required
+                  className={addressSelected ? "bg-green-50 border-green-200" : ""}
                 />
               </div>
             </div>
@@ -335,10 +285,50 @@ export default function CreateWarehousePage() {
                 id="country"
                 value={formData.country}
                 onChange={(e) => handleInputChange("country", e.target.value)}
-                placeholder="Enter country"
+                placeholder={addressSelected ? "Auto-filled from map" : "Will be filled from map"}
                 required
+                className={addressSelected ? "bg-green-50 border-green-200" : ""}
               />
             </div>
+            
+            {formData.latitude && formData.longitude && (
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-4 border-t">
+                <div className="space-y-2">
+                  <Label htmlFor="latitude">Latitude</Label>
+                  <Input
+                    id="latitude"
+                    type="number"
+                    step="any"
+                    value={formData.latitude || ""}
+                    onChange={(e) =>
+                      handleInputChange(
+                        "latitude",
+                        e.target.value ? parseFloat(e.target.value) : 0
+                      )
+                    }
+                    placeholder="Auto-filled from map"
+                    className="bg-green-50 border-green-200"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="longitude">Longitude</Label>
+                  <Input
+                    id="longitude"
+                    type="number"
+                    step="any"
+                    value={formData.longitude || ""}
+                    onChange={(e) =>
+                      handleInputChange(
+                        "longitude",
+                        e.target.value ? parseFloat(e.target.value) : 0
+                      )
+                    }
+                    placeholder="Auto-filled from map"
+                    className="bg-green-50 border-green-200"
+                  />
+                </div>
+              </div>
+            )}
           </CardContent>
         </Card>
 
@@ -375,94 +365,24 @@ export default function CreateWarehousePage() {
           </CardContent>
         </Card>
 
-        {/* Location Coordinates */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <MapPin className="h-5 w-5" />
-              Location Coordinates
-            </CardTitle>
-            <CardDescription>
-              {coordinatesLocked
-                ? "Coordinates automatically detected from address"
-                : "Coordinates will be automatically detected when address fields are filled"}
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            {/* Geocoding Status */}
-            {isGeocoding && (
-              <Alert>
-                <MapPin className="h-4 w-4" />
-                <AlertDescription>
-                  Searching for coordinates...
-                </AlertDescription>
-              </Alert>
-            )}
-
-            {geocodingError && (
+        {/* Google Maps Location Picker */}
+        {process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY ? (
+          <GoogleMapsWarehousePicker
+            onAddressSelect={handleGoogleMapsAddressSelect}
+            apiKey={process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY}
+          />
+        ) : (
+          <Card>
+            <CardContent className="p-6">
               <Alert variant="destructive">
                 <AlertTriangle className="h-4 w-4" />
-                <AlertDescription>{geocodingError}</AlertDescription>
-              </Alert>
-            )}
-
-            {coordinatesLocked && formData.latitude && formData.longitude && (
-              <Alert>
-                <MapPin className="h-4 w-4" />
                 <AlertDescription>
-                  Coordinates found: {formData.latitude.toFixed(6)},{" "}
-                  {formData.longitude.toFixed(6)}
+                  Google Maps API key is not configured.
                 </AlertDescription>
               </Alert>
-            )}
-
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label htmlFor="latitude">Latitude</Label>
-                <Input
-                  id="latitude"
-                  type="number"
-                  step="any"
-                  value={formData.latitude || ""}
-                  onChange={(e) =>
-                    handleInputChange(
-                      "latitude",
-                      e.target.value ? parseFloat(e.target.value) : 0
-                    )
-                  }
-                  placeholder="Enter latitude"
-                  disabled={coordinatesLocked}
-                  className={coordinatesLocked ? "bg-muted" : ""}
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="longitude">Longitude</Label>
-                <Input
-                  id="longitude"
-                  type="number"
-                  step="any"
-                  value={formData.longitude || ""}
-                  onChange={(e) =>
-                    handleInputChange(
-                      "longitude",
-                      e.target.value ? parseFloat(e.target.value) : 0
-                    )
-                  }
-                  placeholder="Enter longitude"
-                  disabled={coordinatesLocked}
-                  className={coordinatesLocked ? "bg-muted" : ""}
-                />
-              </div>
-            </div>
-
-            {coordinatesLocked && (
-              <div className="text-sm text-muted-foreground">
-                Coordinates are automatically locked. Change the address fields
-                to unlock and search for new coordinates.
-              </div>
-            )}
-          </CardContent>
-        </Card>
+            </CardContent>
+          </Card>
+        )}
 
         {/* Images */}
         <Card>
