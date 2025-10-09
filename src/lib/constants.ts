@@ -1,8 +1,8 @@
 // API Base URL
 export const API_URL =
-  process.env.NEXT_PUBLIC_API_URL || "http://localhost:8080/api";
-// process.env.NEXT_PUBLIC_API_URL || "http://44.201.73.159:8081/api";
-
+  process.env.NODE_ENV === "production"
+    ? "/api/v1"
+    : "http://localhost:8080/api/v1";
 // API Endpoints
 export const API_ENDPOINTS = {
   AUTH: {
@@ -29,6 +29,7 @@ export const API_ENDPOINTS = {
   ADMIN_ORDERS: {
     BASE: `${API_URL}/v1/admin/orders`,
     ALL: `${API_URL}/v1/admin/orders`,
+    SEARCH: `${API_URL}/v1/admin/orders/search`,
     BY_ID: (id: string) => `${API_URL}/v1/admin/orders/${id}`,
     BY_NUMBER: (orderNumber: string) =>
       `${API_URL}/v1/admin/orders/number/${orderNumber}`,
@@ -88,7 +89,8 @@ export const API_ENDPOINTS = {
   RETURNS: {
     BASE: `${API_URL}/v1/returns`,
     ADMIN_ALL: `${API_URL}/v1/returns/admin/all`,
-    ADMIN_BY_STATUS: (status: string) => `${API_URL}/v1/returns/admin/status/${status}`,
+    ADMIN_BY_STATUS: (status: string) =>
+      `${API_URL}/v1/returns/admin/status/${status}`,
     ADMIN_GUEST: `${API_URL}/v1/returns/admin/guest`,
     BY_ID: (id: string) => `${API_URL}/v1/returns/${id}`,
     ADMIN_REVIEW: `${API_URL}/v1/returns/admin/review`,

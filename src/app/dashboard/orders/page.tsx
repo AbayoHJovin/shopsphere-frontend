@@ -124,15 +124,61 @@ export default function OrdersPage() {
     fetchOrders();
   }, [currentPage]);
 
-  const fetchOrders = async () => {
+  const fetchOrders = async (useSearch: boolean = false) => {
     try {
       setLoading(true);
-      const response = await orderService.getAllOrdersPaginated(
-        currentPage,
-        pageSize,
-        "createdAt",
-        "desc"
-      );
+      
+      // Check if we should use search or regular fetch
+      const hasActiveFilters = Object.values(filters).some(
+        (value) => value !== "all" && value !== "" && value !== null
+      ) || searchTerm.trim() !== "";
+
+      const shouldUseSearch = useSearch || hasActiveFilters;
+
+      let response;
+      
+      if (shouldUseSearch) {
+        // Prepare search request
+        const searchRequest: any = {
+          page: currentPage,
+          size: pageSize,
+          sortBy: "createdAt",
+          sortDirection: "desc"
+        };
+
+        // Add search term if present
+        if (searchTerm.trim()) {
+          searchRequest.searchKeyword = searchTerm.trim();
+        }
+
+        // Add filters
+        if (filters.orderStatus !== "all") {
+          searchRequest.orderStatus = filters.orderStatus;
+        }
+        if (filters.paymentStatus !== "all") {
+          searchRequest.paymentStatus = filters.paymentStatus;
+        }
+        if (filters.city.trim()) {
+          searchRequest.city = filters.city.trim();
+        }
+        if (filters.startDate) {
+          searchRequest.startDate = filters.startDate.toISOString();
+        }
+        if (filters.endDate) {
+          searchRequest.endDate = filters.endDate.toISOString();
+        }
+
+        response = await orderService.searchOrders(searchRequest);
+      } else {
+        // Use regular pagination
+        response = await orderService.getAllOrdersPaginated(
+          currentPage,
+          pageSize,
+          "createdAt",
+          "desc"
+        );
+      }
+
       setOrders(response.data);
       setTotalPages(response.pagination.totalPages);
       setTotalElements(response.pagination.totalElements);
@@ -237,6 +283,12 @@ export default function OrdersPage() {
     setFilters((prev) => ({ ...prev, [key]: value }));
   };
 
+  const applyFilters = async () => {
+    setCurrentPage(0); // Reset to first page when applying filters
+    await fetchOrders(true); // Force use search
+    setFiltersOpen(false);
+  };
+
   const clearFilters = () => {
     setFilters({
       orderStatus: "all",
@@ -247,6 +299,8 @@ export default function OrdersPage() {
       endDate: null,
     });
     setSearchTerm("");
+    setCurrentPage(0); // Reset to first page
+    fetchOrders(false); // Use regular fetch without filters
   };
 
   const getStatusBadgeVariant = (status: string) => {
@@ -489,7 +543,7 @@ export default function OrdersPage() {
 
               <div className="flex justify-end pt-2">
                 <Button
-                  onClick={() => setFiltersOpen(false)}
+                  onClick={applyFilters}
                   className="bg-primary hover:bg-primary/90"
                 >
                   Apply Filters

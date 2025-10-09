@@ -58,6 +58,59 @@ class OrderService {
   }
 
   /**
+   * Search orders with filters
+   */
+  async searchOrders(searchRequest: {
+    orderNumber?: string;
+    userId?: string;
+    customerName?: string;
+    customerEmail?: string;
+    customerPhone?: string;
+    orderStatus?: string;
+    paymentStatus?: string;
+    city?: string;
+    state?: string;
+    country?: string;
+    totalMin?: number;
+    totalMax?: number;
+    startDate?: string;
+    endDate?: string;
+    paymentMethod?: string;
+    trackingNumber?: string;
+    searchKeyword?: string;
+    page?: number;
+    size?: number;
+    sortBy?: string;
+    sortDirection?: string;
+  }): Promise<{
+    data: AdminOrderDTO[];
+    pagination: {
+      currentPage: number;
+      totalPages: number;
+      totalElements: number;
+      pageSize: number;
+      hasNext: boolean;
+      hasPrevious: boolean;
+      isFirst: boolean;
+      isLast: boolean;
+    };
+  }> {
+    try {
+      const response = await apiClient.post<any>(
+        API_ENDPOINTS.ADMIN_ORDERS.SEARCH,
+        searchRequest
+      );
+      return {
+        data: response.data.data,
+        pagination: response.data.pagination,
+      };
+    } catch (error) {
+      console.error("Error searching orders:", error);
+      throw error;
+    }
+  }
+
+  /**
    * Get orders by status for admin dashboard
    */
   async getOrdersByStatus(status: string): Promise<AdminOrderDTO[]> {
