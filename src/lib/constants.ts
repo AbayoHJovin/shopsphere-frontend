@@ -1,8 +1,8 @@
 // API Base URL
 export const API_URL =
   process.env.NODE_ENV === "production"
-    ? "/api/v1"
-    : "http://localhost:8080/api/v1";
+    ? "/api"
+    : "http://localhost:8080/api";
 // API Endpoints
 export const API_ENDPOINTS = {
   AUTH: {
@@ -89,8 +89,7 @@ export const API_ENDPOINTS = {
   RETURNS: {
     BASE: `${API_URL}/v1/returns`,
     ADMIN_ALL: `${API_URL}/v1/returns/admin/all`,
-    ADMIN_BY_STATUS: (status: string) =>
-      `${API_URL}/v1/returns/admin/status/${status}`,
+    ADMIN_BY_STATUS: (status: string) => `${API_URL}/v1/returns/admin/status/${status}`,
     ADMIN_GUEST: `${API_URL}/v1/returns/admin/guest`,
     BY_ID: (id: string) => `${API_URL}/v1/returns/${id}`,
     ADMIN_REVIEW: `${API_URL}/v1/returns/admin/review`,
