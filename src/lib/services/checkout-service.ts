@@ -32,7 +32,7 @@ export interface PaymentSummaryDTO {
 }
 
 class CheckoutService {
-  private baseUrl = "/v1/checkout";
+  private baseUrl = "/checkout";
 
   async calculateShippingCost(
     request: CalculateOrderShippingRequest

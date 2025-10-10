@@ -114,7 +114,7 @@ export interface ApiResponse<T> {
 }
 
 class WarehouseService {
-  private baseUrl = "/v1/warehouses";
+  private baseUrl = "/warehouses";
 
   async getWarehouses(
     page: number = 0,

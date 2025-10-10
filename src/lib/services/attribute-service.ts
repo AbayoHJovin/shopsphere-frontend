@@ -32,7 +32,7 @@ class AttributeService {
     direction: string = "ASC"
   ): Promise<AttributeTypePageResponse> {
     try {
-      const response = await apiClient.get(`/v1/product-attribute-types`, {
+      const response = await apiClient.get(`/product-attribute-types`, {
         params: { page, size, sort, direction },
       });
       return response.data;
@@ -46,7 +46,7 @@ class AttributeService {
    */
   async getAllAttributeTypesList(): Promise<ProductAttributeTypeDTO[]> {
     try {
-      const response = await apiClient.get(`/v1/product-attribute-types`);
+      const response = await apiClient.get(`/product-attribute-types`);
       return response.data;
     } catch (error) {
       throw error;
@@ -63,7 +63,7 @@ class AttributeService {
   ): Promise<AttributeTypePageResponse> {
     try {
       const response = await apiClient.get(
-        `/v1/product-attribute-types/search`,
+        `/product-attribute-types/search`,
         {
           params: { name, page, size },
         }
@@ -82,7 +82,7 @@ class AttributeService {
   ): Promise<ProductAttributeValueDTO[]> {
     try {
       const response = await apiClient.get(
-        `/v1/product-attribute-values/type/${attributeTypeId}`
+        `/product-attribute-values/type/${attributeTypeId}`
       );
       return response.data;
     } catch (error) {

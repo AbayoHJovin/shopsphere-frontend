@@ -160,7 +160,7 @@ export interface PaginatedResponse<T> {
 }
 
 class DeliveryAgentReturnsService {
-  private readonly baseUrl = '/v1/delivery-agent/returns';
+  private readonly baseUrl = '/delivery-agent/returns';
 
   /**
    * Get return requests assigned to the current delivery agent

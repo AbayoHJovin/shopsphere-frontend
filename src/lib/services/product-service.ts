@@ -201,7 +201,7 @@ import { handleApiError } from "../utils/error-handler";
 class ProductService {
   /**
    * Get all products with pagination, sorting, and filtering
-   * Uses the backend /api/v1/products endpoint
+   * Uses the backend /products endpoint
    */
   async getAllProducts(
     page: number = 0,
@@ -210,7 +210,7 @@ class ProductService {
     sortDir: string = "desc"
   ): Promise<ManyProductsPaginationResponse> {
     try {
-      const response = await apiClient.get(`/v1/products`, {
+      const response = await apiClient.get(`/products`, {
         params: { page, size, sortBy, sortDirection: sortDir },
       });
       return response.data;
@@ -229,7 +229,7 @@ class ProductService {
   ): Promise<ProductPaginationResponse> {
     try {
       const response = await apiClient.get(
-        `/v1/products/category/${categoryId}`,
+        `/products/category/${categoryId}`,
         {
           params: { page, size },
         }
@@ -246,7 +246,7 @@ class ProductService {
   async getProductBasicInfo(productId: string): Promise<ProductBasicInfo> {
     try {
       const response = await apiClient.get(
-        `/v1/products/${productId}/basic-info`
+        `/products/${productId}/basic-info`
       );
       return response.data;
     } catch (error) {
@@ -263,7 +263,7 @@ class ProductService {
   ): Promise<ProductBasicInfo> {
     try {
       const response = await apiClient.put(
-        `/v1/products/${productId}/basic-info`,
+        `/products/${productId}/basic-info`,
         updateData
       );
       return response.data;
@@ -277,7 +277,7 @@ class ProductService {
    */
   async getProductById(productId: string) {
     try {
-      const response = await apiClient.get(`/v1/products/${productId}`);
+      const response = await apiClient.get(`/products/${productId}`);
       return response.data;
     } catch (error) {
       throw handleApiError(error);
@@ -292,7 +292,7 @@ class ProductService {
   }> {
     try {
       const response = await apiClient.post(
-        `/v1/products/create-empty?name=${encodeURIComponent(name)}`
+        `/products/create-empty?name=${encodeURIComponent(name)}`
       );
       return response.data;
     } catch (error) {
@@ -306,7 +306,7 @@ class ProductService {
   }> {
     try {
       const response = await apiClient.get(
-        `/v1/products/${productId}/has-variants`
+        `/products/${productId}/has-variants`
       );
       return response.data;
     } catch (error) {
@@ -328,7 +328,7 @@ class ProductService {
   }> {
     try {
       const response = await apiClient.post(
-        `/v1/products/${productId}/assign-stock`,
+        `/products/${productId}/assign-stock`,
         warehouseStocks
       );
       return response.data;
@@ -353,7 +353,7 @@ class ProductService {
   ): Promise<any> {
     try {
       const response = await apiClient.post(
-        `/api/v1/products/${productId}/assign-stock-with-batches`,
+        `/products/${productId}/assign-stock-with-batches`,
         warehouseStocks
       );
       return response.data;
@@ -369,7 +369,7 @@ class ProductService {
   ): Promise<any> {
     try {
       const response = await apiClient.delete(
-        `/v1/products/${productId}/unassign-warehouse/${warehouseId}`
+        `/products/${productId}/unassign-warehouse/${warehouseId}`
       );
       return response.data;
     } catch (error) {
@@ -402,7 +402,7 @@ class ProductService {
   }> {
     try {
       const response = await apiClient.post(
-        `/v1/products/${productId}/variants/${variantId}/assign-stock-with-batches`,
+        `/products/${productId}/variants/${variantId}/assign-stock-with-batches`,
         warehouseStocks
       );
       return response.data;
@@ -417,7 +417,7 @@ class ProductService {
   }> {
     try {
       const response = await apiClient.get(
-        `/v1/products/${productId}/has-stock`
+        `/products/${productId}/has-stock`
       );
       return response.data;
     } catch (error) {
@@ -431,7 +431,7 @@ class ProductService {
   }> {
     try {
       const response = await apiClient.delete(
-        `/v1/products/${productId}/stock`
+        `/products/${productId}/stock`
       );
       return response.data;
     } catch (error) {
@@ -448,7 +448,7 @@ class ProductService {
       const isFormData = productData instanceof FormData;
 
       const response = await apiClient.put(
-        `/v1/products/${productId}`,
+        `/products/${productId}`,
         productData,
         {
           headers: isFormData
@@ -467,7 +467,7 @@ class ProductService {
    */
   async deleteProduct(productId: string) {
     try {
-      const response = await apiClient.delete(`/v1/products/${productId}`);
+      const response = await apiClient.delete(`/products/${productId}`);
       return response.data;
     } catch (error) {
       throw handleApiError(error);
@@ -476,13 +476,13 @@ class ProductService {
 
   /**
    * Advanced search for products with complex filtering
-   * Uses the backend /api/v1/products/search endpoint
+   * Uses the backend /products/search endpoint
    */
   async advancedSearchProducts(
     filters: ProductSearchDTO
   ): Promise<ManyProductsPaginationResponse> {
     try {
-      const response = await apiClient.post(`/v1/products/search`, filters);
+      const response = await apiClient.post(`/products/search`, filters);
       return response.data;
     } catch (error) {
       throw handleApiError(error);
@@ -532,7 +532,7 @@ class ProductService {
     variantIds?: string[]
   ) {
     try {
-      const response = await apiClient.post(`/v1/products/discount/assign`, {
+      const response = await apiClient.post(`/products/discount/assign`, {
         discountId,
         productIds,
         variantIds,
@@ -548,7 +548,7 @@ class ProductService {
    */
   async removeDiscount(productIds?: string[], variantIds?: string[]) {
     try {
-      const response = await apiClient.delete(`/v1/products/discount/remove`, {
+      const response = await apiClient.delete(`/products/discount/remove`, {
         data: { productIds, variantIds },
       });
       return response.data;
@@ -567,7 +567,7 @@ class ProductService {
   ) {
     try {
       const response = await apiClient.get(
-        `/v1/products/discount/${discountId}`,
+        `/products/discount/${discountId}`,
         {
           params: { page, size },
         }
@@ -583,7 +583,7 @@ class ProductService {
    */
   async getProductPricing(productId: string): Promise<ProductPricing> {
     try {
-      const response = await apiClient.get(`/v1/products/${productId}/pricing`);
+      const response = await apiClient.get(`/products/${productId}/pricing`);
       return response.data;
     } catch (error) {
       throw handleApiError(error);
@@ -599,7 +599,7 @@ class ProductService {
   ): Promise<ProductPricing> {
     try {
       const response = await apiClient.put(
-        `/v1/products/${productId}/pricing`,
+        `/products/${productId}/pricing`,
         updateData
       );
       return response.data;
@@ -611,7 +611,7 @@ class ProductService {
   async getProductImages(productId: string): Promise<ProductMedia[]> {
     try {
       const response = await apiClient.get(
-        `/v1/products/${productId}/media/images`
+        `/products/${productId}/media/images`
       );
       return response.data;
     } catch (error) {
@@ -622,7 +622,7 @@ class ProductService {
   async getProductVideos(productId: string): Promise<ProductVideo[]> {
     try {
       const response = await apiClient.get(
-        `/v1/products/${productId}/media/videos`
+        `/products/${productId}/media/videos`
       );
       return response.data;
     } catch (error) {
@@ -633,7 +633,7 @@ class ProductService {
   async deleteProductImage(productId: string, imageId: number): Promise<void> {
     try {
       await apiClient.delete(
-        `/v1/products/${productId}/media/images/${imageId}`
+        `/products/${productId}/media/images/${imageId}`
       );
     } catch (error) {
       throw handleApiError(error);
@@ -643,7 +643,7 @@ class ProductService {
   async deleteProductVideo(productId: string, videoId: number): Promise<void> {
     try {
       await apiClient.delete(
-        `/v1/products/${productId}/media/videos/${videoId}`
+        `/products/${productId}/media/videos/${videoId}`
       );
     } catch (error) {
       throw handleApiError(error);
@@ -653,7 +653,7 @@ class ProductService {
   async setPrimaryImage(productId: string, imageId: number): Promise<void> {
     try {
       await apiClient.put(
-        `/v1/products/${productId}/media/images/${imageId}/primary`
+        `/products/${productId}/media/images/${imageId}/primary`
       );
     } catch (error) {
       throw handleApiError(error);
@@ -671,7 +671,7 @@ class ProductService {
       });
 
       const response = await apiClient.post(
-        `/v1/products/${productId}/media/images`,
+        `/products/${productId}/media/images`,
         formData,
         {
           headers: {
@@ -696,7 +696,7 @@ class ProductService {
       });
 
       const response = await apiClient.post(
-        `/v1/products/${productId}/media/videos`,
+        `/products/${productId}/media/videos`,
         formData,
         {
           headers: {
@@ -722,7 +722,7 @@ class ProductService {
   ): Promise<ProductVariantsResponse> {
     try {
       const response = await apiClient.get(
-        `/v1/products/${productId}/variants?page=${page}&size=${size}&sortBy=${sortBy}&sortDir=${sortDir}`
+        `/products/${productId}/variants?page=${page}&size=${size}&sortBy=${sortBy}&sortDir=${sortDir}`
       );
       return response.data;
     } catch (error) {
@@ -737,7 +737,7 @@ class ProductService {
   ): Promise<ProductVariant> {
     try {
       const response = await apiClient.put(
-        `/v1/products/${productId}/variants/${variantId}`,
+        `/products/${productId}/variants/${variantId}`,
         updates
       );
       return response.data;
@@ -753,7 +753,7 @@ class ProductService {
   ): Promise<void> {
     try {
       await apiClient.delete(
-        `/v1/products/${productId}/variants/${variantId}/images/${imageId}`
+        `/products/${productId}/variants/${variantId}/images/${imageId}`
       );
     } catch (error) {
       throw handleApiError(error);
@@ -766,7 +766,7 @@ class ProductService {
   ): Promise<{ success: boolean; message: string }> {
     try {
       const response = await apiClient.delete(
-        `/v1/products/${productId}/variants/${variantId}`
+        `/products/${productId}/variants/${variantId}`
       );
       return response.data;
     } catch (error) {
@@ -781,7 +781,7 @@ class ProductService {
   ): Promise<void> {
     try {
       await apiClient.put(
-        `/v1/products/${productId}/variants/${variantId}/images/${imageId}/primary`
+        `/products/${productId}/variants/${variantId}/images/${imageId}/primary`
       );
     } catch (error) {
       throw handleApiError(error);
@@ -800,7 +800,7 @@ class ProductService {
       });
 
       const response = await apiClient.post(
-        `/v1/products/${productId}/variants/${variantId}/images`,
+        `/products/${productId}/variants/${variantId}/images`,
         formData,
         {
           headers: {
@@ -821,7 +821,7 @@ class ProductService {
   ): Promise<void> {
     try {
       await apiClient.delete(
-        `/v1/products/${productId}/variants/${variantId}/attributes/${attributeValueId}`
+        `/products/${productId}/variants/${variantId}/attributes/${attributeValueId}`
       );
     } catch (error) {
       throw handleApiError(error);
@@ -835,7 +835,7 @@ class ProductService {
   ): Promise<ProductVariantAttribute[]> {
     try {
       const response = await apiClient.post(
-        `/v1/products/${productId}/variants/${variantId}/attributes`,
+        `/products/${productId}/variants/${variantId}/attributes`,
         attributes
       );
       return response.data;
@@ -891,7 +891,7 @@ class ProductService {
       });
 
       const response = await apiClient.post(
-        `/v1/products/${productId}/variants`,
+        `/products/${productId}/variants`,
         formData,
         {
           headers: {
@@ -907,7 +907,7 @@ class ProductService {
 
   async getProductDetails(productId: string): Promise<ProductDetails> {
     try {
-      const response = await apiClient.get(`/v1/products/${productId}/details`);
+      const response = await apiClient.get(`/products/${productId}/details`);
       return response.data;
     } catch (error) {
       throw handleApiError(error);
@@ -920,7 +920,7 @@ class ProductService {
   ): Promise<ProductDetails> {
     try {
       const response = await apiClient.put(
-        `/v1/products/${productId}/details`,
+        `/products/${productId}/details`,
         updateData
       );
       return response.data;
@@ -950,7 +950,7 @@ class ProductService {
   }> {
     try {
       const response = await apiClient.get(
-        `/v1/products/${productId}/warehouse-stock?page=${page}&size=${size}&sort=${sort}&direction=${direction}`
+        `/products/${productId}/warehouse-stock?page=${page}&size=${size}&sort=${sort}&direction=${direction}`
       );
       return response.data;
     } catch (error) {

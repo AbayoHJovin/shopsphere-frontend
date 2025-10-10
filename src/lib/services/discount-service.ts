@@ -66,7 +66,7 @@ class DiscountService {
     activeOnly: boolean = false
   ): Promise<DiscountPaginationResponse> {
     try {
-      const response = await apiClient.get(`/v1/discounts`, {
+      const response = await apiClient.get(`/discounts`, {
         params: { page, size, sortBy, sortDirection, activeOnly },
       });
       return response.data;
@@ -80,7 +80,7 @@ class DiscountService {
    */
   async getDiscountById(discountId: string): Promise<DiscountDTO> {
     try {
-      const response = await apiClient.get(`/v1/discounts/${discountId}`);
+      const response = await apiClient.get(`/discounts/${discountId}`);
       return response.data;
     } catch (error) {
       throw handleApiError(error);
@@ -93,7 +93,7 @@ class DiscountService {
   async getDiscountByCode(discountCode: string): Promise<DiscountDTO> {
     try {
       const response = await apiClient.get(
-        `/v1/discounts/code/${discountCode}`
+        `/discounts/code/${discountCode}`
       );
       return response.data;
     } catch (error) {
@@ -112,7 +112,7 @@ class DiscountService {
   }> {
     try {
       const response = await apiClient.get(
-        `/v1/discounts/${discountId}/products`
+        `/discounts/${discountId}/products`
       );
       return response.data;
     } catch (error) {
@@ -125,7 +125,7 @@ class DiscountService {
    */
   async createDiscount(discountData: CreateDiscountDTO): Promise<DiscountDTO> {
     try {
-      const response = await apiClient.post(`/v1/discounts`, discountData);
+      const response = await apiClient.post(`/discounts`, discountData);
       return response.data;
     } catch (error) {
       throw handleApiError(error);
@@ -141,7 +141,7 @@ class DiscountService {
   ): Promise<DiscountDTO> {
     try {
       const response = await apiClient.put(
-        `/v1/discounts/${discountId}`,
+        `/discounts/${discountId}`,
         discountData
       );
       return response.data;
@@ -157,7 +157,7 @@ class DiscountService {
     discountId: string
   ): Promise<{ message: string; discountId: string }> {
     try {
-      const response = await apiClient.delete(`/v1/discounts/${discountId}`);
+      const response = await apiClient.delete(`/discounts/${discountId}`);
       return response.data;
     } catch (error) {
       throw handleApiError(error);
@@ -171,7 +171,7 @@ class DiscountService {
     discountId: string
   ): Promise<{ discountId: string; isValid: boolean }> {
     try {
-      const response = await apiClient.get(`/v1/discounts/${discountId}/valid`);
+      const response = await apiClient.get(`/discounts/${discountId}/valid`);
       return response.data;
     } catch (error) {
       throw handleApiError(error);
@@ -186,7 +186,7 @@ class DiscountService {
   ): Promise<{ discountCode: string; isValid: boolean }> {
     try {
       const response = await apiClient.get(
-        `/v1/discounts/code/${discountCode}/valid`
+        `/discounts/code/${discountCode}/valid`
       );
       return response.data;
     } catch (error) {

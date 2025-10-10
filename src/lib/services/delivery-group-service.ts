@@ -61,7 +61,7 @@ export interface PaginatedResponse<T> {
 }
 
 class DeliveryGroupService {
-  private baseUrl = "/v1/delivery-groups";
+  private baseUrl = "/delivery-groups";
 
   async getAvailableGroups(
     page: number = 0,

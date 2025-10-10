@@ -58,7 +58,7 @@ class StockBatchService {
   async getBatchesByStock(stockId: number): Promise<StockBatch[]> {
     try {
       const response = await apiClient.get(
-        `/v1/stock-batches/stock/${stockId}`
+        `/stock-batches/stock/${stockId}`
       );
       return response.data;
     } catch (error) {
@@ -69,7 +69,7 @@ class StockBatchService {
   async getBatchesByProduct(productId: string): Promise<StockBatch[]> {
     try {
       const response = await apiClient.get(
-        `/v1/stock-batches/product/${productId}`
+        `/stock-batches/product/${productId}`
       );
       return response.data;
     } catch (error) {
@@ -80,7 +80,7 @@ class StockBatchService {
   async getBatchesByVariantId(variantId: number): Promise<StockBatch[]> {
     try {
       const response = await apiClient.get(
-        `/v1/stock-batches/variant/${variantId}`
+        `/stock-batches/variant/${variantId}`
       );
       return response.data;
     } catch (error) {
@@ -90,7 +90,7 @@ class StockBatchService {
 
   async getBatchById(batchId: number): Promise<StockBatch> {
     try {
-      const response = await apiClient.get(`/v1/stock-batches/${batchId}`);
+      const response = await apiClient.get(`/stock-batches/${batchId}`);
       return response.data;
     } catch (error) {
       throw handleApiError(error);
@@ -99,7 +99,7 @@ class StockBatchService {
 
   async createBatch(request: CreateStockBatchRequest): Promise<StockBatch> {
     try {
-      const response = await apiClient.post(`/v1/stock-batches`, request);
+      const response = await apiClient.post(`/stock-batches`, request);
       return response.data;
     } catch (error) {
       throw handleApiError(error);
@@ -113,7 +113,7 @@ class StockBatchService {
   ): Promise<StockBatch> {
     try {
       const response = await apiClient.post(
-        `/v1/stock-batches/variant/${variantId}/warehouse/${warehouseId}`,
+        `/stock-batches/variant/${variantId}/warehouse/${warehouseId}`,
         request
       );
       return response.data;
@@ -128,7 +128,7 @@ class StockBatchService {
   ): Promise<StockBatch> {
     try {
       const response = await apiClient.put(
-        `/v1/stock-batches/${batchId}`,
+        `/stock-batches/${batchId}`,
         request
       );
       return response.data;
@@ -139,7 +139,7 @@ class StockBatchService {
 
   async deleteBatch(batchId: number): Promise<void> {
     try {
-      await apiClient.delete(`/v1/stock-batches/${batchId}`);
+      await apiClient.delete(`/stock-batches/${batchId}`);
     } catch (error) {
       throw handleApiError(error);
     }
@@ -148,7 +148,7 @@ class StockBatchService {
   async recallBatch(batchId: number, reason?: string): Promise<StockBatch> {
     try {
       const response = await apiClient.post(
-        `/v1/stock-batches/${batchId}/recall`,
+        `/stock-batches/${batchId}/recall`,
         null,
         { params: { reason } }
       );
@@ -162,7 +162,7 @@ class StockBatchService {
     daysThreshold: number = 30
   ): Promise<StockBatch[]> {
     try {
-      const response = await apiClient.get(`/v1/stock-batches/expiring-soon`, {
+      const response = await apiClient.get(`/stock-batches/expiring-soon`, {
         params: { daysThreshold },
       });
       return response.data;

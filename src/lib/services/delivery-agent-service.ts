@@ -66,7 +66,7 @@ export interface AddressDTO {
 }
 
 class DeliveryAgentService {
-  private baseUrl = "/v1/delivery-agent";
+  private baseUrl = "/delivery-agent";
 
   async getDashboardData(): Promise<DeliveryAgentDashboard> {
     try {
@@ -95,7 +95,7 @@ class DeliveryAgentService {
   async startDelivery(groupId: number): Promise<any> {
     try {
       const response = await apiClient.post<any>(
-        `/v1/delivery-groups/${groupId}/start-delivery`
+        `/delivery-groups/${groupId}/start-delivery`
       );
       return response.data;
     } catch (error) {
@@ -107,7 +107,7 @@ class DeliveryAgentService {
   async finishDelivery(groupId: number): Promise<any> {
     try {
       const response = await apiClient.post<any>(
-        `/v1/delivery-groups/${groupId}/finish-delivery`
+        `/delivery-groups/${groupId}/finish-delivery`
       );
       return response.data;
     } catch (error) {

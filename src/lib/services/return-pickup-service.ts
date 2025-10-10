@@ -42,7 +42,7 @@ export const returnPickupService = {
    * Process return pickup
    */
   async processReturnPickup(pickupRequest: ReturnPickupRequest): Promise<ReturnPickupResponse> {
-    const response = await apiClient.post('/v1/delivery-agent/pickup/process', pickupRequest);
+    const response = await apiClient.post('/delivery-agent/pickup/process', pickupRequest);
     return response.data;
   },
 
@@ -50,7 +50,7 @@ export const returnPickupService = {
    * Validate return pickup request
    */
   async validateReturnPickup(pickupRequest: ReturnPickupRequest): Promise<string> {
-    const response = await apiClient.post('/v1/delivery-agent/pickup/validate', pickupRequest);
+    const response = await apiClient.post('/delivery-agent/pickup/validate', pickupRequest);
     return response.data;
   },
 

@@ -75,7 +75,7 @@ export interface PaginatedResponse<T> {
 }
 
 class DeliveryAssignmentService {
-  private readonly baseUrl = '/v1/return-delivery';
+  private readonly baseUrl = '/return-delivery';
 
   /**
    * Assign a delivery agent to a return request

@@ -99,7 +99,7 @@ export interface CalculateOrderShippingRequest {
 }
 
 class ShippingCostService {
-  private baseUrl = "/v1/shipping-costs";
+  private baseUrl = "/shipping-costs";
 
   async getAllShippingCosts(
     page: number = 0,

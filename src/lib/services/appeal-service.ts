@@ -75,7 +75,7 @@ export interface AppealStats {
 }
 
 class AppealService {
-  private readonly baseUrl = "/v1/appeals";
+  private readonly baseUrl = "/appeals";
 
   /**
    * Get all appeals with filtering and pagination

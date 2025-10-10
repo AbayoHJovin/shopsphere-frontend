@@ -77,7 +77,7 @@ class BrandService {
 
   async searchBrands(searchDTO: BrandSearchDTO): Promise<BrandPageResponse> {
     try {
-      const response = await apiClient.post(`/v1/brands/search`, searchDTO);
+      const response = await apiClient.post(`/brands/search`, searchDTO);
       return response.data;
     } catch (error) {
       throw handleApiError(error);
@@ -86,7 +86,7 @@ class BrandService {
 
   async createBrand(brandData: CreateBrandRequest): Promise<BrandResponse> {
     try {
-      const response = await apiClient.post(`/v1/brands`, brandData);
+      const response = await apiClient.post(`/brands`, brandData);
       return response.data;
     } catch (error) {
       throw handleApiError(error);
@@ -98,7 +98,7 @@ class BrandService {
     brandData: UpdateBrandRequest
   ): Promise<BrandResponse> {
     try {
-      const response = await apiClient.put(`/v1/brands/${brandId}`, brandData);
+      const response = await apiClient.put(`/brands/${brandId}`, brandData);
       return response.data;
     } catch (error) {
       throw handleApiError(error);
@@ -107,7 +107,7 @@ class BrandService {
 
   async deleteBrand(brandId: string): Promise<void> {
     try {
-      await apiClient.delete(`/v1/brands/${brandId}`);
+      await apiClient.delete(`/brands/${brandId}`);
     } catch (error) {
       throw handleApiError(error);
     }
@@ -122,7 +122,7 @@ class BrandService {
       if (excludeId) {
         params.excludeId = excludeId;
       }
-      const response = await apiClient.get(`/v1/brands/check-name`, { params });
+      const response = await apiClient.get(`/brands/check-name`, { params });
       return response.data;
     } catch (error) {
       throw handleApiError(error);
@@ -138,7 +138,7 @@ class BrandService {
       if (excludeId) {
         params.excludeId = excludeId;
       }
-      const response = await apiClient.get(`/v1/brands/check-slug`, { params });
+      const response = await apiClient.get(`/brands/check-slug`, { params });
       return response.data;
     } catch (error) {
       throw handleApiError(error);
