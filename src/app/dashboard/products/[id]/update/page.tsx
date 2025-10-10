@@ -40,10 +40,6 @@ import { BrandDropdown } from "@/components/products/BrandDropdown";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import {
-  WarehouseSelector,
-  WarehouseStock,
-} from "@/components/WarehouseSelector";
-import {
   WarehouseSelectorWithBatches,
   WarehouseStockWithBatches,
 } from "@/components/WarehouseSelectorWithBatches";
@@ -437,9 +433,6 @@ export default function ProductUpdate({ params }: ProductUpdateProps) {
   const [selectedVariantForWarehouse, setSelectedVariantForWarehouse] =
     useState<number | null>(null);
   const [isWarehouseModalOpen, setIsWarehouseModalOpen] = useState(false);
-  const [variantWarehouseStocks, setVariantWarehouseStocks] = useState<
-    WarehouseStock[]
-  >([]);
   const [variantWarehouseStocksWithBatches, setVariantWarehouseStocksWithBatches] = useState<
     WarehouseStockWithBatches[]
   >([]);
@@ -1142,7 +1135,7 @@ export default function ProductUpdate({ params }: ProductUpdateProps) {
           const newAttribute = { attributeType, attributeValue };
           return {
             ...variant,
-            attributes: [...variant.attributes, newAttribute],
+            attributes: [...(variant.attributes || []), newAttribute],
           };
         }
         return variant;
@@ -1159,9 +1152,9 @@ export default function ProductUpdate({ params }: ProductUpdateProps) {
         if (variant.variantId === variantId) {
           return {
             ...variant,
-            attributes: variant.attributes.filter(
+            attributes: variant.attributes?.filter(
               (_: any, index: number) => index !== attributeIndex
-            ),
+            ) || [],
           };
         }
         return variant;
@@ -1346,7 +1339,7 @@ export default function ProductUpdate({ params }: ProductUpdateProps) {
     setIsWarehouseSelectorOpen(true);
   };
 
-  const handleWarehouseAssignment = (warehouseStocks: WarehouseStock[]) => {
+  const handleWarehouseAssignment = (warehouseStocks: any[]) => {
     if (selectedVariantForWarehouse === null) return;
 
     // Convert WarehouseStock format to our internal format
@@ -1898,9 +1891,9 @@ export default function ProductUpdate({ params }: ProductUpdateProps) {
           variant.variantId === variantId
             ? {
                 ...variant,
-                attributes: variant.attributes.filter(
+                attributes: variant.attributes?.filter(
                   (attr: any) => attr.attributeValueId !== attributeValueId
-                ),
+                ) || [],
               }
             : variant
         )
@@ -1910,9 +1903,9 @@ export default function ProductUpdate({ params }: ProductUpdateProps) {
           variant.variantId === variantId
             ? {
                 ...variant,
-                attributes: variant.attributes.filter(
+                attributes: variant.attributes?.filter(
                   (attr: any) => attr.attributeValueId !== attributeValueId
-                ),
+                ) || [],
               }
             : variant
         )
@@ -1948,7 +1941,7 @@ export default function ProductUpdate({ params }: ProductUpdateProps) {
           variant.variantId === variantId
             ? {
                 ...variant,
-                attributes: [...variant.attributes, ...addedAttributes],
+                attributes: [...(variant.attributes || []), ...addedAttributes],
               }
             : variant
         )
@@ -1958,7 +1951,7 @@ export default function ProductUpdate({ params }: ProductUpdateProps) {
           variant.variantId === variantId
             ? {
                 ...variant,
-                attributes: [...variant.attributes, ...addedAttributes],
+                attributes: [...(variant.attributes || []), ...addedAttributes],
               }
             : variant
         )
@@ -2009,7 +2002,7 @@ export default function ProductUpdate({ params }: ProductUpdateProps) {
 
     setNewVariant((prev) => ({
       ...prev,
-      attributes: [...prev.attributes, ...formattedAttributes],
+      attributes: [...(prev.attributes || []), ...formattedAttributes],
     }));
   };
 
@@ -2048,7 +2041,7 @@ export default function ProductUpdate({ params }: ProductUpdateProps) {
     });
   };
 
-  const getVariantWarehouseStocks = (variantId: number): WarehouseStock[] => {
+  const getVariantWarehouseStocks = (variantId: number): any[] => {
     const stocks = getVariantWarehouseStock(variantId);
     return stocks.map((stock: any) => ({
       warehouseId: parseInt(stock.warehouseId.replace("wh-", "")),
@@ -3058,7 +3051,7 @@ export default function ProductUpdate({ params }: ProductUpdateProps) {
                                         getVariantWarehouseStocks(
                                           variant.variantId
                                         );
-                                      setVariantWarehouseStocks(currentStocks);
+                                      // setVariantWarehouseStocks(currentStocks); // Removed - using batch version
                                     }}
                                     className="text-blue-600 hover:bg-blue-50"
                                   >
@@ -3365,7 +3358,7 @@ export default function ProductUpdate({ params }: ProductUpdateProps) {
                                     <div className="flex items-center justify-between mb-3">
                                       <h5 className="font-medium flex items-center gap-2">
                                         <Package className="w-4 h-4" />
-                                        Attributes ({variant.attributes.length})
+                                        Attributes ({variant.attributes?.length || 0})
                                       </h5>
                                       <Button
                                         type="button"
@@ -3382,7 +3375,7 @@ export default function ProductUpdate({ params }: ProductUpdateProps) {
                                         Manage
                                       </Button>
                                     </div>
-                                    {variant.attributes.length > 0 ? (
+                                    {variant.attributes && variant.attributes.length > 0 ? (
                                       <div className="space-y-2">
                                         {variant.attributes.map((attr) => (
                                           <div
@@ -3445,9 +3438,7 @@ export default function ProductUpdate({ params }: ProductUpdateProps) {
                                           getVariantWarehouseStocks(
                                             variant.variantId
                                           );
-                                        setVariantWarehouseStocks(
-                                          currentStocks
-                                        );
+                                        // setVariantWarehouseStocks(currentStocks); // Removed - using batch version
                                       }}
                                       className="text-blue-600 hover:bg-blue-50"
                                     >
@@ -3482,9 +3473,7 @@ export default function ProductUpdate({ params }: ProductUpdateProps) {
                                             getVariantWarehouseStocks(
                                               variant.variantId
                                             );
-                                          setVariantWarehouseStocks(
-                                            currentStocks
-                                          );
+                                          // setVariantWarehouseStocks(currentStocks); // Removed - using batch version
                                         }}
                                         className="text-blue-600 hover:bg-blue-50"
                                       >
@@ -4111,7 +4100,7 @@ export default function ProductUpdate({ params }: ProductUpdateProps) {
                             .filter((id: any) => id !== warehouse.warehouseId);
 
                       // Convert warehouse IDs to WarehouseStock format
-                      const warehouseStocks: WarehouseStock[] =
+                      const warehouseStocks: any[] =
                         warehouseIds.map((id: any) => ({
                           warehouseId: parseInt(id.replace("wh-", "")),
                           stockQuantity: 0,
@@ -4394,7 +4383,7 @@ export default function ProductUpdate({ params }: ProductUpdateProps) {
                 <div className="space-y-2">
                   {productVariants
                     .find((v) => v.variantId === selectedVariantForAttributes)
-                    ?.attributes.map((attr) => (
+                    ?.attributes?.map((attr) => (
                       <div
                         key={attr.attributeValueId}
                         className="flex items-center justify-between p-3 bg-muted/30 rounded-md"
@@ -4486,7 +4475,6 @@ export default function ProductUpdate({ params }: ProductUpdateProps) {
               onClick={() => {
                 setIsWarehouseModalOpen(false);
                 setSelectedVariantForWarehouse(null);
-                setVariantWarehouseStocks([]);
                 setVariantWarehouseStocksWithBatches([]);
               }}
             >
@@ -4519,7 +4507,6 @@ export default function ProductUpdate({ params }: ProductUpdateProps) {
 
                   setIsWarehouseModalOpen(false);
                   setSelectedVariantForWarehouse(null);
-                  setVariantWarehouseStocks([]);
                   setVariantWarehouseStocksWithBatches([]);
                   
                   // Refresh variant data
@@ -4841,7 +4828,7 @@ export default function ProductUpdate({ params }: ProductUpdateProps) {
                     />
                   </div>
                   <div className="space-y-2">
-                    {newVariant.attributes.map((attr, index) => (
+                    {newVariant.attributes?.map((attr, index) => (
                       <div
                         key={index}
                         className="flex items-center justify-between p-2 bg-muted/30 rounded"
@@ -4857,9 +4844,9 @@ export default function ProductUpdate({ params }: ProductUpdateProps) {
                           onClick={() => {
                             setNewVariant((prev) => ({
                               ...prev,
-                              attributes: prev.attributes.filter(
+                              attributes: prev.attributes?.filter(
                                 (_, i) => i !== index
-                              ),
+                              ) || [],
                             }));
                           }}
                         >

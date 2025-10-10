@@ -42,9 +42,9 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import {
-  WarehouseSelector,
-  WarehouseStock,
-} from "@/components/WarehouseSelector";
+  WarehouseSelectorWithBatches,
+  WarehouseStockWithBatches,
+} from "@/components/WarehouseSelectorWithBatches";
 import FetchAttributesDialog from "@/components/products/FetchAttributesDialog";
 import { productService } from "@/lib/services/product-service";
 import {
@@ -80,7 +80,7 @@ export default function CreateVariantPage() {
   const [isCreating, setIsCreating] = useState(false);
   const [selectedImages, setSelectedImages] = useState<File[]>([]);
   const [imagePreviews, setImagePreviews] = useState<string[]>([]);
-  const [warehouseStocks, setWarehouseStocks] = useState<WarehouseStock[]>([]);
+  const [warehouseStocks, setWarehouseStocks] = useState<WarehouseStockWithBatches[]>([]);
   const [variantAttributes, setVariantAttributes] = useState<
     Array<{ attributeTypeName: string; attributeValue: string }>
   >([]);
@@ -701,7 +701,7 @@ export default function CreateVariantPage() {
           </CardHeader>
           <CardContent>
             <div id="warehouse-selector">
-              <WarehouseSelector
+              <WarehouseSelectorWithBatches
                 warehouseStocks={warehouseStocks}
                 onWarehouseStocksChange={(stocks) => {
                   setWarehouseStocks(stocks);
