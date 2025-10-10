@@ -17,12 +17,13 @@ import {
   FormLabel,
   FormMessage,
 } from "@/components/ui/form";
-import { Layers } from "lucide-react";
+import { Layers, Eye, EyeOff } from "lucide-react";
 import { authService } from "@/lib/services/auth-service";
 import { LoginRequest } from "@/lib/types";
 import { useAppDispatch, useAppSelector } from "@/lib/redux/hooks";
 import { loginStart, loginSuccess, loginFailure } from "@/lib/redux/auth-slice";
 import { handleApiError } from "@/lib/utils/error-handler";
+import { UserRole } from "@/lib/constants";
 
 const formSchema = z.object({
   email: z.string().email("Invalid email address"),
@@ -34,6 +35,7 @@ export function LoginForm() {
   const searchParams = useSearchParams();
   const returnUrl = searchParams?.get("returnUrl") || "/dashboard";
   const { toast } = useToast();
+  const [showPassword, setShowPassword] = useState(false);
 
   const dispatch = useAppDispatch();
   const {
@@ -94,6 +96,15 @@ export function LoginForm() {
         description: data.message || "Logged in successfully",
       });
 
+      if (data.role === UserRole.CUSTOMER) {
+        toast({
+          title: "Redirecting...",
+          description: "You're being redirected to the customer portal",
+        });
+        window.location.href = "https://shopsphere-frontend.vercel.app/shop";
+        return;
+      }
+
       router.replace(returnUrl);
     },
     onError: (error) => {
@@ -152,13 +163,32 @@ export function LoginForm() {
               <FormItem>
                 <FormLabel>Password</FormLabel>
                 <FormControl>
-                  <Input
-                    type="password"
-                    placeholder="******"
-                    {...field}
-                    className="border-primary/20 focus-visible:ring-primary"
-                    disabled={loginMutation.isPending || authLoading}
-                  />
+                  <div className="relative">
+                    <Input
+                      type={showPassword ? "text" : "password"}
+                      placeholder="******"
+                      {...field}
+                      className="border-primary/20 focus-visible:ring-primary pr-10"
+                      disabled={loginMutation.isPending || authLoading}
+                    />
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      className="absolute right-0 top-0 h-full px-3 py-2 hover:bg-transparent"
+                      onClick={() => setShowPassword(!showPassword)}
+                      disabled={loginMutation.isPending || authLoading}
+                    >
+                      {showPassword ? (
+                        <EyeOff className="h-4 w-4 text-muted-foreground" />
+                      ) : (
+                        <Eye className="h-4 w-4 text-muted-foreground" />
+                      )}
+                      <span className="sr-only">
+                        {showPassword ? "Hide password" : "Show password"}
+                      </span>
+                    </Button>
+                  </div>
                 </FormControl>
                 <FormMessage />
               </FormItem>

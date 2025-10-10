@@ -15,7 +15,7 @@ apiClient.interceptors.request.use(
   (config) => {
     // Only add token if we're in the browser
     if (typeof window !== "undefined") {
-      const token = localStorage.getItem("authToken");
+      const token = localStorage.getItem("admin_auth_token");
       if (token) {
         config.headers.Authorization = `Bearer ${token}`;
         // Also set the default header for this instance
@@ -37,7 +37,7 @@ apiClient.interceptors.response.use(
 
       if (typeof window !== "undefined" && !isAuthMeRequest) {
         // Clear the invalid token
-        localStorage.removeItem("authToken");
+        localStorage.removeItem("admin_auth_token");
         delete apiClient.defaults.headers.common["Authorization"];
         delete apiClient.defaults.headers.Authorization;
 

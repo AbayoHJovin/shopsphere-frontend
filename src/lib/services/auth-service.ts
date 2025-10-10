@@ -17,24 +17,18 @@ export const authService = {
       credentials
     );
 
-    // Handle the new response structure from backend
     let loginData: LoginResponse;
     if (response.data.success && response.data.data) {
-      // New structure: { success: true, data: { token, userName, ... }, message: "..." }
       loginData = response.data.data;
     } else {
-      // Old structure: { token, userName, ... }
       loginData = response.data;
     }
 
-    // Store the token in localStorage and set headers
     if (loginData.token) {
-      localStorage.setItem("authToken", loginData.token);
-      // Set the token in axios headers for future requests
+      localStorage.setItem("admin_auth_token", loginData.token);
       apiClient.defaults.headers.common[
         "Authorization"
       ] = `Bearer ${loginData.token}`;
-      // Also set it in the current request headers
       apiClient.defaults.headers.Authorization = `Bearer ${loginData.token}`;
     }
 
@@ -50,14 +44,12 @@ export const authService = {
     } catch (error) {
       console.error("Logout error:", error);
     } finally {
-      // Clear token and headers regardless of API call success
-      localStorage.removeItem("authToken");
+      localStorage.removeItem("admin_auth_token");
       delete apiClient.defaults.headers.common["Authorization"];
       delete apiClient.defaults.headers.Authorization;
-      // Clear any stored tokens in memory
       if (typeof window !== "undefined") {
-        localStorage.removeItem("authToken");
-        sessionStorage.removeItem("authToken");
+        localStorage.removeItem("admin_auth_token");
+        sessionStorage.removeItem("admin_auth_token");
       }
     }
   },
@@ -86,7 +78,7 @@ export const authService = {
    * Get stored auth token
    */
   getToken(): string | null {
-    return localStorage.getItem("authToken");
+    return localStorage.getItem("admin_auth_token");
   },
 
   /**
