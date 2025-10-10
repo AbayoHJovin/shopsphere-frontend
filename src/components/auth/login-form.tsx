@@ -17,11 +17,12 @@ import {
   FormLabel,
   FormMessage,
 } from "@/components/ui/form";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Layers, Eye, EyeOff } from "lucide-react";
 import { authService } from "@/lib/services/auth-service";
 import { LoginRequest } from "@/lib/types";
 import { useAppDispatch, useAppSelector } from "@/lib/redux/hooks";
-import { loginStart, loginSuccess, loginFailure } from "@/lib/redux/auth-slice";
+import { loginStart, loginSuccess, loginFailure, clearError } from "@/lib/redux/auth-slice";
 import { handleApiError } from "@/lib/utils/error-handler";
 import { UserRole } from "@/lib/constants";
 
@@ -137,6 +138,12 @@ export function LoginForm() {
 
       <Form {...form}>
         <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+          {authError && (
+            <Alert variant="destructive">
+              <AlertDescription>{authError}</AlertDescription>
+            </Alert>
+          )}
+
           <FormField
             control={form.control}
             name="email"
@@ -147,6 +154,13 @@ export function LoginForm() {
                   <Input
                     placeholder="admin@example.com"
                     {...field}
+                    onChange={(e) => {
+                      field.onChange(e);
+                      // Clear error when user starts typing
+                      if (authError) {
+                        dispatch(clearError());
+                      }
+                    }}
                     className="border-primary/20 focus-visible:ring-primary"
                     disabled={loginMutation.isPending || authLoading}
                   />
@@ -168,6 +182,13 @@ export function LoginForm() {
                       type={showPassword ? "text" : "password"}
                       placeholder="******"
                       {...field}
+                      onChange={(e) => {
+                        field.onChange(e);
+                        // Clear error when user starts typing
+                        if (authError) {
+                          dispatch(clearError());
+                        }
+                      }}
                       className="border-primary/20 focus-visible:ring-primary pr-10"
                       disabled={loginMutation.isPending || authLoading}
                     />
