@@ -55,9 +55,7 @@ function AuthPageContent() {
           ShopSphere Admin, Employee and Delivery Angent portal
         </div>
 
-        {/* Main Content */}
         <div className="relative z-20 flex-1 flex flex-col justify-center space-y-8">
-          {/* Hero Image */}
           <div className="flex justify-center mb-6">
             <div className="relative">
               <img
@@ -69,7 +67,6 @@ function AuthPageContent() {
             </div>
           </div>
 
-          {/* Features Grid */}
           <div className="grid grid-cols-2 gap-4 mb-8">
             <div className="bg-white/10 backdrop-blur-sm rounded-xl p-4 border border-white/20">
               <div className="flex items-center space-x-3">

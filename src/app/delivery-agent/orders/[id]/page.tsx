@@ -227,112 +227,137 @@ export default function DeliveryAgentOrderDetails() {
         </div>
       </div>
 
-      <div className="grid gap-6 lg:grid-cols-3">
-        {/* Main Content */}
-        <div className="lg:col-span-2 space-y-6">
-          {/* Order Items */}
-          <Card>
+      {/* New Responsive Layout - Mobile First, Most Important Info First */}
+      <div className="space-y-6">
+        {/* TOP PRIORITY: QR Code Verification - Most Critical for Delivery Agents */}
+        {order.status !== "DELIVERED" && (
+          <Card className="border-2 border-primary/20 bg-primary/5">
             <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Package className="h-5 w-5" />
-                Order Items
+              <CardTitle className="flex items-center gap-2 text-primary">
+                <QrCode className="h-6 w-6" />
+                Verify Delivery - Action Required
               </CardTitle>
+              <CardDescription className="text-base">
+                Scan the customer's QR code to complete this delivery
+              </CardDescription>
             </CardHeader>
             <CardContent>
               <div className="space-y-4">
-                {order.items.map((item) => (
+                {/* Verification Result */}
+                {verificationResult && (
                   <div
-                    key={item.id}
-                    className="flex items-center gap-4 p-4 border rounded-lg"
+                    className={`p-4 rounded-lg ${
+                      verificationResult.success
+                        ? "bg-green-50 border border-green-200"
+                        : "bg-red-50 border border-red-200"
+                    }`}
                   >
-                    <div className="relative group">
-                      {item.product?.images &&
-                      item.product.images.length > 0 ? (
-                        <div className="relative">
-                          <img
-                            src={item.product.images[0]}
-                            alt={item.product.name || "Product"}
-                            className="w-16 h-16 object-cover rounded-md"
-                            onError={(e) => {
-                              e.currentTarget.src = "/api/placeholder/100/100";
-                            }}
-                          />
-                          {item.product.images.length > 1 && (
-                            <div className="absolute -top-1 -right-1 bg-primary text-primary-foreground text-xs rounded-full w-5 h-5 flex items-center justify-center">
-                              {item.product.images.length}
-                            </div>
-                          )}
-                        </div>
+                    <div className="flex items-center gap-2">
+                      {verificationResult.success ? (
+                        <Check className="h-5 w-5 text-green-600" />
                       ) : (
-                        <div className="w-16 h-16 bg-gray-200 rounded-md flex items-center justify-center">
-                          <Package className="h-6 w-6 text-gray-400" />
-                        </div>
+                        <X className="h-5 w-5 text-red-600" />
                       )}
-                    </div>
-                    <div className="flex-1">
-                      <h4 className="font-medium">
-                        {item.product?.name || "Product"}
-                      </h4>
-                      <p className="text-sm text-muted-foreground">
-                        Quantity: {item.quantity}
-                      </p>
-                      {item.product?.description && (
-                        <p className="text-xs text-muted-foreground mt-1">
-                          {item.product.description}
-                        </p>
-                      )}
-                    </div>
-                    <div className="text-right">
-                      <p className="font-medium">
-                        {formatCurrency(item.price)}
-                      </p>
-                      <p className="text-sm text-muted-foreground">
-                        Total: {formatCurrency(item.totalPrice)}
+                      <p
+                        className={`text-sm font-medium ${
+                          verificationResult.success
+                            ? "text-green-800"
+                            : "text-red-800"
+                        }`}
+                      >
+                        {verificationResult.message}
                       </p>
                     </div>
                   </div>
-                ))}
-              </div>
-            </CardContent>
-          </Card>
+                )}
 
-          {/* Delivery Information */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Truck className="h-5 w-5" />
-                Delivery Information
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-4">
-                <div className="flex items-start gap-3">
-                  <MapPin className="h-5 w-5 text-muted-foreground mt-0.5" />
-                  <div>
-                    <h4 className="font-medium">Delivery Address</h4>
-                    <p className="text-sm text-muted-foreground">
-                      {order.shippingAddress?.streetAddress || "N/A"}
-                    </p>
-                    <p className="text-sm text-muted-foreground">
-                      {order.shippingAddress?.city || "N/A"},{" "}
-                      {order.shippingAddress?.state || "N/A"}{" "}
-                    </p>
-                    <p className="text-sm text-muted-foreground">
-                      {order.shippingAddress?.country || "N/A"}
-                    </p>
-                    <p className="text-sm text-muted-foreground">
-                      Phone: {order.customerPhone || "N/A"}
-                    </p>
+                {/* Verification Actions */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  {/* Camera Scan */}
+                  <Button
+                    onClick={() => setShowQRScanner(true)}
+                    disabled={isVerifying}
+                    size="lg"
+                    className="flex items-center gap-2 h-12"
+                  >
+                    <Camera className="h-5 w-5" />
+                    {isVerifying ? "Verifying..." : "Scan with Camera"}
+                  </Button>
+
+                  {/* Image Upload */}
+                  <div className="relative">
+                    <input
+                      type="file"
+                      accept="image/*"
+                      onChange={handleFileUpload}
+                      disabled={isVerifying}
+                      className="sr-only"
+                      id="qr-image-upload"
+                    />
+                    <Button
+                      variant="outline"
+                      size="lg"
+                      disabled={isVerifying}
+                      onClick={() => {
+                        const fileInput = document.getElementById(
+                          "qr-image-upload"
+                        ) as HTMLInputElement;
+                        if (fileInput) {
+                          fileInput.click();
+                        }
+                      }}
+                      className="w-full flex items-center gap-2 h-12"
+                    >
+                      <Upload className="h-5 w-5" />
+                      {isVerifying ? "Processing..." : "Upload QR Image"}
+                    </Button>
                   </div>
+                </div>
+
+                {/* Instructions */}
+                <div className="bg-blue-50 p-4 rounded-lg">
+                  <p className="font-medium mb-2 text-blue-900">Quick Instructions:</p>
+                  <ul className="text-sm text-blue-800 space-y-1">
+                    <li>• Ask customer to show their pickup QR code</li>
+                    <li>• Use camera for real-time scanning (recommended)</li>
+                    <li>• Or take a photo and upload it</li>
+                    <li>• Order will be marked as delivered once verified</li>
+                  </ul>
                 </div>
               </div>
             </CardContent>
           </Card>
-        </div>
+        )}
 
-        {/* Sidebar */}
-        <div className="space-y-6">
-          {/* Customer Information */}
+        {/* Delivery Completed Status */}
+        {order.status === "DELIVERED" && (
+          <Card className="border-2 border-green-200 bg-green-50">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2 text-green-700">
+                <Check className="h-6 w-6" />
+                Delivery Completed Successfully
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="text-center space-y-4">
+                <div className="bg-green-100 p-6 rounded-full w-fit mx-auto">
+                  <Check className="h-16 w-16 text-green-600" />
+                </div>
+                <div>
+                  <p className="text-xl font-semibold text-green-700 mb-2">
+                    Order Successfully Delivered
+                  </p>
+                  <p className="text-green-600">
+                    This order has been verified and marked as delivered.
+                  </p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        )}
+
+        {/* SECOND PRIORITY: Customer Information & Contact - Critical for Communication */}
+        <div className="grid gap-6 md:grid-cols-2">
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
@@ -343,13 +368,13 @@ export default function DeliveryAgentOrderDetails() {
             <CardContent>
               <div className="space-y-4">
                 <div className="flex items-center gap-3">
-                  <Avatar>
-                    <AvatarFallback>
+                  <Avatar className="h-12 w-12">
+                    <AvatarFallback className="text-lg">
                       {order.customerName?.charAt(0) || "C"}
                     </AvatarFallback>
                   </Avatar>
                   <div>
-                    <p className="font-medium">
+                    <p className="font-semibold text-lg">
                       {order.customerName || "Customer"}
                     </p>
                     <p className="text-sm text-muted-foreground">
@@ -360,21 +385,147 @@ export default function DeliveryAgentOrderDetails() {
 
                 <Separator />
 
-                <div className="space-y-2">
-                  <div className="flex items-center gap-2 text-sm">
-                    <Phone className="h-4 w-4 text-muted-foreground" />
-                    <span>{order.customerPhone}</span>
-                  </div>
-                  <div className="flex items-center gap-2 text-sm">
-                    <Mail className="h-4 w-4 text-muted-foreground" />
-                    <span>{order.customerEmail}</span>
-                  </div>
+                <div className="space-y-3">
+                  <a 
+                    href={`tel:${order.customerPhone}`}
+                    className="flex items-center gap-3 p-3 rounded-lg bg-blue-50 hover:bg-blue-100 transition-colors"
+                  >
+                    <Phone className="h-5 w-5 text-blue-600" />
+                    <div>
+                      <p className="font-medium text-blue-900">Call Customer</p>
+                      <p className="text-sm text-blue-700">{order.customerPhone}</p>
+                    </div>
+                  </a>
+                  <a 
+                    href={`mailto:${order.customerEmail}`}
+                    className="flex items-center gap-3 p-3 rounded-lg bg-gray-50 hover:bg-gray-100 transition-colors"
+                  >
+                    <Mail className="h-5 w-5 text-gray-600" />
+                    <div>
+                      <p className="font-medium text-gray-900">Email Customer</p>
+                      <p className="text-sm text-gray-700">{order.customerEmail}</p>
+                    </div>
+                  </a>
                 </div>
               </div>
             </CardContent>
           </Card>
 
-          {/* Order Summary */}
+          {/* THIRD PRIORITY: Delivery Address - Critical for Navigation */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Truck className="h-5 w-5" />
+                Delivery Address
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-4">
+                <div className="flex items-start gap-3">
+                  <MapPin className="h-5 w-5 text-muted-foreground mt-1" />
+                  <div className="flex-1">
+                    <h4 className="font-semibold text-lg mb-2">Delivery Location</h4>
+                    <div className="space-y-1">
+                      <p className="font-medium">
+                        {order.shippingAddress?.streetAddress || "N/A"}
+                      </p>
+                      <p className="text-muted-foreground">
+                        {order.shippingAddress?.city || "N/A"},{" "}
+                        {order.shippingAddress?.state || "N/A"}
+                      </p>
+                      <p className="text-muted-foreground">
+                        {order.shippingAddress?.country || "N/A"}
+                      </p>
+                    </div>
+                  </div>
+                </div>
+                
+                {/* Navigation Button */}
+                <Button 
+                  variant="outline" 
+                  className="w-full"
+                  onClick={() => {
+                    const address = `${order.shippingAddress?.streetAddress || ""}, ${order.shippingAddress?.city || ""}, ${order.shippingAddress?.state || ""}, ${order.shippingAddress?.country || ""}`;
+                    const encodedAddress = encodeURIComponent(address);
+                    window.open(`https://maps.google.com/maps?q=${encodedAddress}`, '_blank');
+                  }}
+                >
+                  <MapPin className="h-4 w-4 mr-2" />
+                  Open in Maps
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+
+        {/* FOURTH PRIORITY: Order Items - Important but not critical for delivery */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Package className="h-5 w-5" />
+              Order Items ({order.items.length} items)
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-4">
+              {order.items.map((item) => (
+                <div
+                  key={item.id}
+                  className="flex items-center gap-4 p-4 border rounded-lg hover:bg-gray-50 transition-colors"
+                >
+                  <div className="relative group">
+                    {item.product?.images &&
+                    item.product.images.length > 0 ? (
+                      <div className="relative">
+                        <img
+                          src={item.product.images[0]}
+                          alt={item.product.name || "Product"}
+                          className="w-20 h-20 object-cover rounded-md"
+                          onError={(e) => {
+                            e.currentTarget.src = "/api/placeholder/100/100";
+                          }}
+                        />
+                        {item.product.images.length > 1 && (
+                          <div className="absolute -top-1 -right-1 bg-primary text-primary-foreground text-xs rounded-full w-5 h-5 flex items-center justify-center">
+                            {item.product.images.length}
+                          </div>
+                        )}
+                      </div>
+                    ) : (
+                      <div className="w-20 h-20 bg-gray-200 rounded-md flex items-center justify-center">
+                        <Package className="h-8 w-8 text-gray-400" />
+                      </div>
+                    )}
+                  </div>
+                  <div className="flex-1">
+                    <h4 className="font-semibold text-lg">
+                      {item.product?.name || "Product"}
+                    </h4>
+                    <p className="text-muted-foreground">
+                      Quantity: <span className="font-medium">{item.quantity}</span>
+                    </p>
+                    {item.product?.description && (
+                      <p className="text-sm text-muted-foreground mt-1">
+                        {item.product.description}
+                      </p>
+                    )}
+                  </div>
+                  <div className="text-right">
+                    <p className="font-semibold text-lg">
+                      {formatCurrency(item.price)}
+                    </p>
+                    <p className="text-sm text-muted-foreground">
+                      Total: {formatCurrency(item.totalPrice)}
+                    </p>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* FIFTH PRIORITY: Order Summary & Timeline - Least critical for delivery */}
+        <div className="grid gap-6 md:grid-cols-2">
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
@@ -383,13 +534,13 @@ export default function DeliveryAgentOrderDetails() {
               </CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="space-y-3">
-                <div className="flex justify-between text-sm">
+              <div className="space-y-4">
+                <div className="flex justify-between text-lg">
                   <span>Total Amount</span>
-                  <span>{formatCurrency(order.totalAmount)}</span>
+                  <span className="font-semibold">{formatCurrency(order.totalAmount)}</span>
                 </div>
                 <Separator />
-                <div className="flex justify-between font-medium">
+                <div className="flex justify-between text-xl font-bold">
                   <span>Order Total</span>
                   <span>{formatCurrency(order.totalAmount)}</span>
                 </div>
@@ -397,7 +548,6 @@ export default function DeliveryAgentOrderDetails() {
             </CardContent>
           </Card>
 
-          {/* Order Timeline */}
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
@@ -406,12 +556,12 @@ export default function DeliveryAgentOrderDetails() {
               </CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="space-y-3">
+              <div className="space-y-4">
                 <div className="flex items-center gap-3">
-                  <div className="w-2 h-2 bg-green-500 rounded-full"></div>
+                  <div className="w-3 h-3 bg-green-500 rounded-full"></div>
                   <div>
-                    <p className="text-sm font-medium">Order Placed</p>
-                    <p className="text-xs text-muted-foreground">
+                    <p className="font-medium">Order Placed</p>
+                    <p className="text-sm text-muted-foreground">
                       {formatDate(order.createdAt)}
                     </p>
                   </div>
@@ -419,10 +569,10 @@ export default function DeliveryAgentOrderDetails() {
 
                 {order.updatedAt && order.updatedAt !== order.createdAt && (
                   <div className="flex items-center gap-3">
-                    <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
+                    <div className="w-3 h-3 bg-blue-500 rounded-full"></div>
                     <div>
-                      <p className="text-sm font-medium">Last Updated</p>
-                      <p className="text-xs text-muted-foreground">
+                      <p className="font-medium">Last Updated</p>
+                      <p className="text-sm text-muted-foreground">
                         {formatDate(order.updatedAt)}
                       </p>
                     </div>
@@ -431,133 +581,6 @@ export default function DeliveryAgentOrderDetails() {
               </div>
             </CardContent>
           </Card>
-
-          {/* QR Code Verification */}
-          {order.status !== "DELIVERED" && (
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <QrCode className="h-5 w-5" />
-                  Verify Delivery
-                </CardTitle>
-                <CardDescription>
-                  Scan the customer's QR code to verify delivery
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-4">
-                  {/* Verification Result */}
-                  {verificationResult && (
-                    <div
-                      className={`p-4 rounded-lg ${
-                        verificationResult.success
-                          ? "bg-green-50 border border-green-200"
-                          : "bg-red-50 border border-red-200"
-                      }`}
-                    >
-                      <div className="flex items-center gap-2">
-                        {verificationResult.success ? (
-                          <Check className="h-5 w-5 text-green-600" />
-                        ) : (
-                          <X className="h-5 w-5 text-red-600" />
-                        )}
-                        <p
-                          className={`text-sm font-medium ${
-                            verificationResult.success
-                              ? "text-green-800"
-                              : "text-red-800"
-                          }`}
-                        >
-                          {verificationResult.message}
-                        </p>
-                      </div>
-                    </div>
-                  )}
-
-                  {/* Verification Actions */}
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    {/* Camera Scan */}
-                    <Button
-                      onClick={() => setShowQRScanner(true)}
-                      disabled={isVerifying}
-                      className="flex items-center gap-2"
-                    >
-                      <Camera className="h-4 w-4" />
-                      {isVerifying ? "Verifying..." : "Scan with Camera"}
-                    </Button>
-
-                    {/* Image Upload */}
-                    <div className="relative">
-                      <input
-                        type="file"
-                        accept="image/*"
-                        onChange={handleFileUpload}
-                        disabled={isVerifying}
-                        className="sr-only"
-                        id="qr-image-upload"
-                      />
-                      <Button
-                        variant="outline"
-                        disabled={isVerifying}
-                        onClick={() => {
-                          const fileInput = document.getElementById(
-                            "qr-image-upload"
-                          ) as HTMLInputElement;
-                          if (fileInput) {
-                            fileInput.click();
-                          }
-                        }}
-                        className="w-full flex items-center gap-2"
-                      >
-                        <Upload className="h-4 w-4" />
-                        {isVerifying ? "Processing..." : "Upload Image"}
-                      </Button>
-                    </div>
-                  </div>
-
-                  {/* Instructions */}
-                  <div className="text-sm text-muted-foreground">
-                    <p className="font-medium mb-2">Instructions:</p>
-                    <ul className="list-disc list-inside space-y-1">
-                      <li>Ask the customer to show their pickup QR code</li>
-                      <li>Use camera scan for real-time scanning</li>
-                      <li>Or upload a photo of the QR code</li>
-                      <li>
-                        Once verified, the order will be marked as delivered
-                      </li>
-                    </ul>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          )}
-
-          {/* Delivery Completed */}
-          {order.status === "DELIVERED" && (
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <Check className="h-5 w-5 text-green-500" />
-                  Delivery Completed
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="text-center space-y-4">
-                  <div className="bg-green-100 p-4 rounded-full w-fit mx-auto">
-                    <Check className="h-12 w-12 text-green-500" />
-                  </div>
-                  <div>
-                    <p className="text-lg font-medium text-green-700">
-                      Order Successfully Delivered
-                    </p>
-                    <p className="text-sm text-muted-foreground">
-                      This order has been verified and marked as delivered.
-                    </p>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          )}
         </div>
       </div>
 
