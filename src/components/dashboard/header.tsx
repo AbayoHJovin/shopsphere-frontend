@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import { Bell, Search, Menu, LogOut, Settings, User } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useMutation } from "@tanstack/react-query";
+import { useEnhancedNavigation } from "@/hooks/useEnhancedNavigation";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useToast } from "@/hooks/use-toast";
@@ -31,6 +32,7 @@ interface HeaderProps {
 
 export function Header({ title }: HeaderProps) {
   const router = useRouter();
+  const { navigateWithReload, navigateToAuthRoute } = useEnhancedNavigation();
   const { toast } = useToast();
   const dispatch = useAppDispatch();
   const { user } = useAppSelector((state) => state.auth);
@@ -47,7 +49,8 @@ export function Header({ title }: HeaderProps) {
         title: "Logged out",
         description: "You have been successfully logged out",
       });
-      router.push("/auth");
+      // Force reload after logout to clear all cached data
+      navigateWithReload("/auth");
     },
     onError: (error) => {
       const errorMessage = handleApiError(error);
@@ -182,14 +185,14 @@ export function Header({ title }: HeaderProps) {
           <DropdownMenuSeparator />
           <DropdownMenuItem
             className="cursor-pointer"
-            onClick={() => router.push("/dashboard/settings")}
+            onClick={() => navigateToAuthRoute("/dashboard/settings")}
           >
             <User className="mr-2 h-4 w-4" />
             Profile
           </DropdownMenuItem>
           <DropdownMenuItem
             className="cursor-pointer"
-            onClick={() => router.push("/dashboard/settings")}
+            onClick={() => navigateToAuthRoute("/dashboard/settings")}
           >
             <Settings className="mr-2 h-4 w-4" />
             Settings
