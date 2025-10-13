@@ -53,9 +53,6 @@ export const shouldForceReloadOnAuthChange = (
   return wasAuthenticated !== isAuthenticated;
 };
 
-/**
- * Routes that should always force reload after authentication changes
- */
 export const ROUTES_REQUIRING_RELOAD_ON_AUTH = [
   '/dashboard',
   '/products',
@@ -65,13 +62,10 @@ export const ROUTES_REQUIRING_RELOAD_ON_AUTH = [
   '/settings',
   '/profile',
   '/delivery-agent'
+  ,'/products'
 ];
 
-/**
- * Check if current route requires reload on auth change
- * @param pathname - Current pathname
- * @returns true if route requires reload
- */
+
 export const routeRequiresReloadOnAuth = (pathname: string): boolean => {
   return ROUTES_REQUIRING_RELOAD_ON_AUTH.some(route => 
     pathname.startsWith(route)

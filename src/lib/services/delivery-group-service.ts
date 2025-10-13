@@ -23,6 +23,7 @@ export interface AgentDto {
   phoneNumber?: string;
   isAvailable: boolean;
   hasAGroup: boolean;
+  activeGroupCount: number;
   lastActiveAt: string;
 }
 

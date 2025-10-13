@@ -221,9 +221,13 @@ export function CreateGroupModal({
                         </div>
                         <div className="flex items-center gap-2">
                           {agent.hasAGroup ? (
-                            <Badge variant="destructive">Busy</Badge>
+                            <Badge variant="destructive">
+                              Busy ({agent.activeGroupCount}/5)
+                            </Badge>
                           ) : (
-                            <Badge variant="default">Available</Badge>
+                            <Badge variant="default">
+                              Available ({agent.activeGroupCount}/5)
+                            </Badge>
                           )}
                         </div>
                       </div>
@@ -255,9 +259,13 @@ export function CreateGroupModal({
                 <strong>
                   {selectedAgent.firstName} {selectedAgent.lastName}
                 </strong>
-                {selectedAgent.hasAGroup && (
+                {selectedAgent.hasAGroup ? (
                   <span className="text-red-600 ml-2">
-                    (Currently busy - has a group assigned)
+                    (Busy - has {selectedAgent.activeGroupCount} active groups, max 5 allowed)
+                  </span>
+                ) : (
+                  <span className="text-green-600 ml-2">
+                    (Available - has {selectedAgent.activeGroupCount} active groups)
                   </span>
                 )}
               </AlertDescription>

@@ -57,13 +57,10 @@ export function Sidebar({ className }: SidebarProps) {
       // Call the auth service logout method
       await authService.logout();
       
-      // Dispatch the Redux logout action
       dispatch(logout());
       
-      // Show success message
       toast.success("Logged out successfully");
       
-      // Redirect to login page
       router.push("/auth/login");
     } catch (error) {
       console.error("Logout error:", error);
