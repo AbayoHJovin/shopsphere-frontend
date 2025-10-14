@@ -66,10 +66,15 @@ class DeliveryGroupService {
 
   async getAvailableGroups(
     page: number = 0,
-    size: number = 10
+    size: number = 10,
+    search?: string
   ): Promise<PaginatedResponse<DeliveryGroupDto>> {
+    const params: any = { page, size };
+    if (search && search.trim()) {
+      params.search = search.trim();
+    }
     const response = await apiClient.get(`${this.baseUrl}/available`, {
-      params: { page, size },
+      params,
     });
     return response.data;
   }
@@ -98,10 +103,15 @@ class DeliveryGroupService {
 
   async getAvailableAgents(
     page: number = 0,
-    size: number = 10
+    size: number = 10,
+    search?: string
   ): Promise<PaginatedResponse<AgentDto>> {
+    const params: any = { page, size };
+    if (search && search.trim()) {
+      params.search = search.trim();
+    }
     const response = await apiClient.get(`${this.baseUrl}/agents`, {
-      params: { page, size },
+      params,
     });
     return response.data;
   }
@@ -133,6 +143,16 @@ class DeliveryGroupService {
   async startDelivery(groupId: number): Promise<DeliveryGroupDto> {
     const response = await apiClient.put(
       `${this.baseUrl}/${groupId}/start-delivery`
+    );
+    return response.data.data;
+  }
+
+  async changeOrderGroup(
+    orderId: number,
+    newGroupId: number
+  ): Promise<DeliveryGroupDto> {
+    const response = await apiClient.put(
+      `${this.baseUrl}/order/${orderId}/change-group/${newGroupId}`
     );
     return response.data.data;
   }

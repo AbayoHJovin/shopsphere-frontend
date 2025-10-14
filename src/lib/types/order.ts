@@ -106,6 +106,24 @@ export interface AdminPaymentInfoDTO {
   receiptUrl?: string;
 }
 
+export interface DeliveryGroupInfoDTO {
+  deliveryGroupId: number;
+  deliveryGroupName: string;
+  deliveryGroupDescription?: string;
+  delivererId: string;
+  delivererName: string;
+  delivererEmail?: string;
+  delivererPhone?: string;
+  memberCount: number;
+  hasDeliveryStarted: boolean;
+  deliveryStartedAt?: string;
+  hasDeliveryFinished: boolean;
+  deliveryFinishedAt?: string;
+  scheduledAt?: string;
+  createdAt: string;
+  status: "READY" | "IN_PROGRESS" | "COMPLETED";
+}
+
 export interface AdminOrderDTO {
   id: string;
   userId: string;
@@ -129,6 +147,7 @@ export interface AdminOrderDTO {
   updatedAt: string;
   estimatedDelivery?: string;
   trackingNumber?: string;
+  deliveryGroup?: DeliveryGroupInfoDTO; // Delivery group assignment info
 }
 
 // Keep backward compatibility

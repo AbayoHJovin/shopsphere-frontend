@@ -39,6 +39,7 @@ function AcceptInvitationContent() {
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [phoneNumber, setPhoneNumber] = useState("");
+  const [validationErrors, setValidationErrors] = useState<Record<string, string>>({});
 
   useEffect(() => {
     if (!token) {
@@ -106,6 +107,7 @@ function AcceptInvitationContent() {
 
     try {
       setSubmitting(true);
+      setValidationErrors({}); // Clear previous errors
 
       // Validate form
       if (!isExistingUser && (!password || !confirmPassword)) {
@@ -136,7 +138,14 @@ function AcceptInvitationContent() {
       const result = await adminInvitationService.acceptInvitation(acceptData);
 
       if (!result.success) {
-        throw new Error(result.message || "Failed to accept invitation");
+        // Handle validation errors
+        if (result.errors) {
+          setValidationErrors(result.errors);
+          toast.error(result.message || "Validation failed. Please check the form.");
+        } else {
+          toast.error(result.message || "Failed to accept invitation");
+        }
+        return;
       }
 
       toast.success("Invitation accepted successfully! You can now log in.");
@@ -326,9 +335,28 @@ function AcceptInvitationContent() {
                 id="phone"
                 type="tel"
                 value={phoneNumber}
-                onChange={(e) => setPhoneNumber(e.target.value)}
-                placeholder="Enter your phone number"
+                onChange={(e) => {
+                  setPhoneNumber(e.target.value);
+                  // Clear error when user starts typing
+                  if (validationErrors.phoneNumber) {
+                    setValidationErrors((prev) => {
+                      const newErrors = { ...prev };
+                      delete newErrors.phoneNumber;
+                      return newErrors;
+                    });
+                  }
+                }}
+                placeholder="e.g., +1234567890 or 0712345678"
+                className={validationErrors.phoneNumber ? "border-red-500" : ""}
               />
+              <p className="text-xs text-muted-foreground mt-1">
+                Format: +[country code][number] or local format (e.g., +1234567890, 0712345678)
+              </p>
+              {validationErrors.phoneNumber && (
+                <p className="text-xs text-red-500 mt-1">
+                  {validationErrors.phoneNumber}
+                </p>
+              )}
             </div>
 
             {!isExistingUser && (
@@ -339,10 +367,26 @@ function AcceptInvitationContent() {
                     id="password"
                     type="password"
                     value={password}
-                    onChange={(e) => setPassword(e.target.value)}
+                    onChange={(e) => {
+                      setPassword(e.target.value);
+                      // Clear error when user starts typing
+                      if (validationErrors.password) {
+                        setValidationErrors((prev) => {
+                          const newErrors = { ...prev };
+                          delete newErrors.password;
+                          return newErrors;
+                        });
+                      }
+                    }}
                     placeholder="Create a password"
+                    className={validationErrors.password ? "border-red-500" : ""}
                     required
                   />
+                  {validationErrors.password && (
+                    <p className="text-xs text-red-500 mt-1">
+                      {validationErrors.password}
+                    </p>
+                  )}
                 </div>
 
                 <div>

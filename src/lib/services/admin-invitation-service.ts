@@ -99,6 +99,7 @@ export interface ApiResponse<T> {
   message: string;
   data?: T;
   error?: string;
+  errors?: Record<string, string>; // Field-specific validation errors
 }
 
 class AdminInvitationService {
@@ -319,6 +320,7 @@ class AdminInvitationService {
         success: false,
         message: error.response?.data?.message || "Failed to accept invitation",
         error: error.response?.data?.message || "Network error",
+        errors: error.response?.data?.errors || undefined, // Include field-specific errors
       };
     }
   }

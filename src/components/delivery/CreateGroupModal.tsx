@@ -1,7 +1,7 @@
 "use client";
 
-import { useState, useEffect } from "react";
-import { Plus, Users, Calendar, AlertCircle } from "lucide-react";
+import { useState, useEffect, useMemo } from "react";
+import { Plus, Users, Calendar, AlertCircle, Search } from "lucide-react";
 import {
   Dialog,
   DialogContent,
@@ -48,19 +48,48 @@ export function CreateGroupModal({
   const [autoAssignOrders, setAutoAssignOrders] = useState(true);
   const [currentPage, setCurrentPage] = useState(0);
   const [hasMoreAgents, setHasMoreAgents] = useState(true);
+  const [searchTerm, setSearchTerm] = useState("");
 
   useEffect(() => {
     if (open) {
+      // Reset form when modal opens
+      setFormData({
+        deliveryGroupName: "",
+        deliveryGroupDescription: "",
+        delivererId: "",
+      });
+      setSearchTerm("");
+      setCurrentPage(0);
       fetchAgents();
     }
-  }, [open, currentPage]);
+  }, [open]);
+
+  useEffect(() => {
+    if (open && currentPage > 0) {
+      fetchAgents();
+    }
+  }, [currentPage]);
+
+  // Debounced search effect
+  useEffect(() => {
+    if (open) {
+      const timer = setTimeout(() => {
+        setCurrentPage(0); // Reset to first page on search
+        setAgents([]); // Clear existing agents
+        fetchAgents();
+      }, 300); // 300ms debounce
+
+      return () => clearTimeout(timer);
+    }
+  }, [searchTerm]);
 
   const fetchAgents = async () => {
     try {
       setLoadingAgents(true);
       const response = await deliveryGroupService.getAvailableAgents(
         currentPage,
-        20
+        20,
+        searchTerm || undefined
       );
       if (currentPage === 0) {
         setAgents(response.data);
@@ -95,6 +124,17 @@ export function CreateGroupModal({
       return;
     }
 
+    // Check if selected agent is busy
+    const selectedAgentData = agents.find(
+      (agent) => agent.agentId === formData.delivererId
+    );
+    if (selectedAgentData?.hasAGroup) {
+      toast.error(
+        `This agent is busy with ${selectedAgentData.activeGroupCount} active groups. Please select an available agent.`
+      );
+      return;
+    }
+
     try {
       setCreating(true);
       const request = {
@@ -103,8 +143,9 @@ export function CreateGroupModal({
       };
 
       const newGroup = await deliveryGroupService.createGroup(request);
-      onSuccess(newGroup);
-
+      
+      toast.success("Delivery group created successfully!");
+      
       // Reset form
       setFormData({
         deliveryGroupName: "",
@@ -112,9 +153,19 @@ export function CreateGroupModal({
         delivererId: "",
       });
       setAutoAssignOrders(true);
-    } catch (error) {
+      setSearchTerm("");
+      
+      onSuccess(newGroup);
+    } catch (error: any) {
       console.error("Error creating group:", error);
-      toast.error("Failed to create delivery group");
+      
+      // Handle specific error messages from backend
+      const errorMessage = error?.response?.data?.message || 
+                          error?.response?.data?.details ||
+                          error?.message ||
+                          "Failed to create delivery group";
+      
+      toast.error(errorMessage);
     } finally {
       setCreating(false);
     }
@@ -122,6 +173,20 @@ export function CreateGroupModal({
 
   const selectedAgent = agents.find(
     (agent) => agent.agentId === formData.delivererId
+  );
+
+  // No need for client-side filtering anymore - backend handles it
+  const filteredAgents = agents;
+
+  // Separate available and busy agents
+  const availableAgents = useMemo(
+    () => filteredAgents.filter((agent) => !agent.hasAGroup),
+    [filteredAgents]
+  );
+  
+  const busyAgents = useMemo(
+    () => filteredAgents.filter((agent) => agent.hasAGroup),
+    [filteredAgents]
   );
 
   return (
@@ -175,8 +240,25 @@ export function CreateGroupModal({
 
           {/* Agent Selection */}
           <div className="space-y-4">
-            <Label>Delivery Agent *</Label>
-            <div className="max-h-60 overflow-y-auto border rounded-lg">
+            <div className="flex items-center justify-between">
+              <Label>Delivery Agent *</Label>
+              <div className="text-xs text-muted-foreground">
+                {availableAgents.length} available, {busyAgents.length} busy
+              </div>
+            </div>
+            
+            {/* Search Bar */}
+            <div className="relative">
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+              <Input
+                placeholder="Search agents by name, email, or phone..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="pl-9"
+              />
+            </div>
+
+            <div className="max-h-80 overflow-y-auto border rounded-lg">
               {loadingAgents && agents.length === 0 ? (
                 <div className="flex items-center justify-center py-8">
                   <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
@@ -184,9 +266,69 @@ export function CreateGroupModal({
                     Loading agents...
                   </span>
                 </div>
+              ) : filteredAgents.length === 0 ? (
+                <div className="text-center py-8 text-muted-foreground">
+                  <Users className="h-8 w-8 mx-auto mb-2 opacity-50" />
+                  <p>No agents found matching your search</p>
+                  {searchTerm && (
+                    <Button
+                      variant="link"
+                      size="sm"
+                      onClick={() => setSearchTerm("")}
+                      className="mt-2"
+                    >
+                      Clear search
+                    </Button>
+                  )}
+                </div>
+              ) : availableAgents.length === 0 && busyAgents.length > 0 ? (
+                <div className="p-4">
+                  <Alert className="mb-4">
+                    <AlertCircle className="h-4 w-4" />
+                    <AlertDescription>
+                      All agents are currently busy with 5 active delivery groups. 
+                      Please wait for an agent to complete their deliveries or try again later.
+                    </AlertDescription>
+                  </Alert>
+                  <div className="space-y-2">
+                    {/* Still show busy agents for reference */}
+                    <div className="text-xs font-semibold text-red-600 uppercase tracking-wide mb-2">
+                      Busy Agents ({busyAgents.length})
+                    </div>
+                    {busyAgents.map((agent) => (
+                      <div
+                        key={agent.agentId}
+                        className="p-3 rounded-lg border border-border bg-gray-100 opacity-60"
+                      >
+                        <div className="flex items-center justify-between">
+                          <div className="flex-1">
+                            <div className="font-medium">
+                              {agent.firstName} {agent.lastName}
+                            </div>
+                            <div className="text-sm text-muted-foreground">
+                              {agent.email}
+                            </div>
+                          </div>
+                          <div className="flex flex-col items-end gap-1">
+                            <Badge variant="destructive">Busy</Badge>
+                            <span className="text-xs text-muted-foreground">
+                              {agent.activeGroupCount}/5 groups
+                            </span>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
               ) : (
                 <div className="space-y-2 p-4">
-                  {agents.map((agent) => (
+                  {/* Available Agents Section */}
+                  {availableAgents.length > 0 && (
+                    <>
+                      <div className="text-xs font-semibold text-green-600 uppercase tracking-wide mb-2">
+                        Available Agents ({availableAgents.length})
+                      </div>
+                      {availableAgents.map((agent) => (
                     <div
                       key={agent.agentId}
                       className={`p-3 rounded-lg border transition-colors ${
@@ -219,22 +361,60 @@ export function CreateGroupModal({
                             </div>
                           )}
                         </div>
-                        <div className="flex items-center gap-2">
-                          {agent.hasAGroup ? (
-                            <Badge variant="destructive">
-                              Busy ({agent.activeGroupCount}/5)
-                            </Badge>
-                          ) : (
-                            <Badge variant="default">
-                              Available ({agent.activeGroupCount}/5)
-                            </Badge>
-                          )}
+                        <div className="flex flex-col items-end gap-1">
+                          <Badge variant="default" className="bg-green-600">
+                            Available
+                          </Badge>
+                          <span className="text-xs text-muted-foreground">
+                            {agent.activeGroupCount}/5 groups
+                          </span>
                         </div>
                       </div>
                     </div>
-                  ))}
+                      ))}
+                    </>
+                  )}
 
-                  {hasMoreAgents && (
+                  {/* Busy Agents Section */}
+                  {busyAgents.length > 0 && (
+                    <>
+                      <div className="text-xs font-semibold text-red-600 uppercase tracking-wide mb-2 mt-4">
+                        Busy Agents ({busyAgents.length})
+                      </div>
+                      {busyAgents.map((agent) => (
+                    <div
+                      key={agent.agentId}
+                      className="p-3 rounded-lg border border-border bg-gray-100 cursor-not-allowed opacity-60"
+                    >
+                      <div className="flex items-center justify-between">
+                        <div className="flex-1">
+                          <div className="font-medium">
+                            {agent.firstName} {agent.lastName}
+                          </div>
+                          <div className="text-sm text-muted-foreground">
+                            {agent.email}
+                          </div>
+                          {agent.phoneNumber && (
+                            <div className="text-sm text-muted-foreground">
+                              {agent.phoneNumber}
+                            </div>
+                          )}
+                        </div>
+                        <div className="flex flex-col items-end gap-1">
+                          <Badge variant="destructive">
+                            Busy
+                          </Badge>
+                          <span className="text-xs text-muted-foreground">
+                            {agent.activeGroupCount}/5 groups
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+                      ))}
+                    </>
+                  )}
+
+                  {hasMoreAgents && !searchTerm && (
                     <Button
                       type="button"
                       variant="outline"

@@ -9,6 +9,10 @@ import {
   AlertCircle,
   CheckCircle2,
   X,
+  RefreshCw,
+  Search,
+  Package,
+  Truck,
 } from "lucide-react";
 import {
   Dialog,
@@ -46,6 +50,7 @@ interface DeliveryGroupDialogProps {
   onOpenChange: (open: boolean) => void;
   selectedOrderIds: number[];
   onSuccess: () => void;
+  currentGroup?: DeliveryGroupDto | null; // Existing group if order is already assigned
 }
 
 export function DeliveryGroupDialog({
@@ -53,6 +58,7 @@ export function DeliveryGroupDialog({
   onOpenChange,
   selectedOrderIds,
   onSuccess,
+  currentGroup,
 }: DeliveryGroupDialogProps) {
   const [groups, setGroups] = useState<DeliveryGroupDto[]>([]);
   const [loading, setLoading] = useState(false);
@@ -64,21 +70,54 @@ export function DeliveryGroupDialog({
   const [searchTerm, setSearchTerm] = useState("");
   const [bulkResult, setBulkResult] = useState<BulkAddResult | null>(null);
   const [showBulkResult, setShowBulkResult] = useState(false);
+  const [viewMode, setViewMode] = useState<"view" | "change">("view"); // View existing or change group
 
   const isBulkMode = selectedOrderIds.length > 1;
+  const hasCurrentGroup = currentGroup !== null && currentGroup !== undefined;
+  const isSingleOrderWithGroup = !isBulkMode && hasCurrentGroup;
 
   useEffect(() => {
     if (open) {
+      // Reset view mode based on whether order has a group
+      if (isSingleOrderWithGroup) {
+        setViewMode("view");
+      } else {
+        setViewMode("change");
+        fetchGroups();
+      }
+    } else {
+      // Reset state when dialog closes
+      setSearchTerm("");
+      setCurrentPage(0);
+      setSelectedGroupId(null);
+    }
+  }, [open, isSingleOrderWithGroup]);
+
+  useEffect(() => {
+    if (open && viewMode === "change") {
       fetchGroups();
     }
-  }, [open, currentPage]);
+  }, [currentPage, viewMode]);
+
+  // Debounced search effect
+  useEffect(() => {
+    if (open && viewMode === "change") {
+      const timer = setTimeout(() => {
+        setCurrentPage(0); // Reset to first page on search
+        fetchGroups();
+      }, 300); // 300ms debounce
+
+      return () => clearTimeout(timer);
+    }
+  }, [searchTerm]);
 
   const fetchGroups = async () => {
     try {
       setLoading(true);
       const response = await deliveryGroupService.getAvailableGroups(
         currentPage,
-        10
+        10,
+        searchTerm || undefined
       );
       setGroups(response.data);
       setTotalPages(response.pagination.totalPages);
@@ -95,28 +134,42 @@ export function DeliveryGroupDialog({
 
     try {
       setAssigning(true);
-      const result = await deliveryGroupService.bulkAddOrdersToGroup(
-        selectedGroupId,
-        selectedOrderIds
-      );
-      setBulkResult(result);
-      setShowBulkResult(true);
 
-      if (result.successfullyAdded > 0) {
-        toast.success(
-          `Successfully assigned ${result.successfullyAdded} order(s) to group`
+      // If single order with existing group, use change endpoint
+      if (isSingleOrderWithGroup) {
+        await deliveryGroupService.changeOrderGroup(
+          selectedOrderIds[0],
+          selectedGroupId
         );
+        toast.success("Order successfully moved to new delivery group");
         onSuccess();
-      }
+        onOpenChange(false);
+      } else {
+        // Bulk assignment
+        const result = await deliveryGroupService.bulkAddOrdersToGroup(
+          selectedGroupId,
+          selectedOrderIds
+        );
+        setBulkResult(result);
+        setShowBulkResult(true);
 
-      if (result.skipped > 0) {
-        toast.warning(`${result.skipped} order(s) were skipped`);
+        if (result.successfullyAdded > 0) {
+          toast.success(
+            `Successfully assigned ${result.successfullyAdded} order(s) to group`
+          );
+          onSuccess();
+        }
+
+        if (result.skipped > 0) {
+          toast.warning(`${result.skipped} order(s) were skipped`);
+        }
       }
 
       fetchGroups(); // Refresh groups
-    } catch (error) {
+    } catch (error: any) {
       console.error("Error assigning orders to group:", error);
-      toast.error("Failed to assign orders to group");
+      const errorMessage = error?.response?.data?.message || "Failed to assign orders to group";
+      toast.error(errorMessage);
     } finally {
       setAssigning(false);
     }
@@ -129,13 +182,8 @@ export function DeliveryGroupDialog({
     toast.success("Group created successfully");
   };
 
-  const filteredGroups = groups.filter(
-    (group) =>
-      group.deliveryGroupName
-        .toLowerCase()
-        .includes(searchTerm.toLowerCase()) ||
-      group.delivererName?.toLowerCase().includes(searchTerm.toLowerCase())
-  );
+  // No need for client-side filtering anymore - backend handles it
+  const filteredGroups = groups;
 
   const getStatusBadgeVariant = (status: string) => {
     switch (status) {
@@ -155,32 +203,118 @@ export function DeliveryGroupDialog({
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <Users className="h-5 w-5" />
-              {isBulkMode
+              {viewMode === "view"
+                ? "Delivery Group Assignment"
+                : isBulkMode
                 ? "Assign Orders to Delivery Group"
-                : "Assign Order to Delivery Group"}
+                : "Change Delivery Group"}
             </DialogTitle>
             <DialogDescription>
-              {isBulkMode
+              {viewMode === "view"
+                ? "View current delivery group assignment"
+                : isBulkMode
                 ? `Select a delivery group to assign ${selectedOrderIds.length} orders to`
-                : "Select a delivery group to assign this order to"}
+                : "Select a new delivery group for this order"}
             </DialogDescription>
           </DialogHeader>
 
           <div className="space-y-4 overflow-y-auto">
-            {/* Search and Create Group */}
-            <div className="flex gap-2">
-              <div className="flex-1">
-                <Input
-                  placeholder="Search groups by name or deliverer..."
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                />
-              </div>
-              <Button onClick={() => setCreateGroupOpen(true)}>
-                <Plus className="h-4 w-4 mr-2" />
-                Create Group
-              </Button>
-            </div>
+            {/* View Mode: Show Current Group */}
+            {viewMode === "view" && currentGroup && (
+              <Card className="border-2 border-primary">
+                <CardHeader>
+                  <CardTitle className="flex items-center justify-between">
+                    <span className="flex items-center gap-2">
+                      <Package className="h-5 w-5" />
+                      Current Assignment
+                    </span>
+                    <Badge variant={getStatusBadgeVariant(currentGroup.status)}>
+                      {currentGroup.status}
+                    </Badge>
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <Label className="text-muted-foreground">Group Name</Label>
+                      <p className="font-medium">{currentGroup.deliveryGroupName}</p>
+                    </div>
+                    <div>
+                      <Label className="text-muted-foreground">Deliverer</Label>
+                      <p className="font-medium">{currentGroup.delivererName}</p>
+                    </div>
+                    {currentGroup.deliveryGroupDescription && (
+                      <div className="col-span-2">
+                        <Label className="text-muted-foreground">Description</Label>
+                        <p className="text-sm">{currentGroup.deliveryGroupDescription}</p>
+                      </div>
+                    )}
+                    <div>
+                      <Label className="text-muted-foreground">Total Orders</Label>
+                      <p className="font-medium">{currentGroup.memberCount} orders</p>
+                    </div>
+                    <div>
+                      <Label className="text-muted-foreground">Created</Label>
+                      <p className="text-sm">
+                        {new Date(currentGroup.createdAt).toLocaleDateString()}
+                      </p>
+                    </div>
+                    {currentGroup.hasDeliveryStarted && (
+                      <div className="col-span-2">
+                        <Alert>
+                          <Truck className="h-4 w-4" />
+                          <AlertDescription>
+                            Delivery started on{" "}
+                            {currentGroup.deliveryStartedAt &&
+                              new Date(currentGroup.deliveryStartedAt).toLocaleString()}
+                          </AlertDescription>
+                        </Alert>
+                      </div>
+                    )}
+                  </div>
+
+                  {!currentGroup.hasDeliveryStarted && (
+                    <Button
+                      onClick={() => setViewMode("change")}
+                      variant="outline"
+                      className="w-full"
+                    >
+                      <RefreshCw className="h-4 w-4 mr-2" />
+                      Change Delivery Group
+                    </Button>
+                  )}
+
+                  {currentGroup.hasDeliveryStarted && (
+                    <Alert variant="destructive">
+                      <AlertCircle className="h-4 w-4" />
+                      <AlertDescription>
+                        Cannot change group - delivery has already started
+                      </AlertDescription>
+                    </Alert>
+                  )}
+                </CardContent>
+              </Card>
+            )}
+
+            {/* Change Mode: Show Available Groups */}
+            {viewMode === "change" && (
+              <>
+                {/* Search and Create Group */}
+                <div className="flex gap-2">
+                  <div className="flex-1 relative">
+                    <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                    <Input
+                      placeholder="Search groups by name, deliverer, or description..."
+                      value={searchTerm}
+                      onChange={(e) => setSearchTerm(e.target.value)}
+                      className="pl-9"
+                    />
+                  </div>
+                  <Button onClick={() => setCreateGroupOpen(true)}>
+                    <Plus className="h-4 w-4 mr-2" />
+                    Create Group
+                  </Button>
+                </div>
 
             {/* Groups Table */}
             <Card>
@@ -312,31 +446,53 @@ export function DeliveryGroupDialog({
               </div>
             )}
 
-            {/* Selected Group Info */}
-            {selectedGroupId && (
-              <Alert>
-                <AlertCircle className="h-4 w-4" />
-                <AlertDescription>
-                  Selected group:{" "}
-                  {
-                    groups.find((g) => g.deliveryGroupId === selectedGroupId)
-                      ?.deliveryGroupName
-                  }
-                </AlertDescription>
-              </Alert>
+                {/* Selected Group Info */}
+                {selectedGroupId && (
+                  <Alert>
+                    <CheckCircle2 className="h-4 w-4" />
+                    <AlertDescription>
+                      Selected group:{" "}
+                      <strong>
+                        {
+                          groups.find((g) => g.deliveryGroupId === selectedGroupId)
+                            ?.deliveryGroupName
+                        }
+                      </strong>
+                    </AlertDescription>
+                  </Alert>
+                )}
+              </>
             )}
           </div>
 
           <DialogFooter>
-            <Button variant="outline" onClick={() => onOpenChange(false)}>
-              Cancel
-            </Button>
-            <Button
-              onClick={handleAssignToGroup}
-              disabled={!selectedGroupId || assigning}
-            >
-              {assigning ? "Assigning..." : `Assign to Group`}
-            </Button>
+            {viewMode === "view" ? (
+              <Button onClick={() => onOpenChange(false)}>Close</Button>
+            ) : (
+              <>
+                {isSingleOrderWithGroup && (
+                  <Button
+                    variant="outline"
+                    onClick={() => setViewMode("view")}
+                  >
+                    Back to View
+                  </Button>
+                )}
+                <Button variant="outline" onClick={() => onOpenChange(false)}>
+                  Cancel
+                </Button>
+                <Button
+                  onClick={handleAssignToGroup}
+                  disabled={!selectedGroupId || assigning}
+                >
+                  {assigning
+                    ? "Processing..."
+                    : isSingleOrderWithGroup
+                    ? "Change Group"
+                    : "Assign to Group"}
+                </Button>
+              </>
+            )}
           </DialogFooter>
         </DialogContent>
       </Dialog>

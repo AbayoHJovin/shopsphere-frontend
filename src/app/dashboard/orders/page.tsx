@@ -124,6 +124,24 @@ export default function OrdersPage() {
     fetchOrders();
   }, [currentPage]);
 
+  // Debounced search effect
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      if (searchTerm.trim() || Object.values(filters).some(
+        (value) => value !== "all" && value !== "" && value !== null
+      )) {
+        setCurrentPage(0); // Reset to first page on search
+        fetchOrders(true);
+      } else if (searchTerm === "") {
+        // If search is cleared, fetch without search
+        setCurrentPage(0);
+        fetchOrders(false);
+      }
+    }, 500); // 500ms debounce
+
+    return () => clearTimeout(timer);
+  }, [searchTerm]);
+
   const fetchOrders = async (useSearch: boolean = false) => {
     try {
       setLoading(true);
@@ -192,30 +210,32 @@ export default function OrdersPage() {
     }
   };
 
-  // Check for existing groups for orders
+  // Build order groups map from embedded delivery group data
   useEffect(() => {
-    const checkOrderGroups = async () => {
-      const newOrderGroups = new Map<number, DeliveryGroupDto>();
+    const newOrderGroups = new Map<number, DeliveryGroupDto>();
 
-      for (const order of orders) {
-        try {
-          const group = await deliveryGroupService.findGroupByOrder(
-            parseInt(order.id)
-          );
-          if (group) {
-            newOrderGroups.set(parseInt(order.id), group);
-          }
-        } catch (error) {
-          console.error(`Error checking group for order ${order.id}:`, error);
-        }
+    for (const order of orders) {
+      // Use embedded delivery group data if available
+      if (order.deliveryGroup) {
+        const group: DeliveryGroupDto = {
+          deliveryGroupId: order.deliveryGroup.deliveryGroupId,
+          deliveryGroupName: order.deliveryGroup.deliveryGroupName,
+          deliveryGroupDescription: order.deliveryGroup.deliveryGroupDescription || "",
+          delivererId: order.deliveryGroup.delivererId,
+          delivererName: order.deliveryGroup.delivererName,
+          orderIds: [parseInt(order.id)], // Single order for now
+          memberCount: order.deliveryGroup.memberCount,
+          createdAt: order.deliveryGroup.createdAt,
+          scheduledAt: order.deliveryGroup.scheduledAt,
+          hasDeliveryStarted: order.deliveryGroup.hasDeliveryStarted,
+          deliveryStartedAt: order.deliveryGroup.deliveryStartedAt,
+          status: order.deliveryGroup.status,
+        };
+        newOrderGroups.set(parseInt(order.id), group);
       }
-
-      setOrderGroups(newOrderGroups);
-    };
-
-    if (orders.length > 0) {
-      checkOrderGroups();
     }
+
+    setOrderGroups(newOrderGroups);
   }, [orders]);
 
   // Delivery group workflow functions
@@ -252,10 +272,12 @@ export default function OrdersPage() {
   };
 
 
-  const handleDeliveryGroupSuccess = () => {
+  const handleDeliveryGroupSuccess = async () => {
     // Refresh orders to get updated group information
-    fetchOrders();
+    await fetchOrders();
     setSelectedOrderIds([]);
+    setDeliveryGroupDialogOpen(false);
+    toast.success("Orders updated successfully");
   };
 
   // Pagination functions
@@ -1004,6 +1026,11 @@ export default function OrdersPage() {
         onOpenChange={setDeliveryGroupDialogOpen}
         selectedOrderIds={selectedOrderIds}
         onSuccess={handleDeliveryGroupSuccess}
+        currentGroup={
+          selectedOrderIds.length === 1
+            ? orderGroups.get(selectedOrderIds[0]) || null
+            : null
+        }
       />
     </div>
   );
