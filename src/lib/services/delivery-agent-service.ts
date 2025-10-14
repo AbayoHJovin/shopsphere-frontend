@@ -74,9 +74,13 @@ class DeliveryAgentService {
         `${this.baseUrl}/dashboard`
       );
       return response.data;
-    } catch (error) {
+    } catch (error: any) {
       console.error("Error fetching dashboard data:", error);
-      throw error;
+      const errorMessage = error.response?.data?.message || 
+                          error.response?.data?.details || 
+                          error.message || 
+                          "Failed to fetch dashboard data";
+      throw new Error(errorMessage);
     }
   }
 
@@ -86,9 +90,13 @@ class DeliveryAgentService {
         `${this.baseUrl}/groups/${groupId}/orders`
       );
       return response.data;
-    } catch (error) {
+    } catch (error: any) {
       console.error("Error fetching orders for group:", error);
-      throw error;
+      const errorMessage = error.response?.data?.message || 
+                          error.response?.data?.details || 
+                          error.message || 
+                          "Failed to fetch orders";
+      throw new Error(errorMessage);
     }
   }
 
@@ -98,9 +106,14 @@ class DeliveryAgentService {
         `/delivery-groups/${groupId}/start-delivery`
       );
       return response.data;
-    } catch (error) {
+    } catch (error: any) {
       console.error("Error starting delivery:", error);
-      throw error;
+      // Extract the error message from the response
+      const errorMessage = error.response?.data?.message || 
+                          error.response?.data?.details || 
+                          error.message || 
+                          "Failed to start delivery";
+      throw new Error(errorMessage);
     }
   }
 
@@ -110,9 +123,14 @@ class DeliveryAgentService {
         `/delivery-groups/${groupId}/finish-delivery`
       );
       return response.data;
-    } catch (error) {
+    } catch (error: any) {
       console.error("Error finishing delivery:", error);
-      throw error;
+      // Extract the error message from the response
+      const errorMessage = error.response?.data?.message || 
+                          error.response?.data?.details || 
+                          error.message || 
+                          "Failed to finish delivery";
+      throw new Error(errorMessage);
     }
   }
 
@@ -122,9 +140,13 @@ class DeliveryAgentService {
         `${this.baseUrl}/orders/${orderId}`
       );
       return response.data;
-    } catch (error) {
+    } catch (error: any) {
       console.error("Error fetching order details:", error);
-      throw error;
+      const errorMessage = error.response?.data?.message || 
+                          error.response?.data?.details || 
+                          error.message || 
+                          "Failed to fetch order details";
+      throw new Error(errorMessage);
     }
   }
 }

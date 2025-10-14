@@ -35,6 +35,7 @@ import {
   DeliveryGroupDto,
   OrderDTO,
 } from "@/lib/services/delivery-agent-service";
+import { toast } from "sonner";
 
 export default function DeliveryAgentOrdersPage() {
   const [deliveryGroups, setDeliveryGroups] = useState<DeliveryGroupDto[]>([]);
@@ -105,20 +106,24 @@ export default function DeliveryAgentOrdersPage() {
 
       const result = await deliveryAgentService.startDelivery(groupId);
 
+      const successMessage = result.message || "Delivery started successfully!";
       setActionResult({
         success: true,
-        message: result.message || "Delivery started successfully!",
+        message: successMessage,
         groupId: groupId,
       });
+      toast.success(successMessage);
 
       // Refresh delivery groups to show updated status
       await fetchDeliveryGroups();
     } catch (error: any) {
+      const errorMessage = error.message || "Failed to start delivery";
       setActionResult({
         success: false,
-        message: error.message || "Failed to start delivery",
+        message: errorMessage,
         groupId: groupId,
       });
+      toast.error(errorMessage);
     } finally {
       setActionLoading(null);
     }
@@ -131,20 +136,24 @@ export default function DeliveryAgentOrdersPage() {
 
       const result = await deliveryAgentService.finishDelivery(groupId);
 
+      const successMessage = result.message || "Delivery finished successfully!";
       setActionResult({
         success: true,
-        message: result.message || "Delivery finished successfully!",
+        message: successMessage,
         groupId: groupId,
       });
+      toast.success(successMessage);
 
       // Refresh delivery groups to show updated status
       await fetchDeliveryGroups();
     } catch (error: any) {
+      const errorMessage = error.message || "Failed to finish delivery";
       setActionResult({
         success: false,
-        message: error.message || "Failed to finish delivery",
+        message: errorMessage,
         groupId: groupId,
       });
+      toast.error(errorMessage);
     } finally {
       setActionLoading(null);
     }
