@@ -37,6 +37,7 @@ export const API_ENDPOINTS = {
     UPDATE_STATUS: (id: string) => `/admin/orders/${id}/status`,
     UPDATE_TRACKING: (id: string) =>
       `/admin/orders/${id}/tracking`,
+    COUNT_PENDING: `/admin/orders/count/pending`,
   },
   INVITATIONS: {
     BASE: `/admin-invitations`,
@@ -92,6 +93,7 @@ export const API_ENDPOINTS = {
     ADMIN_GUEST: `/returns/admin/guest`,
     BY_ID: (id: string) => `/returns/${id}`,
     ADMIN_REVIEW: `/returns/admin/review`,
+    COUNT_PENDING: `/returns/admin/count/pending`,
   },
 };
 

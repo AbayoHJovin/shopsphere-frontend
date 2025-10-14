@@ -250,6 +250,21 @@ class OrderService {
       throw error;
     }
   }
+
+  /**
+   * Get pending orders count
+   */
+  async getPendingOrdersCount(): Promise<number> {
+    try {
+      const response = await apiClient.get<{ success: boolean; count: number }>(
+        API_ENDPOINTS.ADMIN_ORDERS.COUNT_PENDING
+      );
+      return response.data.count || 0;
+    } catch (error) {
+      console.error("Error fetching pending orders count:", error);
+      return 0;
+    }
+  }
 }
 
 export const orderService = new OrderService();

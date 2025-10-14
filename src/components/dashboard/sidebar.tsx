@@ -29,6 +29,8 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Separator } from "@/components/ui/separator";
 import { Badge } from "@/components/ui/badge";
 import { usePendingAppealsCount } from "@/hooks/use-pending-appeals";
+import { usePendingOrdersCount } from "@/hooks/use-pending-orders";
+import { usePendingReturnsCount } from "@/hooks/use-pending-returns";
 import { useAppDispatch } from "@/lib/redux/hooks";
 import { logout } from "@/lib/redux/auth-slice";
 import { authService } from "@/lib/services/auth-service";
@@ -45,6 +47,8 @@ export function Sidebar({ className }: SidebarProps) {
   const router = useRouter();
   const dispatch = useAppDispatch();
   const { data: pendingAppealsCount, isLoading: isLoadingAppeals } = usePendingAppealsCount();
+  const { data: pendingOrdersCount, isLoading: isLoadingOrders } = usePendingOrdersCount();
+  const { data: pendingReturnsCount, isLoading: isLoadingReturns } = usePendingReturnsCount();
 
   const toggleSidebar = () => {
     setCollapsed(!collapsed);
@@ -120,19 +124,23 @@ export function Sidebar({ className }: SidebarProps) {
             collapsed={collapsed}
             isActive={pathname.startsWith("/dashboard/products")}
           />
-          <SidebarItem
+          <SidebarItemWithBadge
             href="/dashboard/orders"
             icon={ShoppingCart}
             label="Orders"
             collapsed={collapsed}
             isActive={pathname.startsWith("/dashboard/orders")}
+            badgeCount={pendingOrdersCount}
+            isLoading={isLoadingOrders}
           />
-          <SidebarItem
+          <SidebarItemWithBadge
             href="/dashboard/returns"
             icon={RotateCcw}
             label="Return Requests"
             collapsed={collapsed}
             isActive={pathname.startsWith("/dashboard/returns")}
+            badgeCount={pendingReturnsCount}
+            isLoading={isLoadingReturns}
           />
           <SidebarItemWithBadge
             href="/dashboard/appeals"
