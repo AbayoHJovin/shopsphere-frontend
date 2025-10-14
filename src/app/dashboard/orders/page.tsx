@@ -103,7 +103,7 @@ export default function OrdersPage() {
   // State for API data
   const [loading, setLoading] = useState(true);
   const [orders, setOrders] = useState<AdminOrderDTO[]>([]);
-  
+
   // Pagination state
   const [currentPage, setCurrentPage] = useState(0);
   const [totalPages, setTotalPages] = useState(0);
@@ -127,9 +127,12 @@ export default function OrdersPage() {
   // Debounced search effect
   useEffect(() => {
     const timer = setTimeout(() => {
-      if (searchTerm.trim() || Object.values(filters).some(
-        (value) => value !== "all" && value !== "" && value !== null
-      )) {
+      if (
+        searchTerm.trim() ||
+        Object.values(filters).some(
+          (value) => value !== "all" && value !== "" && value !== null
+        )
+      ) {
         setCurrentPage(0); // Reset to first page on search
         fetchOrders(true);
       } else if (searchTerm === "") {
@@ -145,23 +148,24 @@ export default function OrdersPage() {
   const fetchOrders = async (useSearch: boolean = false) => {
     try {
       setLoading(true);
-      
+
       // Check if we should use search or regular fetch
-      const hasActiveFilters = Object.values(filters).some(
-        (value) => value !== "all" && value !== "" && value !== null
-      ) || searchTerm.trim() !== "";
+      const hasActiveFilters =
+        Object.values(filters).some(
+          (value) => value !== "all" && value !== "" && value !== null
+        ) || searchTerm.trim() !== "";
 
       const shouldUseSearch = useSearch || hasActiveFilters;
 
       let response;
-      
+
       if (shouldUseSearch) {
         // Prepare search request
         const searchRequest: any = {
           page: currentPage,
           size: pageSize,
           sortBy: "createdAt",
-          sortDirection: "desc"
+          sortDirection: "desc",
         };
 
         // Add search term if present
@@ -220,7 +224,8 @@ export default function OrdersPage() {
         const group: DeliveryGroupDto = {
           deliveryGroupId: order.deliveryGroup.deliveryGroupId,
           deliveryGroupName: order.deliveryGroup.deliveryGroupName,
-          deliveryGroupDescription: order.deliveryGroup.deliveryGroupDescription || "",
+          deliveryGroupDescription:
+            order.deliveryGroup.deliveryGroupDescription || "",
           delivererId: order.deliveryGroup.delivererId,
           delivererName: order.deliveryGroup.delivererName,
           orderIds: [parseInt(order.id)], // Single order for now
@@ -270,7 +275,6 @@ export default function OrdersPage() {
       setSelectedOrderIds([]);
     }
   };
-
 
   const handleDeliveryGroupSuccess = async () => {
     // Refresh orders to get updated group information
@@ -403,7 +407,12 @@ export default function OrdersPage() {
             <p className="text-sm text-muted-foreground">
               {loading
                 ? "Loading orders..."
-                : `Showing ${Math.min(pageSize, orders.length)} of ${totalElements} orders (Page ${currentPage + 1} of ${totalPages})`}
+                : `Showing ${Math.min(
+                    pageSize,
+                    orders.length
+                  )} of ${totalElements} orders (Page ${
+                    currentPage + 1
+                  } of ${totalPages})`}
             </p>
             {Object.values(filters).some(
               (value) => value !== "all" && value !== "" && value !== null
@@ -740,6 +749,22 @@ export default function OrdersPage() {
       {/* Orders Table - with improved responsive design */}
       <Card className="border-border/40 shadow-sm">
         <CardContent className="p-0">
+          <div className="flex justify-between items-center px-4 py-4 border-t">
+            <p className="text-sm text-muted-foreground">
+              Total: {totalElements} orders
+              {selectedOrderIds.length > 0 && (
+                <span className="ml-2 text-primary">
+                  ({selectedOrderIds.length} selected)
+                </span>
+              )}
+            </p>
+            {selectedOrderIds.length > 0 && (
+              <Button onClick={handleBulkAssign} className="gap-2">
+                <Users className="h-4 w-4" />
+                Assign to Group ({selectedOrderIds.length})
+              </Button>
+            )}
+          </div>
           <div className="overflow-x-auto">
             <Table>
               <TableHeader>
@@ -935,36 +960,22 @@ export default function OrdersPage() {
             </Table>
           </div>
 
-          {/* Order count info and bulk actions */}
-          <div className="flex justify-between items-center px-4 py-4 border-t">
-            <p className="text-sm text-muted-foreground">
-              Total: {totalElements} orders
-              {selectedOrderIds.length > 0 && (
-                <span className="ml-2 text-primary">
-                  ({selectedOrderIds.length} selected)
-                </span>
-              )}
-            </p>
-            {selectedOrderIds.length > 0 && (
-              <Button onClick={handleBulkAssign} className="gap-2">
-                <Users className="h-4 w-4" />
-                Assign to Group ({selectedOrderIds.length})
-              </Button>
-            )}
-          </div>
-
           {/* Pagination Controls */}
           {totalPages > 1 && (
             <div className="flex items-center justify-center px-4 py-4 border-t">
               <Pagination>
                 <PaginationContent>
                   <PaginationItem>
-                    <PaginationPrevious 
+                    <PaginationPrevious
                       onClick={handlePreviousPage}
-                      className={!hasPrevious ? "pointer-events-none opacity-50" : "cursor-pointer"}
+                      className={
+                        !hasPrevious
+                          ? "pointer-events-none opacity-50"
+                          : "cursor-pointer"
+                      }
                     />
                   </PaginationItem>
-                  
+
                   {/* Page numbers */}
                   {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
                     let pageNum;
@@ -977,7 +988,7 @@ export default function OrdersPage() {
                     } else {
                       pageNum = currentPage - 2 + i;
                     }
-                    
+
                     return (
                       <PaginationItem key={pageNum}>
                         <PaginationLink
@@ -990,7 +1001,7 @@ export default function OrdersPage() {
                       </PaginationItem>
                     );
                   })}
-                  
+
                   {totalPages > 5 && currentPage < totalPages - 3 && (
                     <>
                       <PaginationItem>
@@ -1006,11 +1017,15 @@ export default function OrdersPage() {
                       </PaginationItem>
                     </>
                   )}
-                  
+
                   <PaginationItem>
-                    <PaginationNext 
+                    <PaginationNext
                       onClick={handleNextPage}
-                      className={!hasNext ? "pointer-events-none opacity-50" : "cursor-pointer"}
+                      className={
+                        !hasNext
+                          ? "pointer-events-none opacity-50"
+                          : "cursor-pointer"
+                      }
                     />
                   </PaginationItem>
                 </PaginationContent>

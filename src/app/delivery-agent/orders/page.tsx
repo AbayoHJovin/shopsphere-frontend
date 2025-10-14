@@ -428,7 +428,7 @@ export default function DeliveryAgentOrdersPage() {
                                 </div>
                                 <div className="flex items-center gap-1">
                                   <MapPin className="h-3 w-3" />
-                                  {order.shippingAddress.street}, {order.shippingAddress.city}
+                                  {order.shippingAddress.streetAddress}, {order.shippingAddress.city}
                                 </div>
                               </div>
                             </div>
