@@ -36,6 +36,7 @@ import {
 } from "@/lib/services/delivery-agent-service";
 import QRScannerModal from "@/components/QRScannerModal";
 import { orderService } from "@/lib/services/order-service";
+import LiveRouteMap from "@/components/delivery/LiveRouteMap";
 
 export default function DeliveryAgentOrderDetails() {
   const params = useParams();
@@ -411,7 +412,7 @@ export default function DeliveryAgentOrderDetails() {
             </CardContent>
           </Card>
 
-          {/* THIRD PRIORITY: Delivery Address - Critical for Navigation */}
+          {/* THIRD PRIORITY: Delivery Address Info */}
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
@@ -420,42 +421,43 @@ export default function DeliveryAgentOrderDetails() {
               </CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="space-y-4">
+              <div className="space-y-3">
                 <div className="flex items-start gap-3">
                   <MapPin className="h-5 w-5 text-muted-foreground mt-1" />
                   <div className="flex-1">
-                    <h4 className="font-semibold text-lg mb-2">Delivery Location</h4>
+                    <h4 className="font-semibold text-base mb-1">Delivery Location</h4>
                     <div className="space-y-1">
-                      <p className="font-medium">
+                      <p className="text-sm font-medium">
                         {order.shippingAddress?.streetAddress || "N/A"}
                       </p>
-                      <p className="text-muted-foreground">
+                      <p className="text-sm text-muted-foreground">
                         {order.shippingAddress?.city || "N/A"},{" "}
                         {order.shippingAddress?.state || "N/A"}
                       </p>
-                      <p className="text-muted-foreground">
+                      <p className="text-sm text-muted-foreground">
                         {order.shippingAddress?.country || "N/A"}
                       </p>
                     </div>
                   </div>
                 </div>
-                
-                {/* Navigation Button */}
-                <Button 
-                  variant="outline" 
-                  className="w-full"
-                  onClick={() => {
-                    const address = `${order.shippingAddress?.streetAddress || ""}, ${order.shippingAddress?.city || ""}, ${order.shippingAddress?.state || ""}, ${order.shippingAddress?.country || ""}`;
-                    const encodedAddress = encodeURIComponent(address);
-                    window.open(`https://maps.google.com/maps?q=${encodedAddress}`, '_blank');
-                  }}
-                >
-                  <MapPin className="h-4 w-4 mr-2" />
-                  Open in Maps
-                </Button>
               </div>
             </CardContent>
           </Card>
+        </div>
+
+        {/* Live Navigation Map - Full Width for Better Visibility */}
+        <div className="space-y-2">
+          <div className="flex items-center gap-2">
+            <MapPin className="h-5 w-5 text-primary" />
+            <h2 className="text-xl font-semibold">Live Navigation</h2>
+          </div>
+          <p className="text-sm text-muted-foreground">
+            Real-time navigation to delivery location. Your position updates automatically.
+          </p>
+          <LiveRouteMap
+            destinationAddress={`${order.shippingAddress?.streetAddress || ""}, ${order.shippingAddress?.city || ""}, ${order.shippingAddress?.state || ""}, ${order.shippingAddress?.country || ""}`}
+            destinationName={`${order.customerName}'s Location`}
+          />
         </div>
 
         {/* FOURTH PRIORITY: Order Items - Important but not critical for delivery */}
