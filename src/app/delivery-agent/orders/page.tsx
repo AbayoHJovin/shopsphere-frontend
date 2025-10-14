@@ -28,6 +28,8 @@ import {
   Search,
   Filter,
   Clock,
+  FileText,
+  Plus,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import {
@@ -36,6 +38,8 @@ import {
   OrderDTO,
 } from "@/lib/services/delivery-agent-service";
 import { toast } from "sonner";
+import ViewNotesDialog from "@/components/delivery-agent/ViewNotesDialog";
+import AddNoteDialog from "@/components/delivery-agent/AddNoteDialog";
 
 export default function DeliveryAgentOrdersPage() {
   const [deliveryGroups, setDeliveryGroups] = useState<DeliveryGroupDto[]>([]);
@@ -51,6 +55,12 @@ export default function DeliveryAgentOrdersPage() {
     success: boolean;
     message: string;
     groupId: number;
+  } | null>(null);
+  const [viewNotesDialogOpen, setViewNotesDialogOpen] = useState(false);
+  const [addNoteDialogOpen, setAddNoteDialogOpen] = useState(false);
+  const [selectedGroupForNotes, setSelectedGroupForNotes] = useState<{
+    id: number;
+    name: string;
   } | null>(null);
 
   useEffect(() => {
@@ -366,28 +376,66 @@ export default function DeliveryAgentOrdersPage() {
                           </div>
                         )}
                       </div>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => toggleGroupExpansion(group.deliveryGroupId)}
-                        className="flex items-center gap-1"
-                        disabled={loadingOrders === group.deliveryGroupId}
-                      >
-                        {loadingOrders === group.deliveryGroupId ? (
-                          <Loader2 className="h-4 w-4 animate-spin" />
-                        ) : expandedGroupId === group.deliveryGroupId ? (
-                          <>
-                            <ChevronUp className="h-4 w-4" />
-                            Hide Orders
-                          </>
-                        ) : (
-                          <>
-                            <ChevronDown className="h-4 w-4" />
-                            View Orders
-                          </>
-                        )}
-                      </Button>
+                      <div className="flex items-center gap-2">
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => toggleGroupExpansion(group.deliveryGroupId)}
+                          className="flex items-center gap-1"
+                          disabled={loadingOrders === group.deliveryGroupId}
+                        >
+                          {loadingOrders === group.deliveryGroupId ? (
+                            <Loader2 className="h-4 w-4 animate-spin" />
+                          ) : expandedGroupId === group.deliveryGroupId ? (
+                            <>
+                              <ChevronUp className="h-4 w-4" />
+                              Hide Orders
+                            </>
+                          ) : (
+                            <>
+                              <ChevronDown className="h-4 w-4" />
+                              View Orders
+                            </>
+                          )}
+                        </Button>
+                      </div>
                     </div>
+
+                    {/* Delivery Notes Actions */}
+                    {group.hasDeliveryStarted && !group.hasDeliveryFinished && (
+                      <div className="flex items-center gap-2">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => {
+                            setSelectedGroupForNotes({
+                              id: group.deliveryGroupId,
+                              name: group.deliveryGroupName,
+                            });
+                            setViewNotesDialogOpen(true);
+                          }}
+                          className="flex items-center gap-1"
+                        >
+                          <FileText className="h-4 w-4" />
+                          View Notes
+                        </Button>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => {
+                            setSelectedGroupForNotes({
+                              id: group.deliveryGroupId,
+                              name: group.deliveryGroupName,
+                            });
+                            setAddNoteDialogOpen(true);
+                          }}
+                          className="flex items-center gap-1"
+                        >
+                          <Plus className="h-4 w-4" />
+                          Add Note
+                        </Button>
+                      </div>
+                    )}
 
                     {expandedGroupId === group.deliveryGroupId && (
                       <div className="space-y-3 animate-in slide-in-from-top-2 duration-300">
@@ -454,6 +502,31 @@ export default function DeliveryAgentOrdersPage() {
             </p>
           </CardContent>
         </Card>
+      )}
+
+      {/* Delivery Notes Dialogs */}
+      {selectedGroupForNotes && (
+        <>
+          <ViewNotesDialog
+            open={viewNotesDialogOpen}
+            onOpenChange={setViewNotesDialogOpen}
+            deliveryGroupId={selectedGroupForNotes.id}
+            deliveryGroupName={selectedGroupForNotes.name}
+          />
+          <AddNoteDialog
+            open={addNoteDialogOpen}
+            onOpenChange={setAddNoteDialogOpen}
+            deliveryGroupId={selectedGroupForNotes.id}
+            deliveryGroupName={selectedGroupForNotes.name}
+            onSuccess={() => {
+              // Optionally refresh notes in view dialog if it's open
+              if (viewNotesDialogOpen) {
+                setViewNotesDialogOpen(false);
+                setTimeout(() => setViewNotesDialogOpen(true), 100);
+              }
+            }}
+          />
+        </>
       )}
     </div>
   );

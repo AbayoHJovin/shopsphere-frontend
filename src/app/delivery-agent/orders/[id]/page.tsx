@@ -37,6 +37,8 @@ import {
 import QRScannerModal from "@/components/QRScannerModal";
 import { orderService } from "@/lib/services/order-service";
 import LiveRouteMap from "@/components/delivery/LiveRouteMap";
+import AddOrderNoteDialog from "@/components/delivery-agent/AddOrderNoteDialog";
+import ViewOrderNotesDialog from "@/components/delivery-agent/ViewOrderNotesDialog";
 
 export default function DeliveryAgentOrderDetails() {
   const params = useParams();
@@ -52,6 +54,8 @@ export default function DeliveryAgentOrderDetails() {
     success: boolean;
     message: string;
   } | null>(null);
+  const [showAddNoteDialog, setShowAddNoteDialog] = useState(false);
+  const [showViewNotesDialog, setShowViewNotesDialog] = useState(false);
 
   useEffect(() => {
     const fetchOrder = async () => {
@@ -445,6 +449,62 @@ export default function DeliveryAgentOrderDetails() {
           </Card>
         </div>
 
+        {/* Delivery Notes Section - Important for Communication */}
+        <Card>
+          <CardHeader>
+            <div className="flex items-center justify-between">
+              <CardTitle className="flex items-center gap-2">
+                <FileText className="h-5 w-5" />
+                Delivery Notes
+              </CardTitle>
+              <div className="flex items-center gap-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setShowViewNotesDialog(true)}
+                >
+                  <FileText className="h-4 w-4 mr-2" />
+                  View All Notes
+                </Button>
+                <Button
+                  size="sm"
+                  onClick={() => setShowAddNoteDialog(true)}
+                  disabled={order.status === "DELIVERED"}
+                >
+                  <FileText className="h-4 w-4 mr-2" />
+                  Add Note
+                </Button>
+              </div>
+            </div>
+            <CardDescription>
+              Document important information about this delivery
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-3">
+              <div className="bg-blue-50 p-4 rounded-lg">
+                <p className="text-sm text-blue-900 font-medium mb-2">
+                  Why add notes?
+                </p>
+                <ul className="text-sm text-blue-800 space-y-1">
+                  <li>• Record customer-specific delivery instructions</li>
+                  <li>• Document any issues or delays for this order</li>
+                  <li>• Keep track of communication with the customer</li>
+                  <li>• Help other agents if redelivery is needed</li>
+                </ul>
+              </div>
+              
+              {order.status === "DELIVERED" && (
+                <div className="bg-green-50 p-3 rounded-lg border border-green-200">
+                  <p className="text-sm text-green-800">
+                    <strong>Note:</strong> This order has been delivered. You can view existing notes but cannot add new ones.
+                  </p>
+                </div>
+              )}
+            </div>
+          </CardContent>
+        </Card>
+
         {/* Live Navigation Map - Full Width for Better Visibility */}
         <div className="space-y-2">
           <div className="flex items-center gap-2">
@@ -593,6 +653,26 @@ export default function DeliveryAgentOrderDetails() {
         orderCode={order?.orderNumber || ""}
         onSuccess={handleQRScanSuccess}
         isValidating={isVerifying}
+      />
+
+      {/* Add Order Note Dialog */}
+      <AddOrderNoteDialog
+        open={showAddNoteDialog}
+        onOpenChange={setShowAddNoteDialog}
+        orderId={parseInt(orderId)}
+        orderNumber={order?.orderNumber || ""}
+        onSuccess={() => {
+          // Optionally refresh order data or show success message
+          console.log("Note added successfully");
+        }}
+      />
+
+      {/* View Order Notes Dialog */}
+      <ViewOrderNotesDialog
+        open={showViewNotesDialog}
+        onOpenChange={setShowViewNotesDialog}
+        orderId={parseInt(orderId)}
+        orderNumber={order?.orderNumber || ""}
       />
     </div>
   );

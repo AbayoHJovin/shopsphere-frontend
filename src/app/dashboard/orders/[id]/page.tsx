@@ -71,7 +71,9 @@ export default function OrderDetailsPage() {
   const [loadingAgents, setLoadingAgents] = useState(false);
   const [assigning, setAssigning] = useState(false);
   const [agentSearchTerm, setAgentSearchTerm] = useState("");
-  const [mapType, setMapType] = useState<'satellite' | 'roadmap' | 'hybrid' | 'terrain'>('satellite');
+  const [mapType, setMapType] = useState<
+    "satellite" | "roadmap" | "hybrid" | "terrain"
+  >("satellite");
 
   const orderId = params.id as string;
 
@@ -312,15 +314,6 @@ export default function OrderDetailsPage() {
           <Button
             variant="outline"
             size="sm"
-            onClick={openDeliveryModal}
-            className="gap-2"
-          >
-            <Plus className="h-4 w-4" />
-            Assign Delivery
-          </Button>
-          <Button
-            variant="outline"
-            size="sm"
             onClick={openStatusUpdate}
             className="gap-2"
           >
@@ -466,43 +459,58 @@ export default function OrderDetailsPage() {
                             {item.product.description}
                           </p>
                         )}
-                        
+
                         {/* Discount Information */}
-                        {item.hasDiscount && item.originalPrice && item.discountPercentage && (
-                          <div className="mt-2 p-2 bg-green-50 border border-green-200 rounded-lg">
-                            <div className="flex items-center justify-between">
-                              <div className="flex items-center gap-2">
-                                <Badge variant="secondary" className="bg-green-100 text-green-800 font-semibold">
-                                  -{Math.round(item.discountPercentage)}% DISCOUNT
-                                </Badge>
-                                <span className="text-xs text-green-700 font-medium">
-                                  Applied at purchase
-                                </span>
+                        {item.hasDiscount &&
+                          item.originalPrice &&
+                          item.discountPercentage && (
+                            <div className="mt-2 p-2 bg-green-50 border border-green-200 rounded-lg">
+                              <div className="flex items-center justify-between">
+                                <div className="flex items-center gap-2">
+                                  <Badge
+                                    variant="secondary"
+                                    className="bg-green-100 text-green-800 font-semibold"
+                                  >
+                                    -{Math.round(item.discountPercentage)}%
+                                    DISCOUNT
+                                  </Badge>
+                                  <span className="text-xs text-green-700 font-medium">
+                                    Applied at purchase
+                                  </span>
+                                </div>
+                              </div>
+                              <div className="flex items-center gap-3 mt-1">
+                                <div className="text-sm">
+                                  <span className="text-muted-foreground">
+                                    Original:{" "}
+                                  </span>
+                                  <span className="line-through text-red-600 font-medium">
+                                    ${item.originalPrice.toFixed(2)}
+                                  </span>
+                                </div>
+                                <div className="text-sm">
+                                  <span className="text-muted-foreground">
+                                    Discounted:{" "}
+                                  </span>
+                                  <span className="text-green-700 font-semibold">
+                                    ${item.price?.toFixed(2) || "0.00"}
+                                  </span>
+                                </div>
+                                <div className="text-sm">
+                                  <span className="text-muted-foreground">
+                                    Saved:{" "}
+                                  </span>
+                                  <span className="text-green-700 font-semibold">
+                                    $
+                                    {(item.originalPrice - item.price).toFixed(
+                                      2
+                                    )}
+                                  </span>
+                                </div>
                               </div>
                             </div>
-                            <div className="flex items-center gap-3 mt-1">
-                              <div className="text-sm">
-                                <span className="text-muted-foreground">Original: </span>
-                                <span className="line-through text-red-600 font-medium">
-                                  ${item.originalPrice.toFixed(2)}
-                                </span>
-                              </div>
-                              <div className="text-sm">
-                                <span className="text-muted-foreground">Discounted: </span>
-                                <span className="text-green-700 font-semibold">
-                                  ${item.price?.toFixed(2) || "0.00"}
-                                </span>
-                              </div>
-                              <div className="text-sm">
-                                <span className="text-muted-foreground">Saved: </span>
-                                <span className="text-green-700 font-semibold">
-                                  ${(item.originalPrice - item.price).toFixed(2)}
-                                </span>
-                              </div>
-                            </div>
-                          </div>
-                        )}
-                        
+                          )}
+
                         <div className="flex items-center gap-4 mt-2 text-sm text-muted-foreground">
                           <span>Quantity: {item.quantity}</span>
                           {!item.hasDiscount && (
@@ -528,52 +536,70 @@ export default function OrderDetailsPage() {
                               Sourced from {item.warehouses.length} warehouse(s)
                             </h5>
                             <div className="space-y-2">
-                              {item.warehouses.map((warehouse, warehouseIndex) => (
-                                <div key={warehouse.warehouseId} className="text-xs">
-                                  <div className="flex items-center justify-between mb-1">
-                                    <span className="font-medium text-blue-700">
-                                      {warehouse.warehouseName}
-                                    </span>
-                                    <span className="text-muted-foreground">
-                                      Qty: {warehouse.quantityFromWarehouse}
-                                    </span>
-                                  </div>
-                                  {warehouse.warehouseLocation && (
-                                    <p className="text-muted-foreground mb-1">
-                                      📍 {warehouse.warehouseLocation}
-                                    </p>
-                                  )}
-                                  
-                                  {/* Batches */}
-                                  {warehouse.batches && warehouse.batches.length > 0 && (
-                                    <div className="ml-4 mt-1">
-                                      <p className="text-muted-foreground mb-1">
-                                        Batches ({warehouse.batches.length}):
-                                      </p>
-                                      <div className="space-y-1">
-                                        {warehouse.batches.map((batch, batchIndex) => (
-                                          <div key={batch.batchId} className="flex items-center justify-between bg-white p-2 rounded border">
-                                            <div>
-                                              <span className="font-mono text-xs">
-                                                {batch.batchNumber}
-                                              </span>
-                                              <Badge 
-                                                variant={batch.batchStatus === 'ACTIVE' ? 'default' : 'secondary'}
-                                                className="ml-2 text-xs"
-                                              >
-                                                {batch.batchStatus}
-                                              </Badge>
-                                            </div>
-                                            <span className="text-muted-foreground">
-                                              Qty: {batch.quantityFromBatch}
-                                            </span>
-                                          </div>
-                                        ))}
-                                      </div>
+                              {item.warehouses.map(
+                                (warehouse, warehouseIndex) => (
+                                  <div
+                                    key={warehouse.warehouseId}
+                                    className="text-xs"
+                                  >
+                                    <div className="flex items-center justify-between mb-1">
+                                      <span className="font-medium text-blue-700">
+                                        {warehouse.warehouseName}
+                                      </span>
+                                      <span className="text-muted-foreground">
+                                        Qty: {warehouse.quantityFromWarehouse}
+                                      </span>
                                     </div>
-                                  )}
-                                </div>
-                              ))}
+                                    {warehouse.warehouseLocation && (
+                                      <p className="text-muted-foreground mb-1">
+                                        📍 {warehouse.warehouseLocation}
+                                      </p>
+                                    )}
+
+                                    {/* Batches */}
+                                    {warehouse.batches &&
+                                      warehouse.batches.length > 0 && (
+                                        <div className="ml-4 mt-1">
+                                          <p className="text-muted-foreground mb-1">
+                                            Batches ({warehouse.batches.length}
+                                            ):
+                                          </p>
+                                          <div className="space-y-1">
+                                            {warehouse.batches.map(
+                                              (batch, batchIndex) => (
+                                                <div
+                                                  key={batch.batchId}
+                                                  className="flex items-center justify-between bg-white p-2 rounded border"
+                                                >
+                                                  <div>
+                                                    <span className="font-mono text-xs">
+                                                      {batch.batchNumber}
+                                                    </span>
+                                                    <Badge
+                                                      variant={
+                                                        batch.batchStatus ===
+                                                        "ACTIVE"
+                                                          ? "default"
+                                                          : "secondary"
+                                                      }
+                                                      className="ml-2 text-xs"
+                                                    >
+                                                      {batch.batchStatus}
+                                                    </Badge>
+                                                  </div>
+                                                  <span className="text-muted-foreground">
+                                                    Qty:{" "}
+                                                    {batch.quantityFromBatch}
+                                                  </span>
+                                                </div>
+                                              )
+                                            )}
+                                          </div>
+                                        </div>
+                                      )}
+                                  </div>
+                                )
+                              )}
                             </div>
                           </div>
                         )}
@@ -587,10 +613,16 @@ export default function OrderDetailsPage() {
                               ${(item.originalPrice * item.quantity).toFixed(2)}
                             </p>
                             <p className="font-medium text-green-600">
-                              ${item.totalPrice?.toFixed(2) || (item.price * item.quantity).toFixed(2)}
+                              $
+                              {item.totalPrice?.toFixed(2) ||
+                                (item.price * item.quantity).toFixed(2)}
                             </p>
                             <p className="text-xs text-green-600">
-                              Saved: ${((item.originalPrice - item.price) * item.quantity).toFixed(2)}
+                              Saved: $
+                              {(
+                                (item.originalPrice - item.price) *
+                                item.quantity
+                              ).toFixed(2)}
                             </p>
                           </div>
                         ) : (
@@ -728,99 +760,113 @@ export default function OrderDetailsPage() {
                 </div>
 
                 {/* Google Maps Integration */}
-                {order.shippingAddress.latitude && order.shippingAddress.longitude && (
-                  <div className="space-y-3">
-                    <Separator />
-                    <div>
-                      <label className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
-                        Delivery Location
-                      </label>
-                      <div className="mt-2">
-                        {/* Map Type Toggle Buttons */}
-                        <div className="flex gap-1 mb-2">
-                          <Button
-                            variant={mapType === 'satellite' ? 'default' : 'outline'}
-                            size="sm"
-                            onClick={() => setMapType('satellite')}
-                            className="text-xs"
-                          >
-                            Satellite
-                          </Button>
-                          <Button
-                            variant={mapType === 'roadmap' ? 'default' : 'outline'}
-                            size="sm"
-                            onClick={() => setMapType('roadmap')}
-                            className="text-xs"
-                          >
-                            Roadmap
-                          </Button>
-                          <Button
-                            variant={mapType === 'hybrid' ? 'default' : 'outline'}
-                            size="sm"
-                            onClick={() => setMapType('hybrid')}
-                            className="text-xs"
-                          >
-                            Hybrid
-                          </Button>
-                          <Button
-                            variant={mapType === 'terrain' ? 'default' : 'outline'}
-                            size="sm"
-                            onClick={() => setMapType('terrain')}
-                            className="text-xs"
-                          >
-                            Terrain
-                          </Button>
-                        </div>
-
-                        {/* Google Maps Embed with Dynamic Map Type */}
-                        <div className="relative w-full h-48 rounded-lg overflow-hidden border">
-                          <iframe
-                            src={`https://www.google.com/maps/embed/v1/place?key=${process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY}&q=${order.shippingAddress.latitude},${order.shippingAddress.longitude}&zoom=18&maptype=${mapType}`}
-                            width="100%"
-                            height="100%"
-                            style={{ border: 0 }}
-                            allowFullScreen
-                            loading="lazy"
-                            referrerPolicy="no-referrer-when-downgrade"
-                            className="rounded-lg"
-                          />
-                        </div>
-                        
-                        {/* Coordinates and Actions */}
-                        <div className="flex items-center justify-between mt-2">
-                          <div className="text-xs text-muted-foreground">
-                            <p>Lat: {order.shippingAddress.latitude.toFixed(6)}</p>
-                            <p>Lng: {order.shippingAddress.longitude.toFixed(6)}</p>
+                {order.shippingAddress.latitude &&
+                  order.shippingAddress.longitude && (
+                    <div className="space-y-3">
+                      <Separator />
+                      <div>
+                        <label className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
+                          Delivery Location
+                        </label>
+                        <div className="mt-2">
+                          {/* Map Type Toggle Buttons */}
+                          <div className="flex gap-1 mb-2">
+                            <Button
+                              variant={
+                                mapType === "satellite" ? "default" : "outline"
+                              }
+                              size="sm"
+                              onClick={() => setMapType("satellite")}
+                              className="text-xs"
+                            >
+                              Satellite
+                            </Button>
+                            <Button
+                              variant={
+                                mapType === "roadmap" ? "default" : "outline"
+                              }
+                              size="sm"
+                              onClick={() => setMapType("roadmap")}
+                              className="text-xs"
+                            >
+                              Roadmap
+                            </Button>
+                            <Button
+                              variant={
+                                mapType === "hybrid" ? "default" : "outline"
+                              }
+                              size="sm"
+                              onClick={() => setMapType("hybrid")}
+                              className="text-xs"
+                            >
+                              Hybrid
+                            </Button>
+                            <Button
+                              variant={
+                                mapType === "terrain" ? "default" : "outline"
+                              }
+                              size="sm"
+                              onClick={() => setMapType("terrain")}
+                              className="text-xs"
+                            >
+                              Terrain
+                            </Button>
                           </div>
-                          <div className="flex gap-2">
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              onClick={() => {
-                                const url = `https://www.google.com/maps?q=${order.shippingAddress.latitude},${order.shippingAddress.longitude}`;
-                                window.open(url, '_blank');
-                              }}
-                            >
-                              <ExternalLink className="h-3 w-3 mr-1" />
-                              Open in Maps
-                            </Button>
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              onClick={() => {
-                                const url = `https://www.google.com/maps/dir/?api=1&destination=${order.shippingAddress.latitude},${order.shippingAddress.longitude}`;
-                                window.open(url, '_blank');
-                              }}
-                            >
-                              <Truck className="h-3 w-3 mr-1" />
-                              Get Directions
-                            </Button>
+
+                          {/* Google Maps Embed with Dynamic Map Type */}
+                          <div className="relative w-full h-48 rounded-lg overflow-hidden border">
+                            <iframe
+                              src={`https://www.google.com/maps/embed/v1/place?key=${process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY}&q=${order.shippingAddress.latitude},${order.shippingAddress.longitude}&zoom=18&maptype=${mapType}`}
+                              width="100%"
+                              height="100%"
+                              style={{ border: 0 }}
+                              allowFullScreen
+                              loading="lazy"
+                              referrerPolicy="no-referrer-when-downgrade"
+                              className="rounded-lg"
+                            />
+                          </div>
+
+                          {/* Coordinates and Actions */}
+                          <div className="flex items-center justify-between mt-2">
+                            <div className="text-xs text-muted-foreground">
+                              <p>
+                                Lat: {order.shippingAddress.latitude.toFixed(6)}
+                              </p>
+                              <p>
+                                Lng:{" "}
+                                {order.shippingAddress.longitude.toFixed(6)}
+                              </p>
+                            </div>
+                            <div className="flex gap-2">
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => {
+                                  const url = `https://www.google.com/maps?q=${order.shippingAddress.latitude},${order.shippingAddress.longitude}`;
+                                  window.open(url, "_blank");
+                                }}
+                              >
+                                <ExternalLink className="h-3 w-3 mr-1" />
+                                Open in Maps
+                              </Button>
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => {
+                                  const url = `https://www.google.com/maps/dir/?api=1&destination=${order.shippingAddress.latitude},${order.shippingAddress.longitude}`;
+                                  window.open(url, "_blank");
+                                }}
+                              >
+                                <Truck className="h-3 w-3 mr-1" />
+                                Get Directions
+                              </Button>
+                            </div>
                           </div>
                         </div>
                       </div>
                     </div>
-                  </div>
-                )}
+                  )}
 
                 {order.shippingAddress.phone && (
                   <div className="pt-2 border-t">
@@ -1024,133 +1070,6 @@ export default function OrderDetailsPage() {
                 <>
                   <Check className="h-4 w-4 mr-2" />
                   Update Status
-                </>
-              )}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-
-      {/* Delivery Assignment Dialog */}
-      <Dialog open={deliveryModalOpen} onOpenChange={setDeliveryModalOpen}>
-        <DialogContent className="sm:max-w-[500px]">
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-2">
-              <Truck className="h-5 w-5" />
-              Assign Delivery Agent
-            </DialogTitle>
-            <DialogDescription>
-              Select a delivery agent to assign to order #{order?.orderNumber}.
-              The agent will be responsible for delivering this order.
-            </DialogDescription>
-          </DialogHeader>
-          <div className="grid gap-4 py-4">
-            {loadingAgents ? (
-              <div className="flex items-center justify-center py-8">
-                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
-                <span className="ml-2 text-sm text-muted-foreground">
-                  Loading delivery agents...
-                </span>
-              </div>
-            ) : (
-              <div className="space-y-4">
-                <div className="space-y-2">
-                  <label className="text-sm font-medium">
-                    Search Delivery Agents
-                  </label>
-                  <Input
-                    placeholder="Search by name or email..."
-                    value={agentSearchTerm}
-                    onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
-                      setAgentSearchTerm(e.target.value)
-                    }
-                    className="w-full"
-                  />
-                </div>
-
-                <div className="space-y-2">
-                  <label className="text-sm font-medium">
-                    Select Delivery Agent
-                  </label>
-                  <Select
-                    value={selectedAgent}
-                    onValueChange={setSelectedAgent}
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder="Choose a delivery agent" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {filteredAgents.length === 0 ? (
-                        <div className="p-2 text-sm text-muted-foreground text-center">
-                          {agentSearchTerm
-                            ? "No agents found matching your search"
-                            : "No delivery agents available"}
-                        </div>
-                      ) : (
-                        filteredAgents.map((agent) => (
-                          <SelectItem key={agent.id} value={agent.id}>
-                            <div className="flex items-center gap-2">
-                              <User className="h-4 w-4" />
-                              <span>
-                                {agent.firstName} {agent.lastName}
-                              </span>
-                              <span className="text-muted-foreground">
-                                ({agent.userEmail})
-                              </span>
-                            </div>
-                          </SelectItem>
-                        ))
-                      )}
-                    </SelectContent>
-                  </Select>
-                </div>
-                {selectedAgent && (
-                  <div className="mt-3 p-3 bg-muted rounded-lg">
-                    <p className="text-sm font-medium">Selected Agent:</p>
-                    {(() => {
-                      const agent = deliveryAgents.find(
-                        (a) => a.id === selectedAgent
-                      );
-                      return agent ? (
-                        <div className="mt-1 text-sm text-muted-foreground">
-                          <p>
-                            <strong>
-                              {agent.firstName} {agent.lastName}
-                            </strong>
-                          </p>
-                          <p>{agent.userEmail}</p>
-                          {agent.phoneNumber && <p>{agent.phoneNumber}</p>}
-                        </div>
-                      ) : null;
-                    })()}
-                  </div>
-                )}
-              </div>
-            )}
-          </div>
-          <DialogFooter>
-            <Button
-              variant="outline"
-              onClick={() => {
-                setDeliveryModalOpen(false);
-                setSelectedAgent("");
-                setAgentSearchTerm("");
-              }}
-              disabled={assigning}
-            >
-              <X className="h-4 w-4 mr-2" />
-              Cancel
-            </Button>
-            <Button
-              onClick={handleDeliveryAssignment}
-              disabled={assigning || !selectedAgent || loadingAgents}
-            >
-              {assigning ? (
-                "Assigning..."
-              ) : (
-                <>
-                  <Truck className="h-4 w-4 mr-2" />
-                  Assign Agent
                 </>
               )}
             </Button>
