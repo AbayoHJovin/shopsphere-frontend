@@ -30,6 +30,8 @@ import {
   Clock,
   FileText,
   Plus,
+  History,
+  X,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import {
@@ -62,6 +64,7 @@ export default function DeliveryAgentOrdersPage() {
     id: number;
     name: string;
   } | null>(null);
+  const [showHistory, setShowHistory] = useState(false);
 
   useEffect(() => {
     fetchDeliveryGroups();
@@ -72,7 +75,7 @@ export default function DeliveryAgentOrdersPage() {
       setLoading(true);
       setError(null);
       const dashboardData = await deliveryAgentService.getDashboardData();
-      // Combine current and completed groups for the orders view
+      // Store all groups (current and completed)
       const allGroups = [...dashboardData.currentGroups, ...dashboardData.completedGroups];
       setDeliveryGroups(allGroups);
     } catch (err) {
@@ -179,7 +182,14 @@ export default function DeliveryAgentOrdersPage() {
     }
   };
 
+  // Filter groups based on history view and other filters
   const filteredGroups = deliveryGroups.filter((group) => {
+    // First filter by history view (completed vs incomplete)
+    const isCompleted = group.hasDeliveryFinished;
+    if (showHistory && !isCompleted) return false;
+    if (!showHistory && isCompleted) return false;
+
+    // Then apply search filter
     const matchesSearch = group.deliveryGroupName.toLowerCase().includes(searchTerm.toLowerCase()) ||
                          group.deliveryGroupDescription.toLowerCase().includes(searchTerm.toLowerCase());
     
@@ -188,6 +198,10 @@ export default function DeliveryAgentOrdersPage() {
     const status = getGroupStatus(group);
     return matchesSearch && status.label.toLowerCase() === statusFilter;
   });
+
+  // Separate counts for active and completed
+  const activeGroupsCount = deliveryGroups.filter(g => !g.hasDeliveryFinished).length;
+  const completedGroupsCount = deliveryGroups.filter(g => g.hasDeliveryFinished).length;
 
   const formatDate = (dateString: string) => {
     return new Date(dateString).toLocaleDateString("en-US", {
@@ -233,15 +247,39 @@ export default function DeliveryAgentOrdersPage() {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold tracking-tight">Orders</h1>
+          <h1 className="text-3xl font-bold tracking-tight">
+            {showHistory ? "Delivery History" : "Active Deliveries"}
+          </h1>
           <p className="text-muted-foreground">
-            Manage your delivery groups and orders
+            {showHistory 
+              ? "View your completed delivery groups" 
+              : "Manage your active delivery groups and orders"}
           </p>
         </div>
-        <Badge variant="outline" className="text-sm">
-          <Package className="mr-1 h-3 w-3" />
-          {filteredGroups.length} Groups
-        </Badge>
+        <div className="flex items-center gap-3">
+          <Button
+            variant={showHistory ? "default" : "outline"}
+            size="sm"
+            onClick={() => setShowHistory(!showHistory)}
+            className="flex items-center gap-2"
+          >
+            {showHistory ? (
+              <>
+                <X className="h-4 w-4" />
+                Back to Active
+              </>
+            ) : (
+              <>
+                <History className="h-4 w-4" />
+                History ({completedGroupsCount})
+              </>
+            )}
+          </Button>
+          <Badge variant="outline" className="text-sm">
+            <Package className="mr-1 h-3 w-3" />
+            {filteredGroups.length} {showHistory ? "Completed" : "Active"}
+          </Badge>
+        </div>
       </div>
 
       {/* Filters */}
@@ -262,18 +300,19 @@ export default function DeliveryAgentOrdersPage() {
                 />
               </div>
             </div>
-            <Select value={statusFilter} onValueChange={setStatusFilter}>
-              <SelectTrigger className="w-48">
-                <Filter className="mr-2 h-4 w-4" />
-                <SelectValue placeholder="Filter by status" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All Status</SelectItem>
-                <SelectItem value="pending">Pending</SelectItem>
-                <SelectItem value="in progress">In Progress</SelectItem>
-                <SelectItem value="completed">Completed</SelectItem>
-              </SelectContent>
-            </Select>
+            {!showHistory && (
+              <Select value={statusFilter} onValueChange={setStatusFilter}>
+                <SelectTrigger className="w-48">
+                  <Filter className="mr-2 h-4 w-4" />
+                  <SelectValue placeholder="Filter by status" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Status</SelectItem>
+                  <SelectItem value="pending">Pending</SelectItem>
+                  <SelectItem value="in progress">In Progress</SelectItem>
+                </SelectContent>
+              </Select>
+            )}
           </div>
         </CardContent>
       </Card>
@@ -294,6 +333,21 @@ export default function DeliveryAgentOrdersPage() {
               <Square className="h-5 w-5" />
             )}
             <p className="font-medium">{actionResult.message}</p>
+          </div>
+        </div>
+      )}
+
+      {/* Info Banner for History View */}
+      {showHistory && filteredGroups.length > 0 && (
+        <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+          <div className="flex items-start gap-3">
+            <History className="h-5 w-5 text-blue-600 mt-0.5" />
+            <div>
+              <h3 className="font-semibold text-blue-900 mb-1">Viewing Completed Deliveries</h3>
+              <p className="text-sm text-blue-800">
+                These delivery groups have been marked as finished. You can view order details and notes, but cannot modify delivery status.
+              </p>
+            </div>
           </div>
         </div>
       )}
@@ -323,36 +377,40 @@ export default function DeliveryAgentOrdersPage() {
                       >
                         {status.label}
                       </Badge>
-                      {!group.hasDeliveryStarted && (
-                        <Button
-                          size="sm"
-                          onClick={() => startDelivery(group.deliveryGroupId)}
-                          disabled={actionLoading === group.deliveryGroupId}
-                          className="flex items-center gap-1"
-                        >
-                          {actionLoading === group.deliveryGroupId ? (
-                            <Loader2 className="h-4 w-4 animate-spin" />
-                          ) : (
-                            <Play className="h-4 w-4" />
+                      {!showHistory && (
+                        <>
+                          {!group.hasDeliveryStarted && (
+                            <Button
+                              size="sm"
+                              onClick={() => startDelivery(group.deliveryGroupId)}
+                              disabled={actionLoading === group.deliveryGroupId}
+                              className="flex items-center gap-1"
+                            >
+                              {actionLoading === group.deliveryGroupId ? (
+                                <Loader2 className="h-4 w-4 animate-spin" />
+                              ) : (
+                                <Play className="h-4 w-4" />
+                              )}
+                              Start Delivery
+                            </Button>
                           )}
-                          Start Delivery
-                        </Button>
-                      )}
-                      {group.hasDeliveryStarted && !group.hasDeliveryFinished && (
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          onClick={() => finishDelivery(group.deliveryGroupId)}
-                          disabled={actionLoading === group.deliveryGroupId}
-                          className="flex items-center gap-1"
-                        >
-                          {actionLoading === group.deliveryGroupId ? (
-                            <Loader2 className="h-4 w-4 animate-spin" />
-                          ) : (
-                            <Square className="h-4 w-4" />
+                          {group.hasDeliveryStarted && !group.hasDeliveryFinished && (
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              onClick={() => finishDelivery(group.deliveryGroupId)}
+                              disabled={actionLoading === group.deliveryGroupId}
+                              className="flex items-center gap-1"
+                            >
+                              {actionLoading === group.deliveryGroupId ? (
+                                <Loader2 className="h-4 w-4 animate-spin" />
+                              ) : (
+                                <Square className="h-4 w-4" />
+                              )}
+                              Finish Delivery
+                            </Button>
                           )}
-                          Finish Delivery
-                        </Button>
+                        </>
                       )}
                     </div>
                   </div>
@@ -402,7 +460,7 @@ export default function DeliveryAgentOrdersPage() {
                     </div>
 
                     {/* Delivery Notes Actions */}
-                    {group.hasDeliveryStarted && !group.hasDeliveryFinished && (
+                    {group.hasDeliveryStarted && (
                       <div className="flex items-center gap-2">
                         <Button
                           variant="outline"
@@ -419,21 +477,23 @@ export default function DeliveryAgentOrdersPage() {
                           <FileText className="h-4 w-4" />
                           View Notes
                         </Button>
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => {
-                            setSelectedGroupForNotes({
-                              id: group.deliveryGroupId,
-                              name: group.deliveryGroupName,
-                            });
-                            setAddNoteDialogOpen(true);
-                          }}
-                          className="flex items-center gap-1"
-                        >
-                          <Plus className="h-4 w-4" />
-                          Add Note
-                        </Button>
+                        {!group.hasDeliveryFinished && (
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => {
+                              setSelectedGroupForNotes({
+                                id: group.deliveryGroupId,
+                                name: group.deliveryGroupName,
+                              });
+                              setAddNoteDialogOpen(true);
+                            }}
+                            className="flex items-center gap-1"
+                          >
+                            <Plus className="h-4 w-4" />
+                            Add Note
+                          </Button>
+                        )}
                       </div>
                     )}
 
@@ -494,11 +554,15 @@ export default function DeliveryAgentOrdersPage() {
         <Card>
           <CardContent className="flex flex-col items-center justify-center py-12">
             <Package className="h-12 w-12 text-muted-foreground mb-4" />
-            <h3 className="text-lg font-semibold mb-2">No Orders Found</h3>
+            <h3 className="text-lg font-semibold mb-2">
+              {showHistory ? "No Completed Deliveries" : "No Active Deliveries"}
+            </h3>
             <p className="text-muted-foreground text-center max-w-md">
-              {searchTerm || statusFilter !== "all"
+              {searchTerm || (!showHistory && statusFilter !== "all")
                 ? "No delivery groups match your current filters. Try adjusting your search criteria."
-                : "You don't have any delivery groups assigned at the moment. Check back later or contact your supervisor for new assignments."}
+                : showHistory
+                ? "You don't have any completed deliveries yet. Completed delivery groups will appear here."
+                : "You don't have any active delivery groups at the moment. Check back later or contact your supervisor for new assignments."}
             </p>
           </CardContent>
         </Card>
