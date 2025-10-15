@@ -82,7 +82,7 @@ export default function DeliveryAgentReturnsPage() {
   } = useQuery({
     queryKey: ["delivery-agent-returns", filters],
     queryFn: () => deliveryAgentReturnsService.getAssignedReturnRequests(filters),
-    keepPreviousData: true,
+    placeholderData: (previousData) => previousData,
   });
 
   // Fetch stats
