@@ -209,10 +209,10 @@ export default function ReturnRequestDetailsPage() {
         </div>
         <div className="flex items-center gap-2">
           <Badge className={cn("text-sm", returnStatusInfo.color)}>
-            {returnStatusInfo.icon} {returnStatusInfo.label}
+            {returnStatusInfo.label}
           </Badge>
           <Badge className={cn("text-sm", deliveryStatusInfo.color)}>
-            {deliveryStatusInfo.icon} {deliveryStatusInfo.label}
+       {deliveryStatusInfo.label}
           </Badge>
         </div>
       </div>
@@ -271,6 +271,16 @@ export default function ReturnRequestDetailsPage() {
             <div>
               <Label className="text-sm font-medium">Order Total</Label>
               <p className="text-sm text-muted-foreground">{formatCurrency(returnDetails.orderTotal)}</p>
+            </div>
+            <div className="pt-2">
+              <Button
+                variant="outline"
+                className="w-full"
+                onClick={() => router.push(`/delivery-agent/orders/${returnDetails.orderId}`)}
+              >
+                <ExternalLink className="mr-2 h-4 w-4" />
+                View Parent Order
+              </Button>
             </div>
           </CardContent>
         </Card>

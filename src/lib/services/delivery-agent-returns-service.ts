@@ -232,15 +232,15 @@ class DeliveryAgentReturnsService {
   getReturnStatusInfo(status: ReturnStatus) {
     switch (status) {
       case ReturnStatus.PENDING:
-        return { label: 'Pending', color: 'bg-yellow-100 text-yellow-800', icon: '⏳' };
+        return { label: 'Pending', color: 'bg-yellow-100 text-yellow-800' };
       case ReturnStatus.APPROVED:
-        return { label: 'Approved', color: 'bg-green-100 text-green-800', icon: '✅' };
+        return { label: 'Approved', color: 'bg-green-100 text-green-800' };
       case ReturnStatus.DENIED:
-        return { label: 'Denied', color: 'bg-red-100 text-red-800', icon: '❌' };
+        return { label: 'Denied', color: 'bg-red-100 text-red-800' };
       case ReturnStatus.COMPLETED:
-        return { label: 'Completed', color: 'bg-blue-100 text-blue-800', icon: '🏁' };
+        return { label: 'Completed', color: 'bg-blue-100 text-blue-800' };
       default:
-        return { label: status, color: 'bg-gray-100 text-gray-800', icon: '❓' };
+        return { label: status, color: 'bg-gray-100 text-gray-800' };
     }
   }
 
@@ -250,21 +250,21 @@ class DeliveryAgentReturnsService {
   getDeliveryStatusInfo(status: DeliveryStatus) {
     switch (status) {
       case DeliveryStatus.NOT_ASSIGNED:
-        return { label: 'Not Assigned', color: 'bg-gray-100 text-gray-800', icon: '📋' };
+        return { label: 'Not Assigned', color: 'bg-gray-100 text-gray-800' };
       case DeliveryStatus.ASSIGNED:
-        return { label: 'Assigned', color: 'bg-blue-100 text-blue-800', icon: '👤' };
+        return { label: 'Assigned', color: 'bg-blue-100 text-blue-800' };
       case DeliveryStatus.PICKUP_SCHEDULED:
-        return { label: 'Pickup Scheduled', color: 'bg-purple-100 text-purple-800', icon: '📅' };
+        return { label: 'Pickup Scheduled', color: 'bg-purple-100 text-purple-800' };
       case DeliveryStatus.PICKUP_IN_PROGRESS:
-        return { label: 'Pickup In Progress', color: 'bg-orange-100 text-orange-800', icon: '🚚' };
+        return { label: 'Pickup In Progress', color: 'bg-orange-100 text-orange-800' };
       case DeliveryStatus.PICKUP_COMPLETED:
-        return { label: 'Pickup Completed', color: 'bg-green-100 text-green-800', icon: '✅' };
+        return { label: 'Pickup Completed', color: 'bg-green-100 text-green-800' };
       case DeliveryStatus.PICKUP_FAILED:
-        return { label: 'Pickup Failed', color: 'bg-red-100 text-red-800', icon: '❌' };
+        return { label: 'Pickup Failed', color: 'bg-red-100 text-red-800' };
       case DeliveryStatus.CANCELLED:
-        return { label: 'Cancelled', color: 'bg-gray-100 text-gray-800', icon: '🚫' };
+        return { label: 'Cancelled', color: 'bg-gray-100 text-gray-800' };
       default:
-        return { label: status, color: 'bg-gray-100 text-gray-800', icon: '❓' };
+        return { label: status, color: 'bg-gray-100 text-gray-800' };
     }
   }
 

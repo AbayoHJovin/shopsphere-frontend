@@ -46,6 +46,8 @@ import {
   XCircle,
   AlertCircle,
   Truck,
+  ChevronDown,
+  ChevronUp,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import {
@@ -63,11 +65,13 @@ export default function DeliveryAgentReturnsPage() {
     size: 10,
     sortBy: "createdAt",
     sortDirection: "desc",
+    deliveryStatus: "ASSIGNED,PICKUP_SCHEDULED,PICKUP_IN_PROGRESS", // Default to incomplete statuses
   });
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedReturnStatus, setSelectedReturnStatus] = useState<string>("all");
-  const [selectedDeliveryStatus, setSelectedDeliveryStatus] = useState<string>("all");
+  const [selectedDeliveryStatus, setSelectedDeliveryStatus] = useState<string>("incomplete");
   const [dateFilter, setDateFilter] = useState<string>("all");
+  const [showStats, setShowStats] = useState(true);
 
   // Fetch return requests
   const {
@@ -94,7 +98,11 @@ export default function DeliveryAgentReturnsPage() {
       page: 0, // Reset to first page
       customerName: searchTerm || undefined,
       returnStatus: selectedReturnStatus !== "all" ? selectedReturnStatus : undefined,
-      deliveryStatus: selectedDeliveryStatus !== "all" ? selectedDeliveryStatus : undefined,
+      deliveryStatus: selectedDeliveryStatus === "incomplete" 
+        ? "ASSIGNED,PICKUP_SCHEDULED,PICKUP_IN_PROGRESS" 
+        : selectedDeliveryStatus !== "all" 
+        ? selectedDeliveryStatus 
+        : undefined,
     };
 
     // Apply date filters
@@ -129,13 +137,14 @@ export default function DeliveryAgentReturnsPage() {
   const clearFilters = () => {
     setSearchTerm("");
     setSelectedReturnStatus("all");
-    setSelectedDeliveryStatus("all");
+    setSelectedDeliveryStatus("incomplete");
     setDateFilter("all");
     setFilters({
       page: 0,
       size: 10,
       sortBy: "createdAt",
       sortDirection: "desc",
+      deliveryStatus: "ASSIGNED,PICKUP_SCHEDULED,PICKUP_IN_PROGRESS",
     });
   };
 
@@ -177,14 +186,33 @@ export default function DeliveryAgentReturnsPage() {
             Manage your assigned return pickups
           </p>
         </div>
-        <Badge variant="outline" className="text-sm">
-          <RotateCcw className="mr-1 h-3 w-3" />
-          {returnRequestsData?.totalElements || 0} Returns
-        </Badge>
+        <div className="flex items-center gap-3">
+          <Badge variant="outline" className="text-sm">
+            <RotateCcw className="mr-1 h-3 w-3" />
+            {returnRequestsData?.totalElements || 0} Returns
+          </Badge>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => setShowStats(!showStats)}
+          >
+            {showStats ? (
+              <>
+                <ChevronUp className="mr-2 h-4 w-4" />
+                Hide Stats
+              </>
+            ) : (
+              <>
+                <ChevronDown className="mr-2 h-4 w-4" />
+                Show Stats
+              </>
+            )}
+          </Button>
+        </div>
       </div>
 
       {/* Stats Cards */}
-      {stats && (
+      {showStats && stats && (
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-5">
           <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
@@ -276,12 +304,14 @@ export default function DeliveryAgentReturnsPage() {
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
+                  <SelectItem value="incomplete">Incomplete (Default)</SelectItem>
                   <SelectItem value="all">All Status</SelectItem>
                   <SelectItem value="ASSIGNED">Assigned</SelectItem>
                   <SelectItem value="PICKUP_SCHEDULED">Pickup Scheduled</SelectItem>
                   <SelectItem value="PICKUP_IN_PROGRESS">Pickup In Progress</SelectItem>
                   <SelectItem value="PICKUP_COMPLETED">Pickup Completed</SelectItem>
                   <SelectItem value="PICKUP_FAILED">Pickup Failed</SelectItem>
+                  <SelectItem value="CANCELLED">Cancelled</SelectItem>
                 </SelectContent>
               </Select>
             </div>
@@ -340,12 +370,12 @@ export default function DeliveryAgentReturnsPage() {
                 <Table>
                   <TableHeader>
                     <TableRow>
-                      <TableHead>Order</TableHead>
-                      <TableHead>Customer</TableHead>
-                      <TableHead>Return Status</TableHead>
-                      <TableHead>Delivery Status</TableHead>
-                      <TableHead>Created</TableHead>
-                      <TableHead>Actions</TableHead>
+                      <TableHead className="whitespace-nowrap">Order</TableHead>
+                      <TableHead className="whitespace-nowrap">Customer</TableHead>
+                      <TableHead className="whitespace-nowrap">Return Status</TableHead>
+                      <TableHead className="whitespace-nowrap">Delivery Status</TableHead>
+                      <TableHead className="whitespace-nowrap">Created</TableHead>
+                      <TableHead className="whitespace-nowrap">Actions</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
@@ -355,7 +385,7 @@ export default function DeliveryAgentReturnsPage() {
                       
                       return (
                         <TableRow key={returnRequest.id} className="hover:bg-muted/50">
-                          <TableCell>
+                          <TableCell className="whitespace-nowrap">
                             <div className="flex flex-col">
                               <span className="font-medium">{returnRequest.orderNumber}</span>
                               <span className="text-sm text-muted-foreground">
@@ -363,44 +393,44 @@ export default function DeliveryAgentReturnsPage() {
                               </span>
                             </div>
                           </TableCell>
-                          <TableCell>
-                            <div className="flex flex-col">
-                              <span className="font-medium">{returnRequest.customerName}</span>
-                              <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                                <Mail className="h-3 w-3" />
-                                {returnRequest.customerEmail}
+                          <TableCell className="min-w-[250px]">
+                            <div className="flex flex-col gap-1">
+                              <span className="font-medium whitespace-nowrap">{returnRequest.customerName}</span>
+                              <div className="flex items-center gap-2 text-sm text-muted-foreground whitespace-nowrap">
+                                <Mail className="h-3 w-3 flex-shrink-0" />
+                                <span className="truncate">{returnRequest.customerEmail}</span>
                               </div>
                               {returnRequest.customerPhone && (
-                                <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                                  <Phone className="h-3 w-3" />
+                                <div className="flex items-center gap-2 text-sm text-muted-foreground whitespace-nowrap">
+                                  <Phone className="h-3 w-3 flex-shrink-0" />
                                   {returnRequest.customerPhone}
                                 </div>
                               )}
                               {returnRequest.customerAddress && (
                                 <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                                  <MapPin className="h-3 w-3" />
-                                  {returnRequest.customerAddress}
+                                  <MapPin className="h-3 w-3 flex-shrink-0" />
+                                  <span className="line-clamp-2">{returnRequest.customerAddress}</span>
                                 </div>
                               )}
                             </div>
                           </TableCell>
-                          <TableCell>
+                          <TableCell className="whitespace-nowrap">
                             <Badge className={cn("text-xs", returnStatusInfo.color)}>
-                              {returnStatusInfo.icon} {returnStatusInfo.label}
+                              {returnStatusInfo.label}
                             </Badge>
                           </TableCell>
-                          <TableCell>
+                          <TableCell className="whitespace-nowrap">
                             <Badge className={cn("text-xs", deliveryStatusInfo.color)}>
-                              {deliveryStatusInfo.icon} {deliveryStatusInfo.label}
+                              {deliveryStatusInfo.label}
                             </Badge>
                           </TableCell>
-                          <TableCell>
+                          <TableCell className="whitespace-nowrap">
                             <div className="flex items-center gap-1 text-sm">
                               <Clock className="h-3 w-3" />
                               {formatDate(returnRequest.createdAt)}
                             </div>
                           </TableCell>
-                          <TableCell>
+                          <TableCell className="whitespace-nowrap">
                             <Button
                               variant="outline"
                               size="sm"
