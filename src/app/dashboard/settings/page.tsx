@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useTheme } from "next-themes";
+import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -51,12 +52,15 @@ import {
   CheckCircle2,
   Grid3X3Icon,
   BarChart4,
+  Trash2,
+  AlertTriangle,
 } from "lucide-react";
 
 
 export default function SettingsPage() {
   // Theme handling
   const { theme, setTheme } = useTheme();
+  const router = useRouter();
   
   // State for form inputs
   const [name, setName] = useState("");
@@ -96,7 +100,7 @@ export default function SettingsPage() {
       {/* Settings Tabs */}
       <Tabs defaultValue="appearance" className="w-full">
         <div className="flex flex-col sm:flex-row justify-between items-start gap-2">
-          <TabsList className="w-full max-w-md mb-6 grid grid-cols-2 md:flex">
+          <TabsList className="w-full max-w-2xl mb-6 grid grid-cols-2 md:grid-cols-5 gap-1">
             <TabsTrigger value="appearance" className="flex items-center justify-center data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
               <Palette className="w-4 h-4 mr-2" />
               <span className="hidden sm:inline">Appearance</span>
@@ -114,6 +118,11 @@ export default function SettingsPage() {
             <TabsTrigger value="security" className="flex items-center justify-center data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
               <Lock className="w-4 h-4 mr-2" />
               Security
+            </TabsTrigger>
+            <TabsTrigger value="system" className="flex items-center justify-center data-[state=active]:bg-destructive data-[state=active]:text-destructive-foreground">
+              <Trash2 className="w-4 h-4 mr-2" />
+              <span className="hidden sm:inline">System</span>
+              <span className="sm:hidden">Reset</span>
             </TabsTrigger>
           </TabsList>
 

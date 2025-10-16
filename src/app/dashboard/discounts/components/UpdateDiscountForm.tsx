@@ -305,7 +305,7 @@ export function UpdateDiscountForm({
                     today.setHours(0, 0, 0, 0);
                     return (
                       date < today ||
-                      (watchedStartDate && date < watchedStartDate)
+                      (watchedStartDate ? date < watchedStartDate : false)
                     );
                   }}
                   initialFocus

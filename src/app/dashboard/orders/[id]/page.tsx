@@ -464,17 +464,17 @@ export default function OrderDetailsPage() {
                         {item.hasDiscount &&
                           item.originalPrice &&
                           item.discountPercentage && (
-                            <div className="mt-2 p-2 bg-green-50 border border-green-200 rounded-lg">
+                            <div className="mt-2 p-2 bg-blue-50 border border-blue-200 rounded-lg">
                               <div className="flex items-center justify-between">
                                 <div className="flex items-center gap-2">
                                   <Badge
                                     variant="secondary"
-                                    className="bg-green-100 text-green-800 font-semibold"
+                                    className="bg-blue-100 text-blue-800 font-semibold"
                                   >
                                     -{Math.round(item.discountPercentage)}%
                                     DISCOUNT
                                   </Badge>
-                                  <span className="text-xs text-green-700 font-medium">
+                                  <span className="text-xs text-blue-700 font-medium">
                                     Applied at purchase
                                   </span>
                                 </div>
@@ -492,7 +492,7 @@ export default function OrderDetailsPage() {
                                   <span className="text-muted-foreground">
                                     Discounted:{" "}
                                   </span>
-                                  <span className="text-green-700 font-semibold">
+                                  <span className="text-blue-700 font-semibold">
                                     ${item.price?.toFixed(2) || "0.00"}
                                   </span>
                                 </div>
@@ -500,7 +500,7 @@ export default function OrderDetailsPage() {
                                   <span className="text-muted-foreground">
                                     Saved:{" "}
                                   </span>
-                                  <span className="text-green-700 font-semibold">
+                                  <span className="text-blue-700 font-semibold">
                                     $
                                     {(item.originalPrice - item.price).toFixed(
                                       2
@@ -612,12 +612,12 @@ export default function OrderDetailsPage() {
                             <p className="text-sm text-muted-foreground line-through">
                               ${(item.originalPrice * item.quantity).toFixed(2)}
                             </p>
-                            <p className="font-medium text-green-600">
+                            <p className="font-medium text-blue-600">
                               $
                               {item.totalPrice?.toFixed(2) ||
                                 (item.price * item.quantity).toFixed(2)}
                             </p>
-                            <p className="text-xs text-green-600">
+                            <p className="text-xs text-blue-600">
                               Saved: $
                               {(
                                 (item.originalPrice - item.price) *
@@ -685,7 +685,7 @@ export default function OrderDetailsPage() {
                 </div>
               )}
               {order.discount && order.discount > 0 && (
-                <div className="flex justify-between text-sm text-green-600">
+                <div className="flex justify-between text-sm text-blue-600">
                   <span>Discount</span>
                   <span>-${order.discount.toFixed(2)}</span>
                 </div>
@@ -872,7 +872,7 @@ export default function OrderDetailsPage() {
                     <label className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
                       Contact Phone
                     </label>
-                    <p className="text-sm font-medium text-green-700 dark:text-green-400">
+                    <p className="text-sm font-medium text-blue-700 dark:text-blue-400">
                       {order.shippingAddress.phone}
                     </p>
                   </div>
