@@ -95,6 +95,12 @@ export const API_ENDPOINTS = {
     ADMIN_REVIEW: `/returns/admin/review`,
     COUNT_PENDING: `/returns/admin/count/pending`,
   },
+  MONEY_FLOW: {
+    BASE: `/money-flow`,
+    TRANSACTIONS: `/money-flow/transactions`,
+    BALANCE: `/money-flow/balance`,
+    BY_ID: (id: number) => `/money-flow/${id}`,
+  },
 };
 
 // User roles - must match backend UserRole enum exactly

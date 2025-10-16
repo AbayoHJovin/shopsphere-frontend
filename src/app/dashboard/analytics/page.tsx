@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useAppSelector } from "@/lib/redux/hooks";
 import { dashboardService } from "@/lib/services/dashboard-service";
+import { moneyFlowService } from "@/lib/services/money-flow-service";
 import { UserRole } from "@/lib/constants";
 import {
   Card,
@@ -20,6 +21,13 @@ import {
   PopoverTrigger,
 } from "@/components/ui/popover";
 import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
   CalendarIcon,
   TrendingUp,
   TrendingDown,
@@ -28,13 +36,29 @@ import {
   ShoppingCart,
   CreditCard,
   BarChart3,
+  ArrowUpCircle,
+  ArrowDownCircle,
+  Wallet,
 } from "lucide-react";
 import { formatCurrency } from "@/lib/utils";
 import {
   AnalyticsResponseDTO,
   AnalyticsRequestDTO,
 } from "@/lib/types/dashboard";
-import { format } from "date-fns";
+import { format, subDays, subMonths, subYears, startOfDay, endOfDay } from "date-fns";
+import {
+  LineChart,
+  Line,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  Legend,
+  ResponsiveContainer,
+  Area,
+  AreaChart,
+} from "recharts";
+import { MoneyFlowType } from "@/lib/types/money-flow";
 
 // Analytics metric card component
 function MetricCard({
@@ -87,6 +111,9 @@ function MetricCard({
   );
 }
 
+// Quick filter options for money flow
+type QuickFilter = "24h" | "7d" | "30d" | "90d" | "1y" | "custom";
+
 export default function AnalyticsPage() {
   const { user } = useAppSelector((state) => state.auth);
   const isAdmin = user?.role === UserRole.ADMIN;
@@ -99,6 +126,18 @@ export default function AnalyticsPage() {
     from: new Date(new Date().getFullYear(), new Date().getMonth(), 1), // Start of current month
     to: new Date(), // Today
   });
+
+  // Money flow date range state
+  const [moneyFlowDateRange, setMoneyFlowDateRange] = useState<{
+    from: Date;
+    to: Date;
+  }>({
+    from: subDays(new Date(), 30),
+    to: new Date(),
+  });
+
+  // Quick filter state
+  const [quickFilter, setQuickFilter] = useState<QuickFilter>("30d");
 
   // Analytics request
   const analyticsRequest: AnalyticsRequestDTO = {
@@ -117,12 +156,76 @@ export default function AnalyticsPage() {
     enabled: !!dateRange.from && !!dateRange.to,
   });
 
+  // Fetch money flow data
+  const {
+    data: moneyFlowData,
+    isLoading: moneyFlowLoading,
+    error: moneyFlowError,
+    refetch: refetchMoneyFlow,
+  } = useQuery({
+    queryKey: [
+      "moneyFlow",
+      format(moneyFlowDateRange.from, "yyyy-MM-dd'T'HH:mm:ss"),
+      format(moneyFlowDateRange.to, "yyyy-MM-dd'T'HH:mm:ss"),
+    ],
+    queryFn: () =>
+      moneyFlowService.getMoneyFlow(
+        format(moneyFlowDateRange.from, "yyyy-MM-dd'T'HH:mm:ss"),
+        format(moneyFlowDateRange.to, "yyyy-MM-dd'T'HH:mm:ss")
+      ),
+    enabled: !!moneyFlowDateRange.from && !!moneyFlowDateRange.to,
+  });
+
+  // Fetch current balance
+  const { data: currentBalance } = useQuery({
+    queryKey: ["moneyFlowBalance"],
+    queryFn: () => moneyFlowService.getCurrentBalance(),
+  });
+
   const handleDateChange = (from: Date | undefined, to: Date | undefined) => {
     setDateRange({ from, to });
   };
 
   const handleRefresh = () => {
     refetch();
+  };
+
+  const handleQuickFilterChange = (filter: QuickFilter) => {
+    setQuickFilter(filter);
+    const now = new Date();
+    let from: Date;
+
+    switch (filter) {
+      case "24h":
+        from = subDays(now, 1);
+        break;
+      case "7d":
+        from = subDays(now, 7);
+        break;
+      case "30d":
+        from = subDays(now, 30);
+        break;
+      case "90d":
+        from = subDays(now, 90);
+        break;
+      case "1y":
+        from = subYears(now, 1);
+        break;
+      default:
+        return;
+    }
+
+    setMoneyFlowDateRange({ from, to: now });
+  };
+
+  const handleMoneyFlowDateChange = (
+    from: Date | undefined,
+    to: Date | undefined
+  ) => {
+    if (from && to) {
+      setMoneyFlowDateRange({ from, to });
+      setQuickFilter("custom");
+    }
   };
 
   if (isLoading) {
@@ -296,15 +399,15 @@ export default function AnalyticsPage() {
                           {index + 1}
                         </div>
                         <div>
-                          <p className="font-medium">{product.name}</p>
+                          <p className="font-medium">{product.productName}</p>
                           <p className="text-sm text-muted-foreground">
-                            {product.totalSold} units sold
+                            {product.totalSalesCount} units sold
                           </p>
                         </div>
                       </div>
                       <div className="text-right">
                         <p className="font-medium text-primary">
-                          {formatCurrency(product.totalRevenue)}
+                          {formatCurrency(product.totalSalesAmount)}
                         </p>
                         <p className="text-xs text-muted-foreground">Revenue</p>
                       </div>
@@ -314,6 +417,419 @@ export default function AnalyticsPage() {
               </CardContent>
             </Card>
           )}
+
+          {/* Money Flow Graph */}
+          <Card className="mb-6">
+            <CardHeader>
+              <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+                <div>
+                  <CardTitle className="flex items-center gap-2">
+                    <Wallet className="h-5 w-5" />
+                    Money Flow Tracking
+                  </CardTitle>
+                  <CardDescription>
+                    Monthly income trend - Blue line rises with revenue, falls with expenses (
+                    {moneyFlowData?.granularity || "loading..."} granularity)
+                  </CardDescription>
+                </div>
+                <div className="flex items-center gap-2">
+                  <Select
+                    value={quickFilter}
+                    onValueChange={(value) =>
+                      handleQuickFilterChange(value as QuickFilter)
+                    }
+                  >
+                    <SelectTrigger className="w-[140px]">
+                      <SelectValue placeholder="Select range" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="24h">Last 24 Hours</SelectItem>
+                      <SelectItem value="7d">Last 7 Days</SelectItem>
+                      <SelectItem value="30d">Last 30 Days</SelectItem>
+                      <SelectItem value="90d">Last 90 Days</SelectItem>
+                      <SelectItem value="1y">Last Year</SelectItem>
+                      <SelectItem value="custom">Custom Range</SelectItem>
+                    </SelectContent>
+                  </Select>
+
+                  {quickFilter === "custom" && (
+                    <Popover>
+                      <PopoverTrigger asChild>
+                        <Button variant="outline" size="sm" className="gap-2">
+                          <CalendarIcon className="h-4 w-4" />
+                          {format(moneyFlowDateRange.from, "MMM dd")} -{" "}
+                          {format(moneyFlowDateRange.to, "MMM dd")}
+                        </Button>
+                      </PopoverTrigger>
+                      <PopoverContent className="w-auto p-0" align="end">
+                        <Calendar
+                          initialFocus
+                          mode="range"
+                          defaultMonth={moneyFlowDateRange.from}
+                          selected={{
+                            from: moneyFlowDateRange.from,
+                            to: moneyFlowDateRange.to,
+                          }}
+                          onSelect={(range) =>
+                            handleMoneyFlowDateChange(range?.from, range?.to)
+                          }
+                          numberOfMonths={2}
+                        />
+                      </PopoverContent>
+                    </Popover>
+                  )}
+                </div>
+              </div>
+            </CardHeader>
+            <CardContent>
+              {/* Current Balance Display */}
+              {currentBalance !== undefined && (
+                <div className="mb-6 p-4 bg-primary/5 rounded-lg border border-primary/20">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-sm text-muted-foreground">
+                        Current Balance
+                      </p>
+                      <p className="text-3xl font-bold text-primary">
+                        {formatCurrency(currentBalance)}
+                      </p>
+                    </div>
+                    <Wallet className="h-12 w-12 text-primary/30" />
+                  </div>
+                </div>
+              )}
+
+              {moneyFlowLoading && (
+                <div className="flex items-center justify-center h-[400px]">
+                  <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-primary"></div>
+                </div>
+              )}
+
+              {moneyFlowError && (
+                <div className="flex flex-col items-center justify-center h-[400px] text-center gap-2">
+                  <p className="text-muted-foreground">
+                    Failed to load money flow data
+                  </p>
+                  <Button
+                    onClick={() => refetchMoneyFlow()}
+                    variant="outline"
+                    size="sm"
+                  >
+                    Try Again
+                  </Button>
+                </div>
+              )}
+
+              {moneyFlowData &&
+                moneyFlowData.aggregations &&
+                moneyFlowData.aggregations.length > 0 && (
+                  <>
+                    {/* Summary Cards */}
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+                      <div className="p-4 bg-green-50 dark:bg-green-950/20 rounded-lg border border-green-200 dark:border-green-900">
+                        <div className="flex items-center gap-2 mb-2">
+                          <ArrowUpCircle className="h-5 w-5 text-green-600 dark:text-green-400" />
+                          <p className="text-sm font-medium text-green-900 dark:text-green-100">
+                            Total Inflow
+                          </p>
+                        </div>
+                        <p className="text-2xl font-bold text-green-700 dark:text-green-300">
+                          {formatCurrency(
+                            moneyFlowData.aggregations.reduce(
+                              (sum, agg) => sum + agg.totalInflow,
+                              0
+                            )
+                          )}
+                        </p>
+                      </div>
+
+                      <div className="p-4 bg-red-50 dark:bg-red-950/20 rounded-lg border border-red-200 dark:border-red-900">
+                        <div className="flex items-center gap-2 mb-2">
+                          <ArrowDownCircle className="h-5 w-5 text-red-600 dark:text-red-400" />
+                          <p className="text-sm font-medium text-red-900 dark:text-red-100">
+                            Total Outflow
+                          </p>
+                        </div>
+                        <p className="text-2xl font-bold text-red-700 dark:text-red-300">
+                          {formatCurrency(
+                            moneyFlowData.aggregations.reduce(
+                              (sum, agg) => sum + agg.totalOutflow,
+                              0
+                            )
+                          )}
+                        </p>
+                      </div>
+
+                      <div className="p-4 bg-blue-50 dark:bg-blue-950/20 rounded-lg border border-blue-200 dark:border-blue-900">
+                        <div className="flex items-center gap-2 mb-2">
+                          <BarChart3 className="h-5 w-5 text-blue-600 dark:text-blue-400" />
+                          <p className="text-sm font-medium text-blue-900 dark:text-blue-100">
+                            Net Balance
+                          </p>
+                        </div>
+                        <p className="text-2xl font-bold text-blue-700 dark:text-blue-300">
+                          {formatCurrency(
+                            moneyFlowData.aggregations.reduce(
+                              (sum, agg) => sum + agg.netBalance,
+                              0
+                            )
+                          )}
+                        </p>
+                      </div>
+                    </div>
+
+                    {/* Chart */}
+                    <div className="h-[450px] w-full">
+                      <ResponsiveContainer width="100%" height="100%">
+                        <AreaChart
+                          data={moneyFlowData.aggregations.map((agg) => {
+                            // Format period label based on granularity
+                            let displayPeriod = agg.period;
+                            const granularity = moneyFlowData.granularity;
+                            
+                            try {
+                              if (granularity === 'minute') {
+                                // Format: "HH:MM"
+                                const parts = agg.period.split(' ');
+                                displayPeriod = parts[1] || agg.period;
+                              } else if (granularity === 'hour') {
+                                // Format: "HH:00" or "Mon HH:00"
+                                const parts = agg.period.split(' ');
+                                displayPeriod = parts[1] || agg.period;
+                              } else if (granularity === 'day') {
+                                // Format: "Mon DD" or "MM-DD"
+                                const date = new Date(agg.period);
+                                displayPeriod = format(date, 'MMM dd');
+                              } else if (granularity === 'week') {
+                                // Format: "Week NN"
+                                displayPeriod = agg.period.replace('W', 'Week ');
+                              } else if (granularity === 'month') {
+                                // Format: "Jan 2024"
+                                const [year, month] = agg.period.split('-');
+                                const date = new Date(parseInt(year), parseInt(month) - 1);
+                                displayPeriod = format(date, 'MMM yyyy');
+                              } else if (granularity === 'year') {
+                                displayPeriod = agg.period;
+                              }
+                            } catch (e) {
+                              displayPeriod = agg.period;
+                            }
+                            
+                            return {
+                              period: displayPeriod,
+                              originalPeriod: agg.period,
+                              inflow: agg.totalInflow,
+                              outflow: agg.totalOutflow,
+                              net: agg.netBalance,
+                              transactions: agg.transactions,
+                            };
+                          })}
+                          margin={{ top: 20, right: 30, left: 10, bottom: 10 }}
+                        >
+                          <defs>
+                            <linearGradient
+                              id="colorNet"
+                              x1="0"
+                              y1="0"
+                              x2="0"
+                              y2="1"
+                            >
+                              <stop
+                                offset="5%"
+                                stopColor="#2563eb"
+                                stopOpacity={0.3}
+                              />
+                              <stop
+                                offset="95%"
+                                stopColor="#2563eb"
+                                stopOpacity={0.05}
+                              />
+                            </linearGradient>
+                          </defs>
+                          <CartesianGrid strokeDasharray="3 3" stroke="rgba(0,0,0,0.1)" />
+                          <XAxis
+                            dataKey="period"
+                            tick={{ fontSize: 11, fill: '#666' }}
+                            angle={-35}
+                            textAnchor="end"
+                            height={70}
+                            stroke="rgba(0,0,0,0.3)"
+                            tickLine={{ stroke: 'rgba(0,0,0,0.2)' }}
+                            interval="preserveStartEnd"
+                          />
+                          <YAxis
+                            tick={{ fontSize: 11, fill: '#666' }}
+                            tickFormatter={(value) => {
+                              const absValue = Math.abs(value);
+                              if (absValue >= 1000) {
+                                return `$${(value / 1000).toFixed(0)}k`;
+                              }
+                              return `$${value.toLocaleString()}`;
+                            }}
+                            stroke="rgba(0,0,0,0.3)"
+                            tickLine={{ stroke: 'rgba(0,0,0,0.2)' }}
+                            axisLine={{ stroke: 'rgba(0,0,0,0.3)' }}
+                          />
+                          <Tooltip
+                            content={({ active, payload }) => {
+                              if (active && payload && payload.length) {
+                                const data = payload[0].payload;
+                                return (
+                                  <div className="bg-background border border-border rounded-lg shadow-lg p-4 max-w-sm">
+                                    <p className="font-semibold mb-2 text-blue-600">
+                                      {data.originalPeriod || data.period}
+                                    </p>
+                                    <div className="space-y-1 text-sm">
+                                      <div className="flex items-center justify-between gap-4">
+                                        <span className="flex items-center gap-1 text-green-600">
+                                          <ArrowUpCircle className="h-3 w-3" />
+                                          Inflow:
+                                        </span>
+                                        <span className="font-medium">
+                                          {formatCurrency(data.inflow || 0)}
+                                        </span>
+                                      </div>
+                                      <div className="flex items-center justify-between gap-4">
+                                        <span className="flex items-center gap-1 text-red-600">
+                                          <ArrowDownCircle className="h-3 w-3" />
+                                          Outflow:
+                                        </span>
+                                        <span className="font-medium">
+                                          {formatCurrency(data.outflow || 0)}
+                                        </span>
+                                      </div>
+                                      <div className="flex items-center justify-between gap-4 pt-1 border-t">
+                                        <span className="font-medium">
+                                          Net Balance:
+                                        </span>
+                                        <span
+                                          className={`font-bold ${
+                                            data.net >= 0
+                                              ? "text-green-600"
+                                              : "text-red-600"
+                                          }`}
+                                        >
+                                          {formatCurrency(data.net || 0)}
+                                        </span>
+                                      </div>
+                                    </div>
+
+                                    {/* Show detailed transactions for minute/hour granularity */}
+                                    {data.transactions &&
+                                      data.transactions.length > 0 && (
+                                        <div className="mt-3 pt-3 border-t">
+                                          <p className="text-xs font-semibold mb-2">
+                                            Transactions:
+                                          </p>
+                                          <div className="space-y-2 max-h-[200px] overflow-y-auto">
+                                            {data.transactions.map(
+                                              (transaction: any) => (
+                                                <div
+                                                  key={transaction.id}
+                                                  className="text-xs p-2 bg-muted/50 rounded"
+                                                >
+                                                  <div className="flex items-start justify-between gap-2">
+                                                    <div className="flex-1 min-w-0">
+                                                      <p className="font-medium truncate">
+                                                        {transaction.description}
+                                                      </p>
+                                                      <p className="text-muted-foreground text-[10px]">
+                                                        {format(
+                                                          new Date(
+                                                            transaction.createdAt
+                                                          ),
+                                                          "HH:mm:ss"
+                                                        )}
+                                                      </p>
+                                                    </div>
+                                                    <div className="text-right">
+                                                      <p
+                                                        className={`font-semibold ${
+                                                          transaction.type ===
+                                                          MoneyFlowType.IN
+                                                            ? "text-green-600"
+                                                            : "text-red-600"
+                                                        }`}
+                                                      >
+                                                        {transaction.type ===
+                                                        MoneyFlowType.IN
+                                                          ? "+"
+                                                          : "-"}
+                                                        {formatCurrency(
+                                                          transaction.amount
+                                                        )}
+                                                      </p>
+                                                      <p className="text-[10px] text-muted-foreground">
+                                                        Bal:{" "}
+                                                        {formatCurrency(
+                                                          transaction.remainingBalance
+                                                        )}
+                                                      </p>
+                                                    </div>
+                                                  </div>
+                                                </div>
+                                              )
+                                            )}
+                                          </div>
+                                        </div>
+                                      )}
+                                  </div>
+                                );
+                              }
+                              return null;
+                            }}
+                          />
+                          <Legend 
+                            wrapperStyle={{
+                              paddingTop: '10px',
+                              fontSize: '14px',
+                              fontWeight: 'bold'
+                            }}
+                          />
+                          <Area
+                            type="natural"
+                            dataKey="net"
+                            stroke="#2563eb"
+                            strokeWidth={3}
+                            fill="url(#colorNet)"
+                            dot={{
+                              fill: "#2563eb",
+                              strokeWidth: 2,
+                              r: 6,
+                              stroke: "#fff",
+                            }}
+                            activeDot={{
+                              r: 8,
+                              fill: "#2563eb",
+                              stroke: "#fff",
+                              strokeWidth: 2,
+                            }}
+                            name="Net Balance ($)"
+                            animationDuration={2000}
+                            animationEasing="ease-in-out"
+                          />
+                        </AreaChart>
+                      </ResponsiveContainer>
+                    </div>
+                  </>
+                )}
+
+              {moneyFlowData &&
+                (!moneyFlowData.aggregations ||
+                  moneyFlowData.aggregations.length === 0) && (
+                  <div className="flex flex-col items-center justify-center h-[400px] text-center gap-2">
+                    <Wallet className="h-16 w-16 text-muted-foreground" />
+                    <h3 className="text-lg font-medium">
+                      No Money Flow Data Available
+                    </h3>
+                    <p className="text-muted-foreground text-sm">
+                      Money flow data will appear here once transactions are
+                      recorded.
+                    </p>
+                  </div>
+                )}
+            </CardContent>
+          </Card>
 
           {/* Category Performance */}
           {data.categoryPerformance && data.categoryPerformance.length > 0 && (
@@ -336,18 +852,18 @@ export default function AnalyticsPage() {
                           {index + 1}
                         </div>
                         <div>
-                          <p className="font-medium">{category.name}</p>
+                          <p className="font-medium">{category.categoryName}</p>
                           <p className="text-sm text-muted-foreground">
-                            {category.productCount} products
+                            Category revenue
                           </p>
                         </div>
                       </div>
                       <div className="text-right">
                         <p className="font-medium text-primary">
-                          {category.totalSold}
+                          {formatCurrency(category.revenue)}
                         </p>
                         <p className="text-xs text-muted-foreground">
-                          {category.percentageOfTotalSales.toFixed(1)}% of sales
+                          {category.revenuePercent?.toFixed(1)}% of total
                         </p>
                       </div>
                     </div>

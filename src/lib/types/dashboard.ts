@@ -23,17 +23,17 @@ export interface DashboardResponseDTO {
 // Analytics DTOs - matching exactly with AnalyticsResponseDTO
 export interface TopProductDTO {
   productId: string;
-  name: string;
-  totalSold: number;
-  totalRevenue: number;
+  productName: string;
+  totalSalesCount: number;
+  totalSalesAmount: number;
+  performancePercent: number;
 }
 
 export interface CategoryPerformanceDTO {
-  categoryId: string;
-  name: string;
-  productCount: number;
-  totalSold: number;
-  percentageOfTotalSales: number;
+  categoryId: number;
+  categoryName: string;
+  revenue: number;
+  revenuePercent: number;
 }
 
 export interface AnalyticsResponseDTO {
