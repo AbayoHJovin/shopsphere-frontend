@@ -448,7 +448,6 @@ export default function OrderDetailsPage() {
                         </div>
                       </div>
 
-                      {/* Product Details */}
                       <div className="flex-1">
                         <h4 className="font-medium">
                           {item.product?.name ||
@@ -460,7 +459,6 @@ export default function OrderDetailsPage() {
                           </p>
                         )}
 
-                        {/* Discount Information */}
                         {item.hasDiscount &&
                           item.originalPrice &&
                           item.discountPercentage && (
