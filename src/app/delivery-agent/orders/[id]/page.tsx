@@ -586,7 +586,6 @@ export default function DeliveryAgentOrderDetails() {
           </CardContent>
         </Card>
 
-        {/* FIFTH PRIORITY: Order Summary & Timeline - Least critical for delivery */}
         <div className="grid gap-6 md:grid-cols-2">
           <Card>
             <CardHeader>

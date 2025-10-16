@@ -663,7 +663,6 @@ export default function OrderDetailsPage() {
 
         {/* Sidebar */}
         <div className="space-y-6">
-          {/* Order Summary */}
           <Card>
             <CardHeader>
               <CardTitle>Order Summary</CardTitle>
