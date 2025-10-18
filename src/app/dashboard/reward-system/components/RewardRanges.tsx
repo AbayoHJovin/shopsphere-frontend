@@ -225,7 +225,7 @@ export function RewardRanges({ rewardSystem, onUpdate }: RewardRangesProps) {
                   {/* Visual indicator for current range type */}
                   <div className="col-span-2">
                     <div
-                      className={`p-3 rounded-md border-2 ${
+                      className={`p-3 rounded-[2px] border-2 ${
                         currentRangeType === "QUANTITY"
                           ? "border-blue-200 bg-blue-50"
                           : "border-green-200 bg-green-50"

@@ -241,7 +241,7 @@ export default function WarehouseStockTable({
         </div>
 
         {/* Table */}
-        <div className="rounded-md border">
+        <div className="rounded-[2px] border">
           <Table>
             <TableHeader>
               <TableRow>

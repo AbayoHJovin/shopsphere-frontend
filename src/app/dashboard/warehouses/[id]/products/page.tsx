@@ -333,10 +333,10 @@ export default function WarehouseProductsPage() {
                               alt={product.productName}
                               width={40}
                               height={40}
-                              className="rounded-md object-cover"
+                              className="rounded-[2px] object-cover"
                             />
                           ) : (
-                            <div className="w-10 h-10 bg-muted rounded-md flex items-center justify-center">
+                            <div className="w-10 h-10 bg-muted rounded-[2px] flex items-center justify-center">
                               <Package className="h-4 w-4 text-muted-foreground" />
                             </div>
                           )}
@@ -483,7 +483,7 @@ export default function WarehouseProductsPage() {
                     id="pageSize"
                     value={pageSize}
                     onChange={(e) => handlePageSizeChange(Number(e.target.value))}
-                    className="h-8 px-2 py-1 border border-input bg-background rounded-md text-sm"
+                    className="h-8 px-2 py-1 border border-input bg-background rounded-[2px] text-sm"
                   >
                     <option value={10}>10</option>
                     <option value={20}>20</option>

@@ -66,7 +66,7 @@ export function RevenueChart({ data, isAdmin }: RevenueChartProps) {
           </div>
         </div>
 
-        <div className="mt-6 p-4 bg-muted/50 rounded-lg">
+        <div className="mt-6 p-4 bg-muted/50 rounded-md">
           <div className="flex items-center justify-between">
             <span className="text-sm font-medium">Revenue per Order</span>
             <span className="text-lg font-semibold">

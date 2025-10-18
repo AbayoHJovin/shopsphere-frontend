@@ -183,7 +183,7 @@ export default function ViewNotesDialog({
                   {notes.map((note) => (
                     <div
                       key={note.noteId}
-                      className="rounded-lg border p-4 space-y-3 hover:bg-muted/50 transition-colors"
+                      className="rounded-md border p-4 space-y-3 hover:bg-muted/50 transition-colors"
                     >
                       <div className="flex items-start justify-between gap-4">
                         <div className="flex-1 space-y-2">

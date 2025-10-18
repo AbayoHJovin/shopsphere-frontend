@@ -43,7 +43,7 @@ export function AuthDebug() {
   }
 
   return (
-    <div className="fixed bottom-4 right-4 bg-black text-white p-4 rounded-lg text-xs max-w-sm">
+    <div className="fixed bottom-4 right-4 bg-black text-white p-4 rounded-md text-xs max-w-sm">
       <h3 className="font-bold mb-2">Auth Debug</h3>
       {isLoading ? (
         <p>Loading...</p>

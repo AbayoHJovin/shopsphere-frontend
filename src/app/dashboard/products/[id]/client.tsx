@@ -203,7 +203,7 @@ export default function ProductClient({ product, id }: ProductClientProps) {
                 <div className="grid grid-cols-2 gap-2">
                   {primaryImage ? (
                     <>
-                      <div className="col-span-2 aspect-square rounded-lg overflow-hidden bg-muted">
+                      <div className="col-span-2 aspect-square rounded-md overflow-hidden bg-muted">
                         <img
                           src={selectedImage || primaryImage.url}
                           alt={product.name}
@@ -215,7 +215,7 @@ export default function ProductClient({ product, id }: ProductClientProps) {
                           {product.images.map((image, index) => (
                             <div
                               key={image.imageId}
-                              className={`aspect-square rounded-lg overflow-hidden bg-muted cursor-pointer transition-all ${
+                              className={`aspect-square rounded-md overflow-hidden bg-muted cursor-pointer transition-all ${
                                 selectedImage === image.url
                                   ? "ring-2 ring-primary"
                                   : "hover:opacity-80"
@@ -233,7 +233,7 @@ export default function ProductClient({ product, id }: ProductClientProps) {
                       )}
                     </>
                   ) : (
-                    <div className="col-span-2 aspect-square rounded-lg bg-muted flex items-center justify-center">
+                    <div className="col-span-2 aspect-square rounded-md bg-muted flex items-center justify-center">
                       <ImageIcon className="h-12 w-12 text-muted-foreground" />
                       <span className="text-sm text-muted-foreground mt-2">
                         No images
@@ -525,7 +525,7 @@ export default function ProductClient({ product, id }: ProductClientProps) {
                   <div className="grid grid-cols-2 gap-4">
                     {product.images.map((image, index) => (
                       <div key={image.imageId} className="space-y-2">
-                        <div className="aspect-square rounded-lg overflow-hidden bg-muted">
+                        <div className="aspect-square rounded-md overflow-hidden bg-muted">
                           <img
                             src={image.url}
                             alt={`${product.name} - Image ${index + 1}`}
@@ -574,7 +574,7 @@ export default function ProductClient({ product, id }: ProductClientProps) {
                   <div className="space-y-4">
                     {product.videos.map((video, index) => (
                       <div key={video.videoId} className="space-y-2">
-                        <div className="aspect-video rounded-lg overflow-hidden bg-muted">
+                        <div className="aspect-video rounded-md overflow-hidden bg-muted">
                           <video
                             src={video.url}
                             controls
@@ -739,7 +739,7 @@ export default function ProductClient({ product, id }: ProductClientProps) {
                               {variant.images.map((img) => (
                                 <div
                                   key={img.imageId}
-                                  className="aspect-square rounded-lg overflow-hidden bg-muted"
+                                  className="aspect-square rounded-md overflow-hidden bg-muted"
                                 >
                                   <img
                                     src={img.url}
@@ -789,7 +789,7 @@ export default function ProductClient({ product, id }: ProductClientProps) {
               </CardHeader>
               <CardContent>
                 <div className="grid gap-4 md:grid-cols-3">
-                  <div className="text-center p-4 bg-primary/5 rounded-lg">
+                  <div className="text-center p-4 bg-primary/5 rounded-md">
                     <div className="text-2xl font-bold text-primary">
                       {product.totalWarehouseStock || 0}
                     </div>
@@ -797,7 +797,7 @@ export default function ProductClient({ product, id }: ProductClientProps) {
                       Total Stock Units
                     </div>
                   </div>
-                  <div className="text-center p-4 bg-blue-50 rounded-lg">
+                  <div className="text-center p-4 bg-blue-50 rounded-md">
                     <div className="text-2xl font-bold text-blue-600">
                       {product.totalWarehouses || 0}
                     </div>
@@ -805,7 +805,7 @@ export default function ProductClient({ product, id }: ProductClientProps) {
                       Total Warehouses
                     </div>
                   </div>
-                  <div className="text-center p-4 bg-green-50 rounded-lg">
+                  <div className="text-center p-4 bg-green-50 rounded-md">
                     <div className="text-2xl font-bold text-green-600">
                       {product.warehouseStock?.filter(
                         (stock) => stock.isInStock
@@ -836,7 +836,7 @@ export default function ProductClient({ product, id }: ProductClientProps) {
                     {product.warehouseStock.map((stock) => (
                       <div
                         key={stock.stockId}
-                        className="border rounded-lg p-4"
+                        className="border rounded-md p-4"
                       >
                         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
                           {/* Warehouse Info */}

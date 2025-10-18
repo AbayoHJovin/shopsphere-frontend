@@ -364,7 +364,7 @@ export function VariantBatchManagement({
                     {batches.map((batch) => (
                       <div
                         key={batch.id}
-                        className="flex items-center justify-between p-4 bg-muted/20 rounded-lg border"
+                        className="flex items-center justify-between p-4 bg-muted/20 rounded-md border"
                       >
                         <div className="flex-1 space-y-2">
                           <div className="flex items-center gap-3">
@@ -447,7 +447,7 @@ export function VariantBatchManagement({
                 id="warehouse"
                 value={createForm.stockId}
                 onChange={(e) => setCreateForm({ ...createForm, stockId: Number(e.target.value) })}
-                className="w-full mt-1 px-3 py-2 border border-input rounded-md focus:outline-none focus:ring-2 focus:ring-ring"
+                className="w-full mt-1 px-3 py-2 border border-input rounded-[2px] focus:outline-none focus:ring-2 focus:ring-ring"
                 required
               >
                 <option value={0}>Select a warehouse</option>

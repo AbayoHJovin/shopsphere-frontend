@@ -38,7 +38,7 @@ export function SidebarMobile() {
               href={item.href}
               onClick={() => setOpen(false)}
               className={cn(
-                "flex items-center gap-2 px-3 py-2 text-sm transition-colors rounded-md",
+                "flex items-center gap-2 px-3 py-2 text-sm transition-colors rounded-[2px]",
                 pathname === item.href
                   ? "bg-muted text-primary"
                   : "text-muted-foreground hover:text-primary hover:bg-muted/50"

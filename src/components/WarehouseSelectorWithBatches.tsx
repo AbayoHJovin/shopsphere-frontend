@@ -378,7 +378,7 @@ export function WarehouseSelectorWithBatches({
                   </div>
 
                   {/* Warehouse List */}
-                  <div className="max-h-60 overflow-y-auto border rounded-md">
+                  <div className="max-h-60 overflow-y-auto border rounded-[2px]">
                     {isLoading ? (
                       <div className="flex items-center justify-center py-8">
                         <Loader2 className="h-6 w-6 animate-spin" />
@@ -491,7 +491,7 @@ export function WarehouseSelectorWithBatches({
 
                 {/* Batch Configuration */}
                 {selectedWarehouse && (
-                  <div className="space-y-4 p-4 border rounded-md bg-muted/20">
+                  <div className="space-y-4 p-4 border rounded-[2px] bg-muted/20">
                     <div>
                       <Label className="text-sm font-medium">
                         Selected: {selectedWarehouse.name}
@@ -548,7 +548,7 @@ export function WarehouseSelectorWithBatches({
                           {batches.map((batch, index) => (
                             <div
                               key={index}
-                              className="p-4 border rounded-md bg-background"
+                              className="p-4 border rounded-[2px] bg-background"
                             >
                               <div className="flex items-center justify-between mb-4">
                                 <h4 className="font-medium">
@@ -898,7 +898,7 @@ export function WarehouseSelectorWithBatches({
             <Label className="text-sm font-medium">Current Assignments</Label>
             <div className="space-y-2">
               {warehouseStocks.map((stock) => (
-                <div key={stock.warehouseId} className="p-3 border rounded-md">
+                <div key={stock.warehouseId} className="p-3 border rounded-[2px]">
                   <div className="flex items-center justify-between mb-2">
                     <div className="flex-1">
                       <div className="font-medium">{stock.warehouseName}</div>

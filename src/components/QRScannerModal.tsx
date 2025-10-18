@@ -297,7 +297,7 @@ const QRScannerModal = ({
 
           {/* QR Scanner Container */}
           <div
-            className="relative rounded-lg overflow-hidden bg-black"
+            className="relative rounded-md overflow-hidden bg-black"
             style={{ minHeight: "300px" }}
           >
             {/* The scanner will be rendered in this element */}

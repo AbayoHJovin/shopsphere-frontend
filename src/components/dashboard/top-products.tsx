@@ -35,21 +35,21 @@ export function TopProducts({ data }: TopProductsProps) {
           <div className="space-y-6">
             {/* Product Summary Cards */}
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              <div className="text-center p-4 bg-muted/50 rounded-lg">
+              <div className="text-center p-4 bg-muted/50 rounded-md">
                 <div className="text-2xl font-bold text-primary mb-1">
                   {totalProducts}
                 </div>
                 <p className="text-sm text-muted-foreground">Total Products</p>
               </div>
 
-              <div className="text-center p-4 bg-amber-50 rounded-lg">
+              <div className="text-center p-4 bg-amber-50 rounded-md">
                 <div className="text-2xl font-bold text-amber-600 mb-1">
                   {lowStockProducts}
                 </div>
                 <p className="text-sm text-amber-700">Low Stock</p>
               </div>
 
-              <div className="text-center p-4 bg-green-50 rounded-lg">
+              <div className="text-center p-4 bg-green-50 rounded-md">
                 <div className="text-2xl font-bold text-green-600 mb-1">
                   {totalProducts - lowStockProducts}
                 </div>
@@ -61,14 +61,14 @@ export function TopProducts({ data }: TopProductsProps) {
             <div className="space-y-3">
               <h4 className="text-sm font-medium">Quick Actions</h4>
               <div className="grid grid-cols-2 gap-3">
-                <div className="p-3 bg-primary/10 rounded-lg text-center cursor-pointer hover:bg-primary/20 transition-colors">
+                <div className="p-3 bg-primary/10 rounded-md text-center cursor-pointer hover:bg-primary/20 transition-colors">
                   <Package className="h-5 w-5 text-primary mx-auto mb-2" />
                   <p className="text-sm font-medium text-primary">
                     Add Product
                   </p>
                 </div>
 
-                <div className="p-3 bg-amber-100 rounded-lg text-center cursor-pointer hover:bg-amber-200 transition-colors">
+                <div className="p-3 bg-amber-100 rounded-md text-center cursor-pointer hover:bg-amber-200 transition-colors">
                   <AlertTriangle className="h-5 w-5 text-amber-600 mx-auto mb-2" />
                   <p className="text-sm font-medium text-amber-700">
                     Manage Stock
@@ -78,7 +78,7 @@ export function TopProducts({ data }: TopProductsProps) {
             </div>
 
             {/* Product Status */}
-            <div className="p-4 bg-muted/30 rounded-lg">
+            <div className="p-4 bg-muted/30 rounded-md">
               <div className="flex items-center justify-between mb-2">
                 <span className="text-sm font-medium">Catalog Health</span>
                 <span
@@ -113,7 +113,7 @@ export function TopProducts({ data }: TopProductsProps) {
             <p className="text-muted-foreground mt-1">
               Start building your product catalog to see analytics here.
             </p>
-            <div className="mt-4 p-3 bg-primary/10 rounded-lg cursor-pointer hover:bg-primary/20 transition-colors">
+            <div className="mt-4 p-3 bg-primary/10 rounded-md cursor-pointer hover:bg-primary/20 transition-colors">
               <Package className="h-5 w-5 text-primary mx-auto mb-1" />
               <p className="text-sm font-medium text-primary">
                 Add Your First Product

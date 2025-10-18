@@ -414,7 +414,7 @@ export default function CreateRewardSystemPage() {
                       .map((range) => (
                         <div
                           key={range.tempId}
-                          className="flex items-center gap-2 p-3 border rounded-lg"
+                          className="flex items-center gap-2 p-3 border rounded-md"
                         >
                           <Input
                             type="number"
@@ -495,7 +495,7 @@ export default function CreateRewardSystemPage() {
                       .map((range) => (
                         <div
                           key={range.tempId}
-                          className="flex items-center gap-2 p-3 border rounded-lg"
+                          className="flex items-center gap-2 p-3 border rounded-md"
                         >
                           <Input
                             type="number"

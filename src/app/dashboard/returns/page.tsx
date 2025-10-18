@@ -254,7 +254,7 @@ export default function ReturnRequestsPage() {
           <div className="space-y-4">
             {/* Active Filters Display */}
             {(statusFilter !== 'ALL' || customerTypeFilter !== 'ALL' || searchTerm) && (
-              <div className="flex flex-wrap gap-2 p-3 bg-muted rounded-lg">
+              <div className="flex flex-wrap gap-2 p-3 bg-muted rounded-md">
                 <span className="text-sm font-medium">Active filters:</span>
                 {statusFilter !== 'ALL' && (
                   <Badge variant="secondary">Status: {statusFilter}</Badge>

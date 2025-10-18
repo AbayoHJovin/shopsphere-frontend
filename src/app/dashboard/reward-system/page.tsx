@@ -302,7 +302,7 @@ export default function RewardSystemPage() {
                   <CardContent className="pt-0">
                     <div className="space-y-6">
                       {/* System Status Controls */}
-                      <div className="flex items-center justify-between p-4 bg-muted/50 rounded-lg">
+                      <div className="flex items-center justify-between p-4 bg-muted/50 rounded-md">
                         <div>
                           <h4 className="font-medium">System Controls</h4>
                           <p className="text-sm text-muted-foreground">
@@ -424,7 +424,7 @@ export default function RewardSystemPage() {
                             Purchase Points Configuration
                           </h4>
                           <div className="grid gap-4 md:grid-cols-3">
-                            <div className="p-3 border rounded-lg">
+                            <div className="p-3 border rounded-md">
                               <div className="flex items-center justify-between mb-2">
                                 <span className="text-sm font-medium">
                                   Quantity-Based
@@ -460,7 +460,7 @@ export default function RewardSystemPage() {
                                 )}
                             </div>
 
-                            <div className="p-3 border rounded-lg">
+                            <div className="p-3 border rounded-md">
                               <div className="flex items-center justify-between mb-2">
                                 <span className="text-sm font-medium">
                                   Amount-Based
@@ -495,7 +495,7 @@ export default function RewardSystemPage() {
                                 )}
                             </div>
 
-                            <div className="p-3 border rounded-lg">
+                            <div className="p-3 border rounded-md">
                               <div className="flex items-center justify-between mb-2">
                                 <span className="text-sm font-medium">
                                   Percentage-Based

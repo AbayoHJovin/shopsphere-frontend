@@ -436,10 +436,10 @@ export function DiscountDetailsModal({
                                   <img
                                     src={product.imageUrl}
                                     alt={product.name}
-                                    className="w-12 h-12 object-cover rounded-md"
+                                    className="w-12 h-12 object-cover rounded-[2px]"
                                   />
                                 ) : (
-                                  <div className="w-12 h-12 bg-muted rounded-md flex items-center justify-center">
+                                  <div className="w-12 h-12 bg-muted rounded-[2px] flex items-center justify-center">
                                     <span className="text-xs text-muted-foreground">
                                       No Image
                                     </span>
@@ -516,10 +516,10 @@ export function DiscountDetailsModal({
                                   <img
                                     src={variant.imageUrl}
                                     alt={variant.variantName}
-                                    className="w-12 h-12 object-cover rounded-md"
+                                    className="w-12 h-12 object-cover rounded-[2px]"
                                   />
                                 ) : (
-                                  <div className="w-12 h-12 bg-muted rounded-md flex items-center justify-center">
+                                  <div className="w-12 h-12 bg-muted rounded-[2px] flex items-center justify-center">
                                     <span className="text-xs text-muted-foreground">
                                       No Image
                                     </span>

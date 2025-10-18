@@ -144,7 +144,7 @@ export default function AddOrderNoteDialog({
             </p>
           </div>
 
-          <div className="rounded-lg bg-muted p-4 space-y-2">
+          <div className="rounded-md bg-muted p-4 space-y-2">
             <h4 className="text-sm font-medium">Quick Examples:</h4>
             <ul className="text-xs text-muted-foreground space-y-1">
               <li>• "Customer requested delivery at back entrance"</li>

@@ -453,7 +453,7 @@ export function WarehouseStockWithBatches({
         return (
           <div
             key={stock.warehouseId}
-            className="border rounded-lg overflow-hidden"
+            className="border rounded-md overflow-hidden"
           >
             <Collapsible>
               <CollapsibleTrigger asChild>
@@ -539,7 +539,7 @@ export function WarehouseStockWithBatches({
                         {warehouseBatches.map((batch) => (
                           <div
                             key={batch.id}
-                            className="flex items-center justify-between p-3 bg-muted/10 rounded-lg border hover:bg-muted/20 transition-colors"
+                            className="flex items-center justify-between p-3 bg-muted/10 rounded-md border hover:bg-muted/20 transition-colors"
                           >
                             <div className="flex-1 space-y-2">
                               <div className="flex items-center gap-3">
@@ -578,7 +578,7 @@ export function WarehouseStockWithBatches({
                         ))}
                       </div>
                     ) : (
-                      <div className="text-center py-8 text-muted-foreground border-2 border-dashed border-border rounded-lg">
+                      <div className="text-center py-8 text-muted-foreground border-2 border-dashed border-border rounded-md">
                         <Package className="w-8 h-8 mx-auto mb-2 opacity-50" />
                         <p className="text-sm">No batches found</p>
                         <p className="text-xs mb-4">

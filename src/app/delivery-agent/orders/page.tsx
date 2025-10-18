@@ -320,7 +320,7 @@ export default function DeliveryAgentOrdersPage() {
       {/* Action Result */}
       {actionResult && (
         <div
-          className={`p-4 rounded-lg border ${
+          className={`p-4 rounded-md border ${
             actionResult.success
               ? "bg-green-50 border-green-200 text-green-800"
               : "bg-red-50 border-red-200 text-red-800"
@@ -339,7 +339,7 @@ export default function DeliveryAgentOrdersPage() {
 
       {/* Info Banner for History View */}
       {showHistory && filteredGroups.length > 0 && (
-        <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+        <div className="bg-blue-50 border border-blue-200 rounded-md p-4">
           <div className="flex items-start gap-3">
             <History className="h-5 w-5 text-blue-600 mt-0.5" />
             <div>
@@ -504,7 +504,7 @@ export default function DeliveryAgentOrdersPage() {
                           {groupOrders[group.deliveryGroupId]?.map((order) => (
                             <div
                               key={order.id}
-                              className="rounded-lg border p-4 hover:bg-muted/50 transition-colors cursor-pointer"
+                              className="rounded-md border p-4 hover:bg-muted/50 transition-colors cursor-pointer"
                               onClick={() => {
                                 window.location.href = `/delivery-agent/orders/${order.id}`;
                               }}

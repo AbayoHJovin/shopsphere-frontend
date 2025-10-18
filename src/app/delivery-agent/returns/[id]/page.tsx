@@ -348,7 +348,7 @@ export default function ReturnRequestDetailsPage() {
             {returnDetails.pickupAddress?.latitude && returnDetails.pickupAddress?.longitude && (
               <div className="space-y-2">
                 <Label className="text-sm font-medium">Location Map</Label>
-                <div className="aspect-video rounded-lg overflow-hidden border">
+                <div className="aspect-video rounded-md overflow-hidden border">
                   <iframe
                     src={`https://www.google.com/maps/embed/v1/place?key=${process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY || 'YOUR_API_KEY'}&q=${returnDetails.pickupAddress.latitude},${returnDetails.pickupAddress.longitude}&zoom=15`}
                     width="100%"
@@ -376,7 +376,7 @@ export default function ReturnRequestDetailsPage() {
         <CardContent>
           <p className="text-sm">{returnDetails.reason}</p>
           {returnDetails.decisionNotes && (
-            <div className="mt-4 p-4 bg-muted rounded-lg">
+            <div className="mt-4 p-4 bg-muted rounded-md">
               <Label className="text-sm font-medium">Admin Notes</Label>
               <p className="text-sm text-muted-foreground mt-1">{returnDetails.decisionNotes}</p>
             </div>
@@ -399,7 +399,7 @@ export default function ReturnRequestDetailsPage() {
           {returnDetails.returnItems && returnDetails.returnItems.length > 0 ? (
             <div className="space-y-6">
               {returnDetails.returnItems.map((item, index) => (
-              <div key={item.id} className="border rounded-lg p-4">
+              <div key={item.id} className="border rounded-md p-4">
                 <div className="flex gap-4">
                   {/* Product Images Gallery - Show all images */}
                   <div className="flex-shrink-0">
@@ -417,11 +417,11 @@ export default function ReturnRequestDetailsPage() {
                                 <img
                                   src={url}
                                   alt={`${item.product?.name || "Product"} - Image ${imgIndex + 1}`}
-                                  className="w-16 h-16 object-cover rounded-lg border hover:scale-105 transition-transform cursor-pointer"
+                                  className="w-16 h-16 object-cover rounded-md border hover:scale-105 transition-transform cursor-pointer"
                                   onClick={() => window.open(url, '_blank')}
                                 />
                                 {imgIndex === 3 && imageUrls.length > 4 && (
-                                  <div className="absolute inset-0 bg-black bg-opacity-50 rounded-lg flex items-center justify-center">
+                                  <div className="absolute inset-0 bg-black bg-opacity-50 rounded-md flex items-center justify-center">
                                     <span className="text-white text-xs font-medium">
                                       +{imageUrls.length - 4}
                                     </span>
@@ -437,7 +437,7 @@ export default function ReturnRequestDetailsPage() {
                           )}
                         </div>
                       ) : (
-                        <div className="w-20 h-20 bg-muted rounded-lg border flex items-center justify-center">
+                        <div className="w-20 h-20 bg-muted rounded-md border flex items-center justify-center">
                           <ImageIcon className="h-8 w-8 text-muted-foreground" />
                         </div>
                       );
@@ -529,7 +529,7 @@ export default function ReturnRequestDetailsPage() {
 
                     {/* Item Reason */}
                     {item.itemReason && (
-                      <div className="mt-3 p-3 bg-muted rounded-lg">
+                      <div className="mt-3 p-3 bg-muted rounded-md">
                         <Label className="text-sm font-medium">Item-specific reason:</Label>
                         <p className="text-sm text-muted-foreground mt-1">{item.itemReason}</p>
                       </div>
@@ -608,10 +608,10 @@ export default function ReturnRequestDetailsPage() {
                         <img
                           src={imageUrls[0]}
                           alt={item.product?.name || "Product"}
-                          className="w-20 h-20 object-cover rounded-lg border"
+                          className="w-20 h-20 object-cover rounded-md border"
                         />
                       ) : (
-                        <div className="w-20 h-20 bg-muted rounded-lg border flex items-center justify-center">
+                        <div className="w-20 h-20 bg-muted rounded-md border flex items-center justify-center">
                           <ImageIcon className="h-8 w-8 text-muted-foreground" />
                         </div>
                       );

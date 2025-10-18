@@ -38,7 +38,7 @@ function AuthPageContent() {
 
         {/* Header */}
         <div className="relative z-20 flex items-center text-xl font-bold">
-          <div className="flex items-center justify-center w-10 h-10 bg-white/10 rounded-lg mr-3 backdrop-blur-sm">
+          <div className="flex items-center justify-center w-10 h-10 bg-white/10 rounded-md mr-3 backdrop-blur-sm">
             <svg
               xmlns="http://www.w3.org/2000/svg"
               viewBox="0 0 24 24"
@@ -70,7 +70,7 @@ function AuthPageContent() {
           <div className="grid grid-cols-2 gap-4 mb-8">
             <div className="bg-white/10 backdrop-blur-sm rounded-xl p-4 border border-white/20">
               <div className="flex items-center space-x-3">
-                <div className="w-8 h-8 bg-green-400 rounded-lg flex items-center justify-center">
+                <div className="w-8 h-8 bg-green-400 rounded-md flex items-center justify-center">
                   <svg
                     className="w-4 h-4 text-white"
                     fill="currentColor"
@@ -94,7 +94,7 @@ function AuthPageContent() {
 
             <div className="bg-white/10 backdrop-blur-sm rounded-xl p-4 border border-white/20">
               <div className="flex items-center space-x-3">
-                <div className="w-8 h-8 bg-purple-400 rounded-lg flex items-center justify-center">
+                <div className="w-8 h-8 bg-purple-400 rounded-md flex items-center justify-center">
                   <svg
                     className="w-4 h-4 text-white"
                     fill="currentColor"
@@ -112,7 +112,7 @@ function AuthPageContent() {
 
             <div className="bg-white/10 backdrop-blur-sm rounded-xl p-4 border border-white/20">
               <div className="flex items-center space-x-3">
-                <div className="w-8 h-8 bg-orange-400 rounded-lg flex items-center justify-center">
+                <div className="w-8 h-8 bg-orange-400 rounded-md flex items-center justify-center">
                   <svg
                     className="w-4 h-4 text-white"
                     fill="currentColor"
@@ -134,7 +134,7 @@ function AuthPageContent() {
 
             <div className="bg-white/10 backdrop-blur-sm rounded-xl p-4 border border-white/20">
               <div className="flex items-center space-x-3">
-                <div className="w-8 h-8 bg-blue-400 rounded-lg flex items-center justify-center">
+                <div className="w-8 h-8 bg-blue-400 rounded-md flex items-center justify-center">
                   <svg
                     className="w-4 h-4 text-white"
                     fill="currentColor"
@@ -224,7 +224,7 @@ export default function AuthPage() {
               />
             </div>
             <div className="relative z-20 flex items-center text-xl font-bold">
-              <div className="flex items-center justify-center w-10 h-10 bg-white/10 rounded-lg mr-3 backdrop-blur-sm">
+              <div className="flex items-center justify-center w-10 h-10 bg-white/10 rounded-md mr-3 backdrop-blur-sm">
                 <svg
                   xmlns="http://www.w3.org/2000/svg"
                   viewBox="0 0 24 24"

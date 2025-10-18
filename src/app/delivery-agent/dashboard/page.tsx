@@ -257,7 +257,7 @@ export default function DeliveryAgentDashboard() {
       {/* Action Result */}
       {actionResult && (
         <div
-          className={`p-4 rounded-lg border ${
+          className={`p-4 rounded-md border ${
             actionResult.success
               ? "bg-green-50 border-green-200 text-green-800"
               : "bg-red-50 border-red-200 text-red-800"
@@ -377,7 +377,7 @@ export default function DeliveryAgentDashboard() {
                         {groupOrders[group.deliveryGroupId]?.map((order) => (
                           <div
                             key={order.id}
-                            className="rounded-lg border p-4 hover:bg-muted/50 transition-colors cursor-pointer"
+                            className="rounded-md border p-4 hover:bg-muted/50 transition-colors cursor-pointer"
                             onClick={() => {
                               window.location.href = `/delivery-agent/orders/${order.id}`;
                             }}
@@ -442,7 +442,7 @@ export default function DeliveryAgentDashboard() {
               {dashboardData.completedGroups.map((group) => (
                 <div
                   key={group.deliveryGroupId}
-                  className="flex items-center justify-between rounded-lg border p-3"
+                  className="flex items-center justify-between rounded-md border p-3"
                 >
                   <div className="flex items-center gap-3">
                     <CheckCircle className="h-4 w-4 text-green-600" />

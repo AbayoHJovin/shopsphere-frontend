@@ -258,7 +258,7 @@ export function CreateGroupModal({
               />
             </div>
 
-            <div className="max-h-80 overflow-y-auto border rounded-lg">
+            <div className="max-h-80 overflow-y-auto border rounded-md">
               {loadingAgents && agents.length === 0 ? (
                 <div className="flex items-center justify-center py-8">
                   <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
@@ -298,7 +298,7 @@ export function CreateGroupModal({
                     {busyAgents.map((agent) => (
                       <div
                         key={agent.agentId}
-                        className="p-3 rounded-lg border border-border bg-gray-100 opacity-60"
+                        className="p-3 rounded-md border border-border bg-gray-100 opacity-60"
                       >
                         <div className="flex items-center justify-between">
                           <div className="flex-1">
@@ -331,7 +331,7 @@ export function CreateGroupModal({
                       {availableAgents.map((agent) => (
                     <div
                       key={agent.agentId}
-                      className={`p-3 rounded-lg border transition-colors ${
+                      className={`p-3 rounded-md border transition-colors ${
                         formData.delivererId === agent.agentId
                           ? "border-primary bg-primary/5"
                           : agent.hasAGroup
@@ -384,7 +384,7 @@ export function CreateGroupModal({
                       {busyAgents.map((agent) => (
                     <div
                       key={agent.agentId}
-                      className="p-3 rounded-lg border border-border bg-gray-100 cursor-not-allowed opacity-60"
+                      className="p-3 rounded-md border border-border bg-gray-100 cursor-not-allowed opacity-60"
                     >
                       <div className="flex items-center justify-between">
                         <div className="flex-1">

@@ -53,14 +53,14 @@ export function OrderStatusChart({ data }: OrderStatusChartProps) {
         <div className="space-y-4">
           {/* Order Summary */}
           <div className="grid grid-cols-2 gap-4">
-            <div className="text-center p-3 bg-muted/50 rounded-lg">
+            <div className="text-center p-3 bg-muted/50 rounded-md">
               <div className="text-2xl font-bold text-primary">
                 {totalOrders}
               </div>
               <p className="text-xs text-muted-foreground">Total Orders</p>
             </div>
 
-            <div className="text-center p-3 bg-muted/50 rounded-lg">
+            <div className="text-center p-3 bg-muted/50 rounded-md">
               <div className="text-2xl font-bold text-amber-600">
                 {pendingOrders}
               </div>

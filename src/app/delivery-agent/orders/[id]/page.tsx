@@ -251,7 +251,7 @@ export default function DeliveryAgentOrderDetails() {
                 {/* Verification Result */}
                 {verificationResult && (
                   <div
-                    className={`p-4 rounded-lg ${
+                    className={`p-4 rounded-md ${
                       verificationResult.success
                         ? "bg-green-50 border border-green-200"
                         : "bg-red-50 border border-red-200"
@@ -320,7 +320,7 @@ export default function DeliveryAgentOrderDetails() {
                 </div>
 
                 {/* Instructions */}
-                <div className="bg-blue-50 p-4 rounded-lg">
+                <div className="bg-blue-50 p-4 rounded-md">
                   <p className="font-medium mb-2 text-blue-900">Quick Instructions:</p>
                   <ul className="text-sm text-blue-800 space-y-1">
                     <li>• Ask customer to show their pickup QR code</li>
@@ -393,7 +393,7 @@ export default function DeliveryAgentOrderDetails() {
                 <div className="space-y-3">
                   <a 
                     href={`tel:${order.customerPhone}`}
-                    className="flex items-center gap-3 p-3 rounded-lg bg-blue-50 hover:bg-blue-100 transition-colors"
+                    className="flex items-center gap-3 p-3 rounded-md bg-blue-50 hover:bg-blue-100 transition-colors"
                   >
                     <Phone className="h-5 w-5 text-blue-600" />
                     <div>
@@ -403,7 +403,7 @@ export default function DeliveryAgentOrderDetails() {
                   </a>
                   <a 
                     href={`mailto:${order.customerEmail}`}
-                    className="flex items-center gap-3 p-3 rounded-lg bg-gray-50 hover:bg-gray-100 transition-colors"
+                    className="flex items-center gap-3 p-3 rounded-md bg-gray-50 hover:bg-gray-100 transition-colors"
                   >
                     <Mail className="h-5 w-5 text-gray-600" />
                     <div>
@@ -482,7 +482,7 @@ export default function DeliveryAgentOrderDetails() {
           </CardHeader>
           <CardContent>
             <div className="space-y-3">
-              <div className="bg-blue-50 p-4 rounded-lg">
+              <div className="bg-blue-50 p-4 rounded-md">
                 <p className="text-sm text-blue-900 font-medium mb-2">
                   Why add notes?
                 </p>
@@ -495,7 +495,7 @@ export default function DeliveryAgentOrderDetails() {
               </div>
               
               {order.status === "DELIVERED" && (
-                <div className="bg-green-50 p-3 rounded-lg border border-green-200">
+                <div className="bg-green-50 p-3 rounded-md border border-green-200">
                   <p className="text-sm text-green-800">
                     <strong>Note:</strong> This order has been delivered. You can view existing notes but cannot add new ones.
                   </p>
@@ -533,7 +533,7 @@ export default function DeliveryAgentOrderDetails() {
               {order.items.map((item) => (
                 <div
                   key={item.id}
-                  className="flex items-center gap-4 p-4 border rounded-lg hover:bg-gray-50 transition-colors"
+                  className="flex items-center gap-4 p-4 border rounded-md hover:bg-gray-50 transition-colors"
                 >
                   <div className="relative group">
                     {item.product?.images &&
@@ -542,7 +542,7 @@ export default function DeliveryAgentOrderDetails() {
                         <img
                           src={item.product.images[0]}
                           alt={item.product.name || "Product"}
-                          className="w-20 h-20 object-cover rounded-md"
+                          className="w-20 h-20 object-cover rounded-[2px]"
                           onError={(e) => {
                             e.currentTarget.src = "/api/placeholder/100/100";
                           }}
@@ -554,7 +554,7 @@ export default function DeliveryAgentOrderDetails() {
                         )}
                       </div>
                     ) : (
-                      <div className="w-20 h-20 bg-gray-200 rounded-md flex items-center justify-center">
+                      <div className="w-20 h-20 bg-gray-200 rounded-[2px] flex items-center justify-center">
                         <Package className="h-8 w-8 text-gray-400" />
                       </div>
                     )}

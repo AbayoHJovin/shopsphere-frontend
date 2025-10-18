@@ -219,7 +219,7 @@ export default function FetchAttributesDialog({
                     return (
                       <div
                         key={attributeType.attributeTypeId}
-                        className="border rounded-lg p-4"
+                        className="border rounded-md p-4"
                       >
                         <div className="flex items-center space-x-3 mb-3">
                           <Checkbox

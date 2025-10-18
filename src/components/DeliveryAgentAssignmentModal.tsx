@@ -325,7 +325,7 @@ export default function DeliveryAgentAssignmentModal({
 
         {/* Return Request Details */}
         {returnRequestDetails && (
-          <div className="p-4 bg-blue-50 rounded-lg border border-blue-200">
+          <div className="p-4 bg-blue-50 rounded-md border border-blue-200">
             <h4 className="font-medium text-blue-900 mb-2 flex items-center gap-2">
               <Package className="h-4 w-4" />
               Return Request Details
@@ -415,7 +415,7 @@ export default function DeliveryAgentAssignmentModal({
         {/* Delivery Agents Table */}
         {!agentsLoading && agentsData?.content && agentsData.content.length > 0 && (
           <div className="space-y-4">
-            <div className="rounded-md border">
+            <div className="rounded-[2px] border">
               <Table>
                 <TableHeader>
                   <TableRow>

@@ -637,7 +637,7 @@ export default function EditRewardSystemPage() {
                   {rewardRanges.map((range, index) => (
                     <div
                       key={index}
-                      className="p-4 border rounded-lg space-y-3"
+                      className="p-4 border rounded-md space-y-3"
                     >
                       <div className="flex justify-between items-center">
                         <h5 className="font-medium">Range {index + 1}</h5>
@@ -665,7 +665,7 @@ export default function EditRewardSystemPage() {
                                 e.target.value
                               )
                             }
-                            className="w-full p-2 border rounded-md"
+                            className="w-full p-2 border rounded-[2px]"
                           >
                             <option value="QUANTITY">Quantity</option>
                             <option value="AMOUNT">Amount</option>

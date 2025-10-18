@@ -267,7 +267,7 @@ export default function ShippingCostsPage() {
             </div>
           ) : (
             <>
-              <div className="rounded-md border">
+              <div className="rounded-[2px] border">
                 <Table>
                   <TableHeader>
                     <TableRow>

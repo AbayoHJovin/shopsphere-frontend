@@ -370,7 +370,7 @@ export default function AppealsPage() {
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <div className="rounded-md border">
+          <div className="rounded-[2px] border">
             <div className="overflow-x-auto">
               <table className="w-full">
                 <thead>
@@ -537,7 +537,7 @@ export default function AppealsPage() {
               </div>
 
               {/* Return Request Link */}
-              <div className="p-4 bg-blue-50 rounded-lg border border-blue-200">
+              <div className="p-4 bg-blue-50 rounded-md border border-blue-200">
                 <div className="flex items-center justify-between">
                   <div>
                     <h4 className="font-medium text-blue-900">Related Return Request</h4>
@@ -561,14 +561,14 @@ export default function AppealsPage() {
               <div className="space-y-4">
                 <div className="space-y-2">
                   <Label className="text-sm font-medium">Appeal Reason</Label>
-                  <div className="p-3 bg-muted rounded-lg">
+                  <div className="p-3 bg-muted rounded-md">
                     {selectedAppeal.reason}
                   </div>
                 </div>
                 {selectedAppeal.description && (
                   <div className="space-y-2">
                     <Label className="text-sm font-medium">Description</Label>
-                    <div className="p-3 bg-muted rounded-lg">
+                    <div className="p-3 bg-muted rounded-md">
                       {selectedAppeal.description}
                     </div>
                   </div>
@@ -589,7 +589,7 @@ export default function AppealsPage() {
                                        media.fileName?.toLowerCase().match(/\.(mp4|mov|avi|mkv|webm)$/);
                         
                         return (
-                          <div key={media.id} className="border rounded-lg overflow-hidden bg-white">
+                          <div key={media.id} className="border rounded-md overflow-hidden bg-white">
                             {/* Media Preview */}
                             <div className="aspect-video bg-gray-100 flex items-center justify-center relative">
                               {isImage ? (
@@ -673,7 +673,7 @@ export default function AppealsPage() {
                     {selectedAppeal.decisionNotes && (
                       <div className="space-y-2">
                         <Label className="text-xs text-muted-foreground">Decision Notes</Label>
-                        <div className="p-3 bg-muted rounded-lg">
+                        <div className="p-3 bg-muted rounded-md">
                           {selectedAppeal.decisionNotes}
                         </div>
                       </div>
@@ -842,7 +842,7 @@ export default function AppealsPage() {
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <Card className="p-4">
                     <div className="flex items-center gap-3">
-                      <div className="p-2 bg-blue-100 rounded-lg">
+                      <div className="p-2 bg-blue-100 rounded-md">
                         <FileText className="h-5 w-5 text-blue-600" />
                       </div>
                       <div>
@@ -855,7 +855,7 @@ export default function AppealsPage() {
 
                   <Card className="p-4">
                     <div className="flex items-center gap-3">
-                      <div className="p-2 bg-purple-100 rounded-lg">
+                      <div className="p-2 bg-purple-100 rounded-md">
                         <Clock className="h-5 w-5 text-purple-600" />
                       </div>
                       <div>

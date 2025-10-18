@@ -163,7 +163,7 @@ export default function VariantSelectionDialog({
           {variants && variants.length > 0 && (
             <div className="space-y-4">
               {/* Select All Checkbox */}
-              <div className="flex items-center space-x-2 p-4 bg-muted/50 rounded-lg">
+              <div className="flex items-center space-x-2 p-4 bg-muted/50 rounded-md">
                 <Checkbox
                   id="select-all"
                   checked={selectAll}
@@ -182,7 +182,7 @@ export default function VariantSelectionDialog({
                 {variants.map((variant: ProductVariantWarehouseDTO) => (
                   <div
                     key={variant.variantId}
-                    className={`flex items-center space-x-4 p-4 border rounded-lg hover:bg-muted/30 transition-colors ${
+                    className={`flex items-center space-x-4 p-4 border rounded-md hover:bg-muted/30 transition-colors ${
                       selectedVariants.has(variant.variantId)
                         ? "border-primary bg-primary/5"
                         : "border-border"
@@ -205,10 +205,10 @@ export default function VariantSelectionDialog({
                           alt={variant.variantName}
                           width={48}
                           height={48}
-                          className="rounded-md object-cover"
+                          className="rounded-[2px] object-cover"
                         />
                       ) : (
-                        <div className="w-12 h-12 bg-muted rounded-md flex items-center justify-center">
+                        <div className="w-12 h-12 bg-muted rounded-[2px] flex items-center justify-center">
                           <Package className="h-6 w-6 text-muted-foreground" />
                         </div>
                       )}

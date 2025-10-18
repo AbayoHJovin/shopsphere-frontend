@@ -80,7 +80,7 @@ function MetricCard({
     <Card>
       <CardHeader className="flex flex-row items-center justify-between pb-2">
         <CardTitle className="text-sm font-medium">{title}</CardTitle>
-        <div className="p-1 bg-primary/10 rounded-md text-primary">{icon}</div>
+        <div className="p-1 bg-primary/10 rounded-[2px] text-primary">{icon}</div>
       </CardHeader>
       <CardContent>
         <div className="text-2xl font-bold">{value}</div>
@@ -392,7 +392,7 @@ export default function AnalyticsPage() {
                   {data.topProducts.map((product, index) => (
                     <div
                       key={product.productId}
-                      className="flex items-center justify-between p-3 bg-muted/30 rounded-lg"
+                      className="flex items-center justify-between p-3 bg-muted/30 rounded-md"
                     >
                       <div className="flex items-center gap-3">
                         <div className="w-8 h-8 bg-primary/10 rounded-full flex items-center justify-center text-sm font-bold text-primary">
@@ -484,7 +484,7 @@ export default function AnalyticsPage() {
             <CardContent>
               {/* Current Balance Display */}
               {currentBalance !== undefined && (
-                <div className="mb-6 p-4 bg-primary/5 rounded-lg border border-primary/20">
+                <div className="mb-6 p-4 bg-primary/5 rounded-md border border-primary/20">
                   <div className="flex items-center justify-between">
                     <div>
                       <p className="text-sm text-muted-foreground">
@@ -526,7 +526,7 @@ export default function AnalyticsPage() {
                   <>
                     {/* Summary Cards */}
                     <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
-                      <div className="p-4 bg-green-50 dark:bg-green-950/20 rounded-lg border border-green-200 dark:border-green-900">
+                      <div className="p-4 bg-green-50 dark:bg-green-950/20 rounded-md border border-green-200 dark:border-green-900">
                         <div className="flex items-center gap-2 mb-2">
                           <ArrowUpCircle className="h-5 w-5 text-green-600 dark:text-green-400" />
                           <p className="text-sm font-medium text-green-900 dark:text-green-100">
@@ -543,7 +543,7 @@ export default function AnalyticsPage() {
                         </p>
                       </div>
 
-                      <div className="p-4 bg-red-50 dark:bg-red-950/20 rounded-lg border border-red-200 dark:border-red-900">
+                      <div className="p-4 bg-red-50 dark:bg-red-950/20 rounded-md border border-red-200 dark:border-red-900">
                         <div className="flex items-center gap-2 mb-2">
                           <ArrowDownCircle className="h-5 w-5 text-red-600 dark:text-red-400" />
                           <p className="text-sm font-medium text-red-900 dark:text-red-100">
@@ -560,7 +560,7 @@ export default function AnalyticsPage() {
                         </p>
                       </div>
 
-                      <div className="p-4 bg-blue-50 dark:bg-blue-950/20 rounded-lg border border-blue-200 dark:border-blue-900">
+                      <div className="p-4 bg-blue-50 dark:bg-blue-950/20 rounded-md border border-blue-200 dark:border-blue-900">
                         <div className="flex items-center gap-2 mb-2">
                           <BarChart3 className="h-5 w-5 text-blue-600 dark:text-blue-400" />
                           <p className="text-sm font-medium text-blue-900 dark:text-blue-100">
@@ -675,7 +675,7 @@ export default function AnalyticsPage() {
                               if (active && payload && payload.length) {
                                 const data = payload[0].payload;
                                 return (
-                                  <div className="bg-background border border-border rounded-lg shadow-lg p-4 max-w-sm">
+                                  <div className="bg-background border border-border rounded-md shadow-lg p-4 max-w-sm">
                                     <p className="font-semibold mb-2 text-blue-600">
                                       {data.originalPeriod || data.period}
                                     </p>
@@ -845,7 +845,7 @@ export default function AnalyticsPage() {
                   {data.categoryPerformance.map((category, index) => (
                     <div
                       key={category.categoryId}
-                      className="flex items-center justify-between p-3 bg-muted/30 rounded-lg"
+                      className="flex items-center justify-between p-3 bg-muted/30 rounded-md"
                     >
                       <div className="flex items-center gap-3">
                         <div className="w-8 h-8 bg-primary/10 rounded-full flex items-center justify-center text-sm font-bold text-primary">

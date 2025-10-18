@@ -543,7 +543,7 @@ export function BatchManagement({
         ) : (
           <div className="space-y-3">
             {batches.map((batch) => (
-              <div key={batch.id} className="border rounded-lg p-4">
+              <div key={batch.id} className="border rounded-md p-4">
                 <div className="flex items-center justify-between mb-2">
                   <div className="flex items-center gap-2">
                     <span className="font-medium">{batch.batchNumber}</span>

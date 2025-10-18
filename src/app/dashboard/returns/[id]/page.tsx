@@ -234,13 +234,13 @@ export default function ReturnRequestDetailPage() {
             <CardContent>
               <div className="space-y-4">
                 {returnRequest.returnItems.map((item, index) => (
-                  <div key={item.orderItemId || index} className="border rounded-lg p-4">
+                  <div key={item.orderItemId || index} className="border rounded-md p-4">
                     <div className="flex items-start gap-4">
                       {item.productImage && (
                         <img
                           src={item.productImage}
                           alt={item.productName}
-                          className="w-16 h-16 object-cover rounded-md"
+                          className="w-16 h-16 object-cover rounded-[2px]"
                         />
                       )}
                       <div className="flex-1">
@@ -269,7 +269,7 @@ export default function ReturnRequestDetailPage() {
                           )}
                         </div>
                         {item.itemReason && (
-                          <div className="mt-3 p-3 bg-muted rounded-md">
+                          <div className="mt-3 p-3 bg-muted rounded-[2px]">
                             <p className="text-sm font-medium mb-1">Reason for return:</p>
                             <p className="text-sm">{item.itemReason}</p>
                           </div>
@@ -304,7 +304,7 @@ export default function ReturnRequestDetailPage() {
               </CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="p-4 bg-muted rounded-lg">
+              <div className="p-4 bg-muted rounded-md">
                 <p>{returnRequest.reason}</p>
               </div>
             </CardContent>
@@ -322,7 +322,7 @@ export default function ReturnRequestDetailPage() {
               <CardContent>
                 <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
                   {returnRequest.returnMedia.map((media) => (
-                    <div key={media.id} className="border rounded-lg p-3 hover:shadow-md transition-shadow">
+                    <div key={media.id} className="border rounded-md p-3 hover:shadow-md transition-shadow">
                       <div className="flex items-center gap-2 mb-2">
                         {isImageFile(media) ? (
                           <ImageIcon className="h-4 w-4 text-blue-600" />
@@ -343,23 +343,23 @@ export default function ReturnRequestDetailPage() {
                           <img
                             src={media.fileUrl}
                             alt="Return media"
-                            className="w-full h-24 object-cover rounded-md group-hover:opacity-80 transition-opacity"
+                            className="w-full h-24 object-cover rounded-[2px] group-hover:opacity-80 transition-opacity"
                           />
                         ) : isVideoFile(media) ? (
-                          <div className="relative w-full h-24 bg-gray-100 rounded-md flex items-center justify-center group-hover:bg-gray-200 transition-colors">
+                          <div className="relative w-full h-24 bg-gray-100 rounded-[2px] flex items-center justify-center group-hover:bg-gray-200 transition-colors">
                             <Play className="h-8 w-8 text-gray-600" />
-                            <div className="absolute inset-0 bg-black bg-opacity-20 rounded-md opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                            <div className="absolute inset-0 bg-black bg-opacity-20 rounded-[2px] opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
                               <Play className="h-6 w-6 text-white" />
                             </div>
                           </div>
                         ) : (
-                          <div className="w-full h-24 bg-gray-100 rounded-md flex items-center justify-center">
+                          <div className="w-full h-24 bg-gray-100 rounded-[2px] flex items-center justify-center">
                             <FileText className="h-8 w-8 text-gray-600" />
                           </div>
                         )}
                         
                         {/* Overlay for click indication */}
-                        <div className="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-10 rounded-md transition-all flex items-center justify-center">
+                        <div className="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-10 rounded-[2px] transition-all flex items-center justify-center">
                           <div className="opacity-0 group-hover:opacity-100 transition-opacity">
                             <div className="bg-white bg-opacity-90 rounded-full p-2">
                               {isImageFile(media) ? (
@@ -582,18 +582,18 @@ export default function ReturnRequestDetailPage() {
             {selectedMedia && (
               <div className="space-y-4">
                 {/* Media Display */}
-                <div className="flex justify-center bg-gray-50 rounded-lg p-4">
+                <div className="flex justify-center bg-gray-50 rounded-md p-4">
                   {isImageFile(selectedMedia) ? (
                     <img
                       src={selectedMedia.fileUrl}
                       alt="Return media"
-                      className="max-w-full max-h-[60vh] object-contain rounded-md"
+                      className="max-w-full max-h-[60vh] object-contain rounded-[2px]"
                     />
                   ) : isVideoFile(selectedMedia) ? (
                     <video
                       src={selectedMedia.fileUrl}
                       controls
-                      className="max-w-full max-h-[60vh] rounded-md"
+                      className="max-w-full max-h-[60vh] rounded-[2px]"
                       preload="metadata"
                     >
                       Your browser does not support the video tag.

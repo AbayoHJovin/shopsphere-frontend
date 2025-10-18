@@ -410,11 +410,11 @@ export default function OrderDetailsPage() {
                   {order.items.map((item, index) => (
                     <div
                       key={item.id || index}
-                      className="flex gap-4 items-start p-4 border rounded-lg"
+                      className="flex gap-4 items-start p-4 border rounded-md"
                     >
                       {/* Product Image */}
                       <div className="flex-shrink-0">
-                        <div className="w-16 h-16 bg-gray-100 rounded-lg flex items-center justify-center overflow-hidden">
+                        <div className="w-16 h-16 bg-gray-100 rounded-md flex items-center justify-center overflow-hidden">
                           {item.product?.images &&
                           item.product.images.length > 0 ? (
                             <img
@@ -462,7 +462,7 @@ export default function OrderDetailsPage() {
                         {item.hasDiscount &&
                           item.originalPrice &&
                           item.discountPercentage && (
-                            <div className="mt-2 p-2 bg-blue-50 border border-blue-200 rounded-lg">
+                            <div className="mt-2 p-2 bg-blue-50 border border-blue-200 rounded-md">
                               <div className="flex items-center justify-between">
                                 <div className="flex items-center gap-2">
                                   <Badge
@@ -528,7 +528,7 @@ export default function OrderDetailsPage() {
 
                         {/* Warehouse and Batch Information */}
                         {item.warehouses && item.warehouses.length > 0 && (
-                          <div className="mt-3 p-3 bg-gray-50 rounded-lg">
+                          <div className="mt-3 p-3 bg-gray-50 rounded-md">
                             <h5 className="text-sm font-medium mb-2 flex items-center gap-2">
                               <Package className="h-4 w-4" />
                               Sourced from {item.warehouses.length} warehouse(s)
@@ -811,7 +811,7 @@ export default function OrderDetailsPage() {
                           </div>
 
                           {/* Google Maps Embed with Dynamic Map Type */}
-                          <div className="relative w-full h-48 rounded-lg overflow-hidden border">
+                          <div className="relative w-full h-48 rounded-md overflow-hidden border">
                             <iframe
                               src={`https://www.google.com/maps/embed/v1/place?key=${process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY}&q=${order.shippingAddress.latitude},${order.shippingAddress.longitude}&zoom=18&maptype=${mapType}`}
                               width="100%"
@@ -820,7 +820,7 @@ export default function OrderDetailsPage() {
                               allowFullScreen
                               loading="lazy"
                               referrerPolicy="no-referrer-when-downgrade"
-                              className="rounded-lg"
+                              className="rounded-md"
                             />
                           </div>
 
