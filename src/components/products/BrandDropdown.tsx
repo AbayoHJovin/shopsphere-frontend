@@ -281,7 +281,7 @@ export function BrandDropdown({
                   {brands.map((brand) => (
                     <div
                       key={brand.brandId}
-                      className="flex items-center justify-between p-2 hover:bg-accent rounded-[2px] cursor-pointer"
+                      className="flex items-center justify-between p-2 hover:bg-accent rounded-lg cursor-pointer"
                       onClick={() => handleBrandSelect(brand.brandId)}
                     >
                       <div className="flex flex-col">

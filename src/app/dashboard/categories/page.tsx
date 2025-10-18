@@ -574,8 +574,8 @@ export default function CategoriesPage() {
     setBrandFormDescription(brand.description || "");
     setBrandFormLogoUrl(brand.logoUrl || "");
     setBrandFormWebsiteUrl(brand.websiteUrl || "");
-    setBrandFormIsActive(brand.isActive);
-    setBrandFormIsFeatured(brand.isFeatured);
+    setBrandFormIsActive(brand.active);
+    setBrandFormIsFeatured(brand.featured);
     setIsEditBrandDialogOpen(true);
   };
 
@@ -591,7 +591,7 @@ export default function CategoriesPage() {
 
   const handleDeleteBrand = () => {
     if (!selectedBrand) return;
-    deleteBrandMutation.mutate(selectedBrand.id);
+    deleteBrandMutation.mutate(selectedBrand.brandId);
   };
 
   return (
@@ -1644,7 +1644,7 @@ export default function CategoriesPage() {
                       <TableBody>
                         {brands.length > 0 ? (
                           brands.map((brand: BrandResponse) => (
-                            <TableRow key={brand.id}>
+                            <TableRow key={brand.brandId}>
                               <TableCell>
                                 <div className="font-medium">
                                   {brand.brandName}
@@ -1665,14 +1665,14 @@ export default function CategoriesPage() {
                               <TableCell className="text-center">
                                 <Badge
                                   variant={
-                                    brand.isActive ? "default" : "secondary"
+                                    brand.active ? "default" : "secondary"
                                   }
                                 >
-                                  {brand.isActive ? "Active" : "Inactive"}
+                                  {brand.active ? "Active" : "Inactive"}
                                 </Badge>
                               </TableCell>
                               <TableCell className="text-center">
-                                {brand.isFeatured ? (
+                                {brand.featured ? (
                                   <Badge
                                     variant="outline"
                                     className="text-amber-600 border-amber-600"
@@ -2048,7 +2048,7 @@ export default function CategoriesPage() {
                   return;
                 }
                 updateBrandMutation.mutate({
-                  id: selectedBrand!.id,
+                  id: selectedBrand!.brandId,
                   data: {
                     brandName: brandFormName.trim(),
                     description: brandFormDescription.trim() || undefined,
@@ -2167,11 +2167,11 @@ export default function CategoriesPage() {
                   <p className="text-sm font-medium leading-none">Status</p>
                   <div className="flex gap-2">
                     <Badge
-                      variant={selectedBrand.isActive ? "default" : "secondary"}
+                      variant={selectedBrand.active ? "default" : "secondary"}
                     >
-                      {selectedBrand.isActive ? "Active" : "Inactive"}
+                      {selectedBrand.active ? "Active" : "Inactive"}
                     </Badge>
-                    {selectedBrand.isFeatured && (
+                    {selectedBrand.featured && (
                       <Badge
                         variant="outline"
                         className="text-amber-600 border-amber-600"

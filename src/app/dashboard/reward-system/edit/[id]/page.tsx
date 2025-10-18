@@ -665,7 +665,7 @@ export default function EditRewardSystemPage() {
                                 e.target.value
                               )
                             }
-                            className="w-full p-2 border rounded-[2px]"
+                            className="w-full p-2 border rounded-lg"
                           >
                             <option value="QUANTITY">Quantity</option>
                             <option value="AMOUNT">Amount</option>

@@ -673,7 +673,7 @@ export default function SettingsPage() {
                   </div>
                   
                   {twoFactorEnabled && (
-                    <div className="border rounded-[2px] p-4 bg-muted/50">
+                    <div className="border rounded-lg p-4 bg-muted/50">
                       <p className="text-sm mb-3">
                         Two-factor authentication has been enabled for your account.
                         You will be prompted for a verification code when signing in.

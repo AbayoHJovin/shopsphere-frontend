@@ -411,7 +411,7 @@ export default function CreateWarehousePage() {
                     <img
                       src={URL.createObjectURL(image)}
                       alt={`Preview ${index + 1}`}
-                      className="w-full h-24 object-cover rounded-[2px]"
+                      className="w-full h-24 object-cover rounded-lg"
                     />
                     <Button
                       type="button"

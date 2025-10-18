@@ -121,7 +121,7 @@ export function Header({ title }: HeaderProps) {
           <Input
             type="search"
             placeholder="Click here or CTRL + K to search"
-            className="w-full rounded-[2px] pl-8 border-primary/20 focus-visible:ring-primary cursor-pointer"
+            className="w-full rounded-lg pl-8 border-primary/20 focus-visible:ring-primary cursor-pointer"
             onClick={() => setIsSearchModalOpen(true)}
             readOnly
           />

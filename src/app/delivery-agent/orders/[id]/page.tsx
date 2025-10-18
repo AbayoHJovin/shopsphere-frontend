@@ -542,7 +542,7 @@ export default function DeliveryAgentOrderDetails() {
                         <img
                           src={item.product.images[0]}
                           alt={item.product.name || "Product"}
-                          className="w-20 h-20 object-cover rounded-[2px]"
+                          className="w-20 h-20 object-cover rounded-lg"
                           onError={(e) => {
                             e.currentTarget.src = "/api/placeholder/100/100";
                           }}
@@ -554,7 +554,7 @@ export default function DeliveryAgentOrderDetails() {
                         )}
                       </div>
                     ) : (
-                      <div className="w-20 h-20 bg-gray-200 rounded-[2px] flex items-center justify-center">
+                      <div className="w-20 h-20 bg-gray-200 rounded-lg flex items-center justify-center">
                         <Package className="h-8 w-8 text-gray-400" />
                       </div>
                     )}

@@ -205,10 +205,10 @@ export default function VariantSelectionDialog({
                           alt={variant.variantName}
                           width={48}
                           height={48}
-                          className="rounded-[2px] object-cover"
+                          className="rounded-lg object-cover"
                         />
                       ) : (
-                        <div className="w-12 h-12 bg-muted rounded-[2px] flex items-center justify-center">
+                        <div className="w-12 h-12 bg-muted rounded-lg flex items-center justify-center">
                           <Package className="h-6 w-6 text-muted-foreground" />
                         </div>
                       )}

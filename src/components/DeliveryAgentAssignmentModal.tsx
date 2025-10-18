@@ -415,7 +415,7 @@ export default function DeliveryAgentAssignmentModal({
         {/* Delivery Agents Table */}
         {!agentsLoading && agentsData?.content && agentsData.content.length > 0 && (
           <div className="space-y-4">
-            <div className="rounded-[2px] border">
+            <div className="rounded-lg border">
               <Table>
                 <TableHeader>
                   <TableRow>

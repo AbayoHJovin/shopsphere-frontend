@@ -416,7 +416,7 @@ export function ProductDiscountModal({
                                 />
 
                                 {variantImage ? (
-                                  <div className="h-12 w-12 rounded-[2px] bg-muted overflow-hidden">
+                                  <div className="h-12 w-12 rounded-lg bg-muted overflow-hidden">
                                     <img
                                       src={variantImage.url}
                                       alt={variant.variantName || "Variant"}
@@ -424,7 +424,7 @@ export function ProductDiscountModal({
                                     />
                                   </div>
                                 ) : (
-                                  <div className="h-12 w-12 rounded-[2px] bg-muted/50 flex items-center justify-center">
+                                  <div className="h-12 w-12 rounded-lg bg-muted/50 flex items-center justify-center">
                                     <Package className="h-6 w-6 text-muted-foreground" />
                                   </div>
                                 )}

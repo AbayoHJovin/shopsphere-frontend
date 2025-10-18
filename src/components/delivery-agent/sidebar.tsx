@@ -162,7 +162,7 @@ function SidebarItem({
     <Link
       href={href}
       className={cn(
-        "flex h-10 items-center rounded-[2px] px-3 py-2 transition-colors",
+        "flex h-10 items-center rounded-lg px-3 py-2 transition-colors",
         isActive
           ? "bg-primary text-primary-foreground"
           : "text-muted-foreground hover:bg-primary hover:text-primary-foreground",
@@ -190,7 +190,7 @@ function LogoutButton({
       onClick={onClick}
       disabled={isLoading}
       className={cn(
-        "flex h-10 items-center rounded-[2px] px-3 py-2 transition-colors w-full",
+        "flex h-10 items-center rounded-lg px-3 py-2 transition-colors w-full",
         "text-muted-foreground hover:bg-destructive hover:text-destructive-foreground",
         "disabled:opacity-50 disabled:cursor-not-allowed",
         collapsed ? "justify-center" : "justify-start"

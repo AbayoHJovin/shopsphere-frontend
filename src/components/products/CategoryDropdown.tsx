@@ -255,7 +255,7 @@ export function CategoryDropdown({
                   {categories.map((category) => (
                     <div
                       key={category.id}
-                      className="flex items-center justify-between p-2 hover:bg-accent rounded-[2px] cursor-pointer"
+                      className="flex items-center justify-between p-2 hover:bg-accent rounded-lg cursor-pointer"
                       onClick={() => handleCategorySelect(category.id)}
                     >
                       <div className="flex flex-col">

@@ -240,7 +240,7 @@ export default function ReturnRequestDetailPage() {
                         <img
                           src={item.productImage}
                           alt={item.productName}
-                          className="w-16 h-16 object-cover rounded-[2px]"
+                          className="w-16 h-16 object-cover rounded-lg"
                         />
                       )}
                       <div className="flex-1">
@@ -269,7 +269,7 @@ export default function ReturnRequestDetailPage() {
                           )}
                         </div>
                         {item.itemReason && (
-                          <div className="mt-3 p-3 bg-muted rounded-[2px]">
+                          <div className="mt-3 p-3 bg-muted rounded-lg">
                             <p className="text-sm font-medium mb-1">Reason for return:</p>
                             <p className="text-sm">{item.itemReason}</p>
                           </div>
@@ -343,23 +343,23 @@ export default function ReturnRequestDetailPage() {
                           <img
                             src={media.fileUrl}
                             alt="Return media"
-                            className="w-full h-24 object-cover rounded-[2px] group-hover:opacity-80 transition-opacity"
+                            className="w-full h-24 object-cover rounded-lg group-hover:opacity-80 transition-opacity"
                           />
                         ) : isVideoFile(media) ? (
-                          <div className="relative w-full h-24 bg-gray-100 rounded-[2px] flex items-center justify-center group-hover:bg-gray-200 transition-colors">
+                          <div className="relative w-full h-24 bg-gray-100 rounded-lg flex items-center justify-center group-hover:bg-gray-200 transition-colors">
                             <Play className="h-8 w-8 text-gray-600" />
-                            <div className="absolute inset-0 bg-black bg-opacity-20 rounded-[2px] opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                            <div className="absolute inset-0 bg-black bg-opacity-20 rounded-lg opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
                               <Play className="h-6 w-6 text-white" />
                             </div>
                           </div>
                         ) : (
-                          <div className="w-full h-24 bg-gray-100 rounded-[2px] flex items-center justify-center">
+                          <div className="w-full h-24 bg-gray-100 rounded-lg flex items-center justify-center">
                             <FileText className="h-8 w-8 text-gray-600" />
                           </div>
                         )}
                         
                         {/* Overlay for click indication */}
-                        <div className="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-10 rounded-[2px] transition-all flex items-center justify-center">
+                        <div className="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-10 rounded-lg transition-all flex items-center justify-center">
                           <div className="opacity-0 group-hover:opacity-100 transition-opacity">
                             <div className="bg-white bg-opacity-90 rounded-full p-2">
                               {isImageFile(media) ? (
@@ -587,13 +587,13 @@ export default function ReturnRequestDetailPage() {
                     <img
                       src={selectedMedia.fileUrl}
                       alt="Return media"
-                      className="max-w-full max-h-[60vh] object-contain rounded-[2px]"
+                      className="max-w-full max-h-[60vh] object-contain rounded-lg"
                     />
                   ) : isVideoFile(selectedMedia) ? (
                     <video
                       src={selectedMedia.fileUrl}
                       controls
-                      className="max-w-full max-h-[60vh] rounded-[2px]"
+                      className="max-w-full max-h-[60vh] rounded-lg"
                       preload="metadata"
                     >
                       Your browser does not support the video tag.

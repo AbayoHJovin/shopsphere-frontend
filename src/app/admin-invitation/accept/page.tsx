@@ -290,7 +290,7 @@ function AcceptInvitationContent() {
             {invitation.invitationMessage && (
               <div>
                 <Label className="text-muted-foreground">Message</Label>
-                <p className="text-sm mt-1 p-3 bg-gray-50 rounded-[2px]">
+                <p className="text-sm mt-1 p-3 bg-gray-50 rounded-lg">
                   {invitation.invitationMessage}
                 </p>
               </div>

@@ -370,7 +370,7 @@ export default function AppealsPage() {
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <div className="rounded-[2px] border">
+          <div className="rounded-lg border">
             <div className="overflow-x-auto">
               <table className="w-full">
                 <thead>

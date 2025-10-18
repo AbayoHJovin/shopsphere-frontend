@@ -2645,7 +2645,7 @@ export default function ProductUpdate({ params }: ProductUpdateProps) {
                       {existingImages.map((image) => (
                         <div key={image.imageId} className="relative group">
                           <div
-                            className={`aspect-square w-full h-24 overflow-hidden bg-muted rounded-[2px] border ${
+                            className={`aspect-square w-full h-24 overflow-hidden bg-muted rounded-lg border ${
                               image.isPrimary
                                 ? "border-primary border-2"
                                 : "border-border/40"
@@ -2754,7 +2754,7 @@ export default function ProductUpdate({ params }: ProductUpdateProps) {
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-2">
                       {existingVideos.map((video) => (
                         <div key={video.videoId} className="relative group">
-                          <div className="aspect-video w-full bg-muted rounded-[2px] border border-border/40 overflow-hidden">
+                          <div className="aspect-video w-full bg-muted rounded-lg border border-border/40 overflow-hidden">
                             <video
                               src={video.url}
                               className="w-full h-full object-cover"
@@ -3301,14 +3301,14 @@ export default function ProductUpdate({ params }: ProductUpdateProps) {
                                                 image.altText ||
                                                 variant.variantName
                                               }
-                                              className="w-full h-20 object-cover rounded-[2px] border"
+                                              className="w-full h-20 object-cover rounded-lg border"
                                             />
                                             {image.isPrimary && (
                                               <div className="absolute top-1 right-1">
                                                 <Star className="w-3 h-3 text-yellow-500 fill-current" />
                                               </div>
                                             )}
-                                            <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity rounded-[2px] flex items-center justify-center gap-1">
+                                            <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity rounded-lg flex items-center justify-center gap-1">
                                               <Button
                                                 type="button"
                                                 variant="secondary"
@@ -3380,7 +3380,7 @@ export default function ProductUpdate({ params }: ProductUpdateProps) {
                                         {variant.attributes.map((attr) => (
                                           <div
                                             key={attr.attributeValueId}
-                                            className="flex items-center justify-between p-3 bg-muted/30 rounded-[2px] hover:bg-muted/50 transition-colors"
+                                            className="flex items-center justify-between p-3 bg-muted/30 rounded-lg hover:bg-muted/50 transition-colors"
                                           >
                                             <div className="flex-1">
                                               <span className="font-medium text-sm">
@@ -4188,7 +4188,7 @@ export default function ProductUpdate({ params }: ProductUpdateProps) {
               />
               <label
                 htmlFor="image-upload"
-                className="inline-flex items-center px-4 py-2 border border-border rounded-[2px] shadow-sm text-sm font-medium text-foreground bg-background hover:bg-muted cursor-pointer"
+                className="inline-flex items-center px-4 py-2 border border-border rounded-lg shadow-sm text-sm font-medium text-foreground bg-background hover:bg-muted cursor-pointer"
               >
                 <Plus className="w-4 h-4 mr-2" />
                 Choose Files
@@ -4207,7 +4207,7 @@ export default function ProductUpdate({ params }: ProductUpdateProps) {
                       <img
                         src={URL.createObjectURL(file)}
                         alt={file.name}
-                        className="w-full h-20 object-cover rounded-[2px] border"
+                        className="w-full h-20 object-cover rounded-lg border"
                       />
                       <div className="absolute top-1 right-1">
                         <Button
@@ -4386,7 +4386,7 @@ export default function ProductUpdate({ params }: ProductUpdateProps) {
                     ?.attributes?.map((attr) => (
                       <div
                         key={attr.attributeValueId}
-                        className="flex items-center justify-between p-3 bg-muted/30 rounded-[2px]"
+                        className="flex items-center justify-between p-3 bg-muted/30 rounded-lg"
                       >
                         <div className="flex-1">
                           <span className="font-medium text-sm">
@@ -4885,7 +4885,7 @@ export default function ProductUpdate({ params }: ProductUpdateProps) {
                     />
                     <label
                       htmlFor="variant-images"
-                      className="inline-flex items-center px-4 py-2 border border-border rounded-[2px] text-sm font-medium cursor-pointer hover:bg-muted transition-colors"
+                      className="inline-flex items-center px-4 py-2 border border-border rounded-lg text-sm font-medium cursor-pointer hover:bg-muted transition-colors"
                     >
                       <Plus className="w-4 h-4 mr-2" />
                       Choose Images

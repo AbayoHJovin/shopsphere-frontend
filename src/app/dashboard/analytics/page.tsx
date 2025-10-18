@@ -80,7 +80,7 @@ function MetricCard({
     <Card>
       <CardHeader className="flex flex-row items-center justify-between pb-2">
         <CardTitle className="text-sm font-medium">{title}</CardTitle>
-        <div className="p-1 bg-primary/10 rounded-[2px] text-primary">{icon}</div>
+        <div className="p-1 bg-primary/10 rounded-lg text-primary">{icon}</div>
       </CardHeader>
       <CardContent>
         <div className="text-2xl font-bold">{value}</div>

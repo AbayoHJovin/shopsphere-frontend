@@ -665,7 +665,7 @@ export default function CreateVariantPage() {
                       <img
                         src={preview}
                         alt={`Preview ${index + 1}`}
-                        className="w-full h-20 object-cover rounded-[2px] border"
+                        className="w-full h-20 object-cover rounded-lg border"
                       />
                       <Button
                         type="button"
