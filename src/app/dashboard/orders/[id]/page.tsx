@@ -13,9 +13,11 @@ import {
   Edit3,
   Check,
   X,
-  Plus,
   Truck,
   ExternalLink,
+  RotateCcw,
+  Eye,
+  Gift,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
@@ -50,6 +52,8 @@ import {
   OrderStatus,
   OrderPaymentStatus,
 } from "@/lib/types/order";
+import returnService from "@/services/returnService";
+import { ReturnRequestDTO } from "@/types/return";
 import { toast } from "sonner";
 import { format } from "date-fns";
 import { TruncatedText } from "@/components/ui/truncated-text";
@@ -75,6 +79,10 @@ export default function OrderDetailsPage() {
     "satellite" | "roadmap" | "hybrid" | "terrain"
   >("satellite");
 
+  // Returns associated with this order
+  const [orderReturns, setOrderReturns] = useState<ReturnRequestDTO[]>([]);
+  const [loadingReturns, setLoadingReturns] = useState(false);
+
   const orderId = params.id as string;
 
   useEffect(() => {
@@ -95,6 +103,35 @@ export default function OrderDetailsPage() {
       fetchOrder();
     }
   }, [orderId]);
+
+  // Fetch returns associated with this order by order number
+  useEffect(() => {
+    const fetchReturns = async () => {
+      if (!order?.orderNumber) return;
+      try {
+        setLoadingReturns(true);
+        // Use admin returns list with search filter, then filter exactly by orderNumber
+        const resp = await returnService.getAllReturnRequests({
+          page: 0,
+          size: 50,
+          sort: "submittedAt",
+          direction: "DESC",
+          filters: { search: order.orderNumber },
+        });
+        const matches = (resp.content || []).filter(
+          (r) => r.orderNumber === order.orderNumber
+        );
+        setOrderReturns(matches);
+      } catch (e) {
+        console.error("Error fetching order returns:", e);
+        setOrderReturns([]);
+      } finally {
+        setLoadingReturns(false);
+      }
+    };
+
+    fetchReturns();
+  }, [order?.orderNumber]);
 
   // Filter delivery agents based on search term
   useEffect(() => {
@@ -323,87 +360,158 @@ export default function OrderDetailsPage() {
         </div>
       </div>
 
-      <div className="grid gap-6 lg:grid-cols-3">
-        {/* Main Content */}
-        <div className="lg:col-span-2 space-y-6">
-          {/* Order Information */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Package className="h-5 w-5" />
-                Order Information
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                  <label className="text-sm font-medium text-muted-foreground">
-                    Order Number
-                  </label>
-                  <div className="mt-1">
-                    <TruncatedText
-                      text={order.orderNumber}
-                      maxLength={20}
-                      className="font-medium"
-                    />
-                  </div>
-                </div>
-                <div>
-                  <label className="text-sm font-medium text-muted-foreground">
-                    Customer
-                  </label>
-                  <div className="mt-1">
-                    {order.customerName ? (
-                      <div>
-                        <p className="font-medium">{order.customerName}</p>
-                        {order.customerEmail && (
-                          <p className="text-sm text-muted-foreground">
-                            {order.customerEmail}
-                          </p>
-                        )}
-                        {order.customerPhone && (
-                          <p className="text-sm text-muted-foreground">
-                            {order.customerPhone}
-                          </p>
-                        )}
-                      </div>
-                    ) : (
+        <div className="grid gap-6 lg:grid-cols-3">
+          {/* Main Content */}
+          <div className="lg:col-span-2 space-y-6">
+            {/* Order Information */}
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Package className="h-5 w-5" />
+                  Order Information
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <label className="text-sm font-medium text-muted-foreground">
+                      Order Number
+                    </label>
+                    <div className="mt-1">
                       <TruncatedText
-                        text={order.userId}
-                        maxLength={16}
+                        text={order.orderNumber}
+                        maxLength={20}
                         className="font-medium"
                       />
-                    )}
+                    </div>
+                  </div>
+                  <div>
+                    <label className="text-sm font-medium text-muted-foreground">
+                      Customer
+                    </label>
+                    <div className="mt-1">
+                      {order.customerName ? (
+                        <div>
+                          <p className="font-medium">{order.customerName}</p>
+                          {order.customerEmail && (
+                            <p className="text-sm text-muted-foreground">
+                              {order.customerEmail}
+                            </p>
+                          )}
+                          {order.customerPhone && (
+                            <p className="text-sm text-muted-foreground">
+                              {order.customerPhone}
+                            </p>
+                          )}
+                        </div>
+                      ) : (
+                        <TruncatedText
+                          text={order.userId}
+                          maxLength={16}
+                          className="font-medium"
+                        />
+                      )}
+                    </div>
+                  </div>
+                  <div>
+                    <label className="text-sm font-medium text-muted-foreground">
+                      Created At
+                    </label>
+                    <p className="font-medium">
+                      {format(new Date(order.createdAt), "PPP 'at' p")}
+                    </p>
+                  </div>
+                  <div>
+                    <label className="text-sm font-medium text-muted-foreground">
+                      Last Updated
+                    </label>
+                    <p className="font-medium">
+                      {format(new Date(order.updatedAt), "PPP 'at' p")}
+                    </p>
                   </div>
                 </div>
-                <div>
-                  <label className="text-sm font-medium text-muted-foreground">
-                    Created At
-                  </label>
-                  <p className="font-medium">
-                    {format(new Date(order.createdAt), "PPP 'at' p")}
-                  </p>
-                </div>
-                <div>
-                  <label className="text-sm font-medium text-muted-foreground">
-                    Last Updated
-                  </label>
-                  <p className="font-medium">
-                    {format(new Date(order.updatedAt), "PPP 'at' p")}
-                  </p>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
+              </CardContent>
+            </Card>
 
-          {/* Order Items */}
-          <Card>
-            <CardHeader>
-              <CardTitle>Order Items</CardTitle>
-              <CardDescription>
-                {order.items?.length || 0} item(s) in this order
-              </CardDescription>
-            </CardHeader>
+            {/* Associated Return Requests - Only show if there are returns */}
+            {orderReturns.length > 0 && (
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <RotateCcw className="h-5 w-5" />
+                  Associated Return Requests
+                </CardTitle>
+                <CardDescription>
+                  {loadingReturns ? "Loading..." : `${orderReturns.length} return request(s)`}
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                {loadingReturns ? (
+                  <div className="flex items-center justify-center py-8">
+                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+                  </div>
+                ) : orderReturns.length === 0 ? (
+                  <div className="text-center py-8 text-muted-foreground">
+                    <RotateCcw className="h-12 w-12 mx-auto mb-2 opacity-50" />
+                    <p>No return requests for this order</p>
+                  </div>
+                ) : (
+                  <div className="space-y-3">
+                    {orderReturns.map((returnReq) => (
+                      <div
+                        key={returnReq.id}
+                        className="flex items-center justify-between p-3 border rounded-md hover:bg-muted/50 transition-colors"
+                      >
+                        <div className="flex-1">
+                          <div className="flex items-center gap-2 mb-1">
+                            <span className="font-medium text-sm">
+                              Return #{String(returnReq.id).slice(-8)}
+                            </span>
+                            <Badge
+                              variant={
+                                returnReq.status === "PENDING"
+                                  ? "secondary"
+                                  : returnReq.status === "APPROVED"
+                                  ? "default"
+                                  : returnReq.status === "DENIED"
+                                  ? "destructive"
+                                  : "outline"
+                              }
+                            >
+                              {returnReq.status}
+                            </Badge>
+                          </div>
+                          <div className="text-xs text-muted-foreground space-y-1">
+                            <p>
+                              Submitted: {format(new Date(returnReq.submittedAt), "PPP")}
+                            </p>
+                            <p>{returnReq.returnItems?.length || 0} item(s)</p>
+                          </div>
+                        </div>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => router.push(`/dashboard/returns/${returnReq.id}`)}
+                        >
+                          <Eye className="h-4 w-4 mr-2" />
+                          View Details
+                        </Button>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+            )}
+
+            {/* Order Items */}
+            <Card>
+              <CardHeader>
+                <CardTitle>Order Items</CardTitle>
+                <CardDescription>
+                  {order.items?.length || 0} item(s) in this order
+                </CardDescription>
+              </CardHeader>
             <CardContent>
               {order.items && order.items.length > 0 ? (
                 <div className="space-y-4">
@@ -688,6 +796,34 @@ export default function OrderDetailsPage() {
                   <span>-${order.discount.toFixed(2)}</span>
                 </div>
               )}
+              {(order.paymentInfo?.paymentMethod === "POINTS" || 
+                order.paymentInfo?.paymentMethod === "HYBRID") && 
+                order.paymentInfo?.pointsUsed !== undefined && 
+                order.paymentInfo?.pointsUsed > 0 && (
+                <>
+                  <div className="pt-3 border-t">
+                    <label className="text-sm font-medium text-muted-foreground">
+                      Points Used
+                    </label>
+                    <p className="text-sm font-bold text-yellow-600">
+                      {order.paymentInfo?.pointsUsed} points
+                    </p>
+                  </div>
+                  <div>
+                    <label className="text-sm font-medium text-muted-foreground">
+                      Points Value
+                    </label>
+                    <p className="text-sm font-bold text-green-600">
+                      ${order.paymentInfo.pointsValue?.toFixed(2) || "0.00"}
+                    </p>
+                  </div>
+                  {order.paymentInfo.paymentMethod === "HYBRID" && (
+                    <div className="text-xs text-muted-foreground italic">
+                      Combined points and card payment
+                    </div>
+                  )}
+                </>
+              )}
               <Separator />
               <div className="flex justify-between font-medium">
                 <span>Total</span>
@@ -960,6 +1096,7 @@ export default function OrderDetailsPage() {
                   </a>
                 </div>
               )}
+              
             </CardContent>
           </Card>
 

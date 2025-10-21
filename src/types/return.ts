@@ -1,5 +1,17 @@
 // Return Request Types for Admin Dashboard
 
+export interface ExpectedRefundDTO {
+  paymentMethod: string;
+  monetaryRefund: number;
+  pointsRefund: number;
+  pointsRefundValue: number;
+  totalRefundValue: number;
+  isFullReturn: boolean;
+  itemsRefund: number;
+  shippingRefund: number;
+  refundDescription: string;
+}
+
 export interface ReturnRequestDTO {
   id: string | number;
   orderId: string | number;
@@ -24,6 +36,7 @@ export interface ReturnRequestDTO {
   canBeAppealed: boolean;
   daysUntilExpiry: number;
   eligibleForReturn: boolean;
+  expectedRefund?: ExpectedRefundDTO;
 }
 
 export interface ReturnItemDTO {

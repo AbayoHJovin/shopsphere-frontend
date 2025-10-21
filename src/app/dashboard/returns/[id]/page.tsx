@@ -28,7 +28,8 @@ import {
   Mail,
   ExternalLink,
   Play,
-  X
+  X,
+  RotateCcw
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { ReturnRequestDTO, ReturnDecisionDTO } from '@/types/return';
@@ -294,6 +295,111 @@ export default function ReturnRequestDetailPage() {
               )}
             </CardContent>
           </Card>
+
+          {/* Expected Refund */}
+          {returnRequest.expectedRefund && (
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <RotateCcw className="h-5 w-5" />
+                  Expected Refund Breakdown
+                </CardTitle>
+                <CardDescription>
+                  Calculated refund based on payment method and return items
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="bg-gradient-to-br from-green-50 to-emerald-50 dark:from-green-950/20 dark:to-emerald-950/20 p-6 rounded-lg border border-green-200 dark:border-green-800">
+                  <div className="space-y-4">
+                    {/* Payment Method */}
+                    <div className="flex items-center justify-between pb-3 border-b">
+                      <span className="text-sm font-medium text-muted-foreground">
+                        Payment Method
+                      </span>
+                      <Badge variant="outline" className="font-mono text-sm">
+                        {returnRequest.expectedRefund.paymentMethod}
+                      </Badge>
+                    </div>
+                    
+                    {/* Refund Components */}
+                    <div className="space-y-3">
+                      {returnRequest.expectedRefund.monetaryRefund > 0 && (
+                        <div className="flex items-center justify-between">
+                          <span className="text-sm font-medium text-muted-foreground">
+                            Card Refund
+                          </span>
+                          <span className="text-xl font-bold text-green-600 dark:text-green-400">
+                            ${(returnRequest.expectedRefund.monetaryRefund || 0).toFixed(2)}
+                          </span>
+                        </div>
+                      )}
+                      
+                      {returnRequest.expectedRefund.pointsRefund > 0 && (
+                        <>
+                          <div className="flex items-center justify-between">
+                            <span className="text-sm font-medium text-muted-foreground">
+                              Points Refund
+                            </span>
+                            <span className="text-xl font-bold text-yellow-600 dark:text-yellow-400">
+                              {returnRequest.expectedRefund.pointsRefund} points
+                            </span>
+                          </div>
+                          <div className="flex items-center justify-between">
+                            <span className="text-xs text-muted-foreground">
+                              Points Value
+                            </span>
+                            <span className="text-sm font-semibold text-green-600 dark:text-green-400">
+                              ${(returnRequest.expectedRefund.pointsRefundValue || 0).toFixed(2)}
+                            </span>
+                          </div>
+                        </>
+                      )}
+                    </div>
+                    
+                    {/* Breakdown */}
+                    <div className="pt-3 border-t space-y-2">
+                      <div className="flex items-center justify-between text-sm">
+                        <span className="text-muted-foreground">Items Refund</span>
+                        <span className="font-medium">
+                          ${(returnRequest.expectedRefund.itemsRefund || 0).toFixed(2)}
+                        </span>
+                      </div>
+                      {returnRequest.expectedRefund.shippingRefund > 0 && (
+                        <div className="flex items-center justify-between text-sm">
+                          <span className="text-muted-foreground">Shipping Refund</span>
+                          <span className="font-medium">
+                            ${(returnRequest.expectedRefund.shippingRefund || 0).toFixed(2)}
+                          </span>
+                        </div>
+                      )}
+                      {returnRequest.expectedRefund.isFullReturn && (
+                        <Badge variant="secondary" className="mt-2">
+                          Full Order Return
+                        </Badge>
+                      )}
+                    </div>
+                    
+                    <Separator />
+                    
+                    {/* Total */}
+                    <div className="flex items-center justify-between pt-2">
+                      <span className="font-bold text-lg">Total Refund Value</span>
+                      <span className="text-2xl font-bold text-green-600 dark:text-green-400">
+                        ${(returnRequest.expectedRefund.totalRefundValue || 0).toFixed(2)}
+                      </span>
+                    </div>
+                    
+                    {/* Description */}
+                    <div className="pt-3 border-t">
+                      <p className="text-sm text-muted-foreground italic">
+                        {returnRequest.expectedRefund.refundDescription}
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          )}
 
           {/* Return Reason */}
           <Card>

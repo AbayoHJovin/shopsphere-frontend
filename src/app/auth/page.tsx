@@ -36,7 +36,6 @@ function AuthPageContent() {
           />
         </div>
 
-        {/* Header */}
         <div className="relative z-20 flex items-center text-xl font-bold">
           <div className="flex items-center justify-center w-10 h-10 bg-white/10 rounded-md mr-3 backdrop-blur-sm">
             <svg
@@ -52,7 +51,7 @@ function AuthPageContent() {
               <path d="M15 6v12a3 3 0 1 0 3-3H6a3 3 0 1 0 3 3V6a3 3 0 1 0-3 3h12a3 3 0 1 0-3-3" />
             </svg>
           </div>
-          ShopSphere Admin, Employee and Delivery Angent portal
+          ShopSphere Admin, Employee and Delivery Agent portal
         </div>
 
         <div className="relative z-20 flex-1 flex flex-col justify-center space-y-8">

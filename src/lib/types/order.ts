@@ -104,6 +104,8 @@ export interface AdminPaymentInfoDTO {
   transactionRef?: string;
   paymentDate?: string;
   receiptUrl?: string;
+  pointsUsed?: number;
+  pointsValue?: number;
 }
 
 export interface DeliveryGroupInfoDTO {
