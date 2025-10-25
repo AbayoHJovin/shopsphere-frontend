@@ -22,7 +22,12 @@ import { Layers, Eye, EyeOff } from "lucide-react";
 import { authService } from "@/lib/services/auth-service";
 import { LoginRequest } from "@/lib/types";
 import { useAppDispatch, useAppSelector } from "@/lib/redux/hooks";
-import { loginStart, loginSuccess, loginFailure, clearError } from "@/lib/redux/auth-slice";
+import {
+  loginStart,
+  loginSuccess,
+  loginFailure,
+  clearError,
+} from "@/lib/redux/auth-slice";
 import { handleApiError } from "@/lib/utils/error-handler";
 import { UserRole } from "@/lib/constants";
 
@@ -97,7 +102,11 @@ export function LoginForm() {
         description: data.message || "Logged in successfully",
       });
 
-      if (data.role === UserRole.CUSTOMER) {
+      if (
+        data.role != UserRole.ADMIN &&
+        data.role != UserRole.EMPLOYEE &&
+        data.role != UserRole.DELIVERY_AGENT
+      ) {
         toast({
           title: "Redirecting...",
           description: "You're being redirected to the customer portal",

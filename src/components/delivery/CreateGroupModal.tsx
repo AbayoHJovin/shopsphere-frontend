@@ -29,6 +29,7 @@ interface CreateGroupModalProps {
   onOpenChange: (open: boolean) => void;
   onSuccess: (group: DeliveryGroupDto) => void;
   selectedOrderIds: number[];
+  mode?: "create" | "change"; // Mode: create new group or create for changing
 }
 
 export function CreateGroupModal({
@@ -36,6 +37,7 @@ export function CreateGroupModal({
   onOpenChange,
   selectedOrderIds,
   onSuccess,
+  mode = "create",
 }: CreateGroupModalProps) {
   const [formData, setFormData] = useState({
     deliveryGroupName: "",
@@ -45,7 +47,8 @@ export function CreateGroupModal({
   const [agents, setAgents] = useState<AgentDto[]>([]);
   const [loadingAgents, setLoadingAgents] = useState(false);
   const [creating, setCreating] = useState(false);
-  const [autoAssignOrders, setAutoAssignOrders] = useState(true);
+  // Don't auto-assign when changing groups
+  const [autoAssignOrders, setAutoAssignOrders] = useState(mode === "create");
   const [currentPage, setCurrentPage] = useState(0);
   const [hasMoreAgents, setHasMoreAgents] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
@@ -137,9 +140,10 @@ export function CreateGroupModal({
 
     try {
       setCreating(true);
+      // When changing groups, never auto-assign during creation
       const request = {
         ...formData,
-        orderIds: autoAssignOrders ? selectedOrderIds : undefined,
+        orderIds: mode === "create" && autoAssignOrders ? selectedOrderIds : undefined,
       };
 
       const newGroup = await deliveryGroupService.createGroup(request);
@@ -191,18 +195,21 @@ export function CreateGroupModal({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-2xl max-h-[80vh] overflow-hidden">
+      <DialogContent className="max-w-2xl max-h-[90vh] flex flex-col">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <Plus className="h-5 w-5" />
             Create Delivery Group
           </DialogTitle>
           <DialogDescription>
-            Create a new delivery group and optionally assign orders to it
+            {mode === "change" 
+              ? "Create a new delivery group to move the order to"
+              : "Create a new delivery group and optionally assign orders to it"}
           </DialogDescription>
         </DialogHeader>
 
-        <form onSubmit={handleSubmit} className="space-y-6 overflow-y-auto">
+        <form onSubmit={handleSubmit} className="flex-1 flex flex-col overflow-hidden">
+          <div className="flex-1 space-y-6 overflow-y-auto pr-2">
           {/* Group Details */}
           <div className="space-y-4">
             <div className="space-y-2">
@@ -452,8 +459,8 @@ export function CreateGroupModal({
             </Alert>
           )}
 
-          {/* Auto-assign Orders */}
-          {selectedOrderIds.length > 0 && (
+          {/* Auto-assign Orders - Only show in create mode */}
+          {mode === "create" && selectedOrderIds.length > 0 && (
             <div className="space-y-4">
               <div className="flex items-center space-x-2">
                 <Checkbox
@@ -470,23 +477,34 @@ export function CreateGroupModal({
               </div>
             </div>
           )}
-        </form>
+          
+          {/* Info for change mode */}
+          {mode === "change" && (
+            <Alert>
+              <AlertCircle className="h-4 w-4" />
+              <AlertDescription>
+                After creating this group, you'll be able to move the order to it.
+              </AlertDescription>
+            </Alert>
+          )}
+          </div>
 
-        <DialogFooter>
-          <Button variant="outline" onClick={() => onOpenChange(false)}>
-            Cancel
-          </Button>
-          <Button
-            onClick={handleSubmit}
-            disabled={
-              creating ||
-              !formData.deliveryGroupName.trim() ||
-              !formData.delivererId
-            }
-          >
-            {creating ? "Creating..." : "Create Group"}
-          </Button>
-        </DialogFooter>
+          <DialogFooter className="mt-4 pt-4 border-t">
+            <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
+              Cancel
+            </Button>
+            <Button
+              type="submit"
+              disabled={
+                creating ||
+                !formData.deliveryGroupName.trim() ||
+                !formData.delivererId
+              }
+            >
+              {creating ? "Creating..." : "Create Group"}
+            </Button>
+          </DialogFooter>
+        </form>
       </DialogContent>
     </Dialog>
   );

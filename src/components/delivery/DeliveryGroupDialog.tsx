@@ -503,6 +503,7 @@ export function DeliveryGroupDialog({
         onOpenChange={setCreateGroupOpen}
         onSuccess={handleCreateGroupSuccess}
         selectedOrderIds={selectedOrderIds}
+        mode={isSingleOrderWithGroup ? "change" : "create"}
       />
 
       {/* Bulk Result Modal */}
