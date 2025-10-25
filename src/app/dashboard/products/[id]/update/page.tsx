@@ -1063,36 +1063,141 @@ export default function ProductUpdate({ params }: ProductUpdateProps) {
     }
   };
 
-  const handleVideoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleVideoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = Array.from(e.target.files || []);
     if (files.length === 0) return;
 
+    // Reset the input so the same file can be selected again if needed
+    e.target.value = "";
+
+    // Check total video limit
+    if (existingVideos.length + files.length > 5) {
+      toast({
+        title: "Too Many Videos",
+        description: `You can only upload up to 5 videos. Currently you have ${existingVideos.length} video(s).`,
+        variant: "destructive",
+      });
+      return;
+    }
+
     setIsVideoUploading(true);
 
-    files.forEach((file) => {
-      if (file.type.startsWith("video/")) {
-        const reader = new FileReader();
-        reader.onload = (event) => {
-          const newVideo = {
-            videoId: Math.floor(Date.now() + Math.random() * 1000),
-            url: event.target?.result as string,
-            altText: file.name,
-            sortOrder: existingVideos.length,
-            file: file,
-          };
-          setExistingVideos((prev) => [...prev, newVideo]);
-        };
-        reader.readAsDataURL(file);
-      }
-    });
+    const validVideos: Array<{
+      videoId: number;
+      url: string;
+      altText: string;
+      sortOrder: number;
+      file: File;
+    }> = [];
+    const errors: string[] = [];
 
-    setTimeout(() => {
-      setIsVideoUploading(false);
+    // Validate each video
+    for (const file of files) {
+      try {
+        // Check if it's a video file
+        if (!file.type.startsWith("video/")) {
+          errors.push(`"${file.name}" is not a valid video file`);
+          continue;
+        }
+
+        // Check file size (max 100MB)
+        const maxSize = 100 * 1024 * 1024; // 100MB in bytes
+        if (file.size > maxSize) {
+          const sizeMB = (file.size / (1024 * 1024)).toFixed(2);
+          errors.push(
+            `"${file.name}" is too large (${sizeMB}MB). Maximum size is 100MB or 15 seconds video`
+          );
+          continue;
+        }
+
+        // Validate video duration
+        const duration = await getVideoDuration(file);
+        if (duration > 15) {
+          errors.push(
+            `"${file.name}" is too long (${duration.toFixed(1)}s). Maximum duration is 15 seconds`
+          );
+          continue;
+        }
+
+        // If all validations pass, read the file
+        const dataUrl = await readFileAsDataURL(file);
+        validVideos.push({
+          videoId: Math.floor(Date.now() + Math.random() * 1000),
+          url: dataUrl,
+          altText: file.name,
+          sortOrder: existingVideos.length + validVideos.length,
+          file: file,
+        });
+      } catch (error) {
+        console.error(`Error processing video ${file.name}:`, error);
+        errors.push(
+          `"${file.name}" could not be processed. Please try again.`
+        );
+      }
+    }
+
+    setIsVideoUploading(false);
+
+    // Add valid videos
+    if (validVideos.length > 0) {
+      setExistingVideos((prev) => [...prev, ...validVideos]);
       toast({
         title: "Videos Added",
-        description: `${files.length} video(s) have been added to the product`,
+        description: `${validVideos.length} video(s) have been added successfully`,
       });
-    }, 1000);
+    }
+
+    // Show errors if any
+    if (errors.length > 0) {
+      toast({
+        title: "Video Validation Errors",
+        description: (
+          <div className="space-y-1">
+            <p className="font-semibold">The following videos could not be added:</p>
+            <ul className="list-disc list-inside space-y-1 text-sm">
+              {errors.map((error, index) => (
+                <li key={index}>{error}</li>
+              ))}
+            </ul>
+          </div>
+        ),
+        variant: "destructive",
+        duration: 8000,
+      });
+    }
+  };
+
+  // Helper function to get video duration
+  const getVideoDuration = (file: File): Promise<number> => {
+    return new Promise((resolve, reject) => {
+      const video = document.createElement("video");
+      video.preload = "metadata";
+
+      video.onloadedmetadata = () => {
+        window.URL.revokeObjectURL(video.src);
+        resolve(video.duration);
+      };
+
+      video.onerror = () => {
+        reject(new Error("Failed to load video metadata"));
+      };
+
+      video.src = URL.createObjectURL(file);
+    });
+  };
+
+  // Helper function to read file as data URL
+  const readFileAsDataURL = (file: File): Promise<string> => {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = (event) => {
+        resolve(event.target?.result as string);
+      };
+      reader.onerror = () => {
+        reject(new Error("Failed to read file"));
+      };
+      reader.readAsDataURL(file);
+    });
   };
 
   // Variant management functions
