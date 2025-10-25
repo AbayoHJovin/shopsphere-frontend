@@ -24,12 +24,17 @@ export const authService = {
       loginData = response.data;
     }
 
+    // Only store token for admin portal users (not customers)
     if (loginData.token) {
-      localStorage.setItem("admin_auth_token", loginData.token);
-      apiClient.defaults.headers.common[
-        "Authorization"
-      ] = `Bearer ${loginData.token}`;
-      apiClient.defaults.headers.Authorization = `Bearer ${loginData.token}`;
+      const allowedRoles = ["ADMIN", "EMPLOYEE", "DELIVERY_AGENT"];
+      
+      if (allowedRoles.includes(loginData.role)) {
+        localStorage.setItem("admin_auth_token", loginData.token);
+        apiClient.defaults.headers.common[
+          "Authorization"
+        ] = `Bearer ${loginData.token}`;
+        apiClient.defaults.headers.Authorization = `Bearer ${loginData.token}`;
+      }
     }
 
     return loginData;
@@ -61,33 +66,24 @@ export const authService = {
   async getCurrentUser(): Promise<User> {
     const response = await apiClient.get<any>(API_ENDPOINTS.AUTH.ME);
 
-    // Handle the new response structure from backend
     let userData: User;
     if (response.data.success && response.data.data) {
-      // New structure: { success: true, data: { ... }, message: "..." }
       userData = response.data.data;
     } else {
-      // Old structure: { ... }
       userData = response.data;
     }
 
     return userData;
   },
 
-  /**
-   * Get stored auth token
-   */
   getToken(): string | null {
     return localStorage.getItem("admin_auth_token");
   },
 
-  /**
-   * Check if user is authenticated
-   */
+
   isAuthenticated(): boolean {
     const token = this.getToken();
     if (token) {
-      // Set the token in axios headers for future requests
       apiClient.defaults.headers.common["Authorization"] = `Bearer ${token}`;
       apiClient.defaults.headers.Authorization = `Bearer ${token}`;
       return true;
@@ -95,9 +91,6 @@ export const authService = {
     return false;
   },
 
-  /**
-   * Refresh token headers - useful when token is restored from storage
-   */
   refreshTokenHeaders(): void {
     const token = this.getToken();
     if (token) {

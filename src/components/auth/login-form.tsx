@@ -107,11 +107,16 @@ export function LoginForm() {
         data.role != UserRole.EMPLOYEE &&
         data.role != UserRole.DELIVERY_AGENT
       ) {
+        localStorage.removeItem("admin_auth_token");
+        
         toast({
           title: "Redirecting...",
           description: "You're being redirected to the customer portal",
         });
-        window.location.href = "https://shopsphere-frontend.vercel.app/shop";
+        
+        setTimeout(() => {
+          window.location.href = "https://shopsphere-frontend.vercel.app/shop";
+        }, 500);
         return;
       }
 

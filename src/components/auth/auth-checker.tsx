@@ -60,6 +60,15 @@ export function AuthChecker({ children }: { children: React.ReactNode }) {
         console.log("Making API call to get current user...");
         const user = await authService.getCurrentUser();
         console.log("User data received:", user);
+        
+        const allowedRoles = ["ADMIN", "EMPLOYEE", "DELIVERY_AGENT"];
+        if (!allowedRoles.includes(user.role)) {
+          console.log("User has invalid role for admin portal:", user.role);
+          localStorage.removeItem("admin_auth_token");
+          dispatch(checkAuthFailure());
+          return;
+        }
+        
         dispatch(checkAuthSuccess(user));
       } catch (error) {
         console.log("Auth check failed:", error);

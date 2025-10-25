@@ -44,21 +44,18 @@ export default function ProtectedRoute({
       return;
     }
 
-    // Check if user has required role
     if (user && allowedRoles.length > 0 && !allowedRoles.includes(user.role)) {
       hasRedirected.current = true;
-      // Redirect based on user role
       if (user.role === UserRole.DELIVERY_AGENT) {
         router.push("/delivery-agent/dashboard");
       } else if (user.role === UserRole.CUSTOMER) {
-        router.push("/"); // Redirect to home page for customers
+        router.push("/");
       } else {
-        router.push("/dashboard"); // Default fallback for admin/employee
+        router.push("/dashboard");
       }
     }
   }, [isAuthenticated, user, allowedRoles, router, pathname, checkingAuth]);
 
-  // Show loading during auth check
   if (checkingAuth) {
     return (
       <div className="flex items-center justify-center min-h-screen">
@@ -67,15 +64,12 @@ export default function ProtectedRoute({
     );
   }
 
-  // Return children only if authenticated
   if (isAuthenticated && user) {
-    // If role check is required and user has appropriate role
     if (allowedRoles.length === 0 || allowedRoles.includes(user.role)) {
       return <>{children}</>;
     }
   }
 
-  // Return loading while redirecting
   return (
     <div className="flex items-center justify-center min-h-screen">
       <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
