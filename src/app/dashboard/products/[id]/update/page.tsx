@@ -1091,17 +1091,14 @@ export default function ProductUpdate({ params }: ProductUpdateProps) {
     }> = [];
     const errors: string[] = [];
 
-    // Validate each video
     for (const file of files) {
       try {
-        // Check if it's a video file
         if (!file.type.startsWith("video/")) {
           errors.push(`"${file.name}" is not a valid video file`);
           continue;
         }
 
-        // Check file size (max 100MB)
-        const maxSize = 100 * 1024 * 1024; // 100MB in bytes
+        const maxSize = 100 * 1024 * 1024;
         if (file.size > maxSize) {
           const sizeMB = (file.size / (1024 * 1024)).toFixed(2);
           errors.push(
@@ -1110,7 +1107,6 @@ export default function ProductUpdate({ params }: ProductUpdateProps) {
           continue;
         }
 
-        // Validate video duration
         const duration = await getVideoDuration(file);
         if (duration > 15) {
           errors.push(
@@ -1119,7 +1115,6 @@ export default function ProductUpdate({ params }: ProductUpdateProps) {
           continue;
         }
 
-        // If all validations pass, read the file
         const dataUrl = await readFileAsDataURL(file);
         validVideos.push({
           videoId: Math.floor(Date.now() + Math.random() * 1000),
@@ -1138,7 +1133,6 @@ export default function ProductUpdate({ params }: ProductUpdateProps) {
 
     setIsVideoUploading(false);
 
-    // Add valid videos
     if (validVideos.length > 0) {
       setExistingVideos((prev) => [...prev, ...validVideos]);
       toast({
