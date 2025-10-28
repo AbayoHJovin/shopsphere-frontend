@@ -22,7 +22,7 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 import { ArrowLeft, Upload, X, MapPin, AlertTriangle } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
 import { useRouter } from "next/navigation";
-import { GoogleMapsWarehousePicker } from "@/components/GoogleMapsWarehousePicker";
+import { GoogleMapsAddressPicker } from "@/components/GoogleMapsWarehousePicker";
 
 export default function CreateWarehousePage() {
   const router = useRouter();
@@ -68,12 +68,17 @@ export default function CreateWarehousePage() {
 
   // Handle Google Maps address selection
   const handleGoogleMapsAddressSelect = (address: any) => {
+    // Combine street number and street name for the address field
+    const streetAddress = [address.streetNumber, address.streetName]
+      .filter(Boolean)
+      .join(' ') || address.formattedAddress;
+    
     setFormData(prev => ({
       ...prev,
-      address: address.streetAddress,
+      address: streetAddress,
       city: address.city,
       state: address.state,
-      zipCode: address.zipCode,
+      zipCode: "", // Google Maps AddressDetails doesn't include zipCode, user will need to add it
       country: address.country,
       latitude: address.latitude,
       longitude: address.longitude,
@@ -82,7 +87,7 @@ export default function CreateWarehousePage() {
     
     toast({
       title: "Location Selected",
-      description: "Address details have been automatically filled from the map selection.",
+      description: "Address details have been automatically filled from the map selection. Please add the zip code.",
     });
   };
 
@@ -367,7 +372,7 @@ export default function CreateWarehousePage() {
 
         {/* Google Maps Location Picker */}
         {process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY ? (
-          <GoogleMapsWarehousePicker
+          <GoogleMapsAddressPicker
             onAddressSelect={handleGoogleMapsAddressSelect}
             apiKey={process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY}
           />
